@@ -2,12 +2,10 @@
 
 Privacy-first, ephemeral social app for spontaneous real-world hangouts ("Moves").
 
-This repo currently contains the **Supabase backend** — schema, Row Level Security policies, and RPCs. The Expo Router app will be added in a follow-up once the backend is confirmed.
-
 ## Stack
 
 - **Backend:** Supabase (PostgreSQL + PostGIS), Supabase Realtime, pg_cron
-- **Frontend (planned):** Expo (React Native) + Expo Router, TypeScript, hand-rolled design tokens (no NativeWind)
+- **Frontend:** Expo (React Native) + Expo Router, TypeScript, hand-rolled design tokens (`src/theme/tokens.ts`, no NativeWind), running as a web SPA today (`expo start --web`) and native-ready
 
 ## Getting started (backend)
 
@@ -27,6 +25,25 @@ supabase db reset   # applies all migrations in supabase/migrations against the 
 ```
 
 > `pg_cron` requires superuser-level extension privileges. On hosted Supabase this works directly via migration; on some other Postgres providers you may need to enable the extension from a dashboard first before `supabase db push` succeeds.
+
+## Getting started (app)
+
+```bash
+npm install
+cp .env.example .env   # fill in your Supabase project URL + anon key
+npm run web             # or: npm run ios / npm run android
+```
+
+The app is a single-page app (`app.json` → `web.output: "single"`) rather than statically rendered — Supabase's session client touches `window`/`localStorage` at init, which doesn't exist in Node's SSR context that `"static"` output would otherwise use.
+
+## App structure
+
+- `src/app/` — Expo Router routes: `(auth)` sign-in/up, `(tabs)` for Moves/Search/Profile, plus `moves/create`, `moves/[id]` (Move Room), `users/[id]` (mutual-friends profile view).
+- `src/features/*/api.ts` — all Supabase calls, one module per domain (`auth`, `profile`, `search`, `friends`, `moves`). Screens stay thin.
+- `src/components/` — hand-rolled primitives (`Avatar` renders the close-friend ring and host pulse dot, `SegmentedControl`, etc.) styled against `src/theme/tokens.ts`.
+- `src/providers/AuthProvider.tsx` — session + profile context; `src/app/_layout.tsx` redirects between the `(auth)` and `(tabs)` groups based on session state.
+
+Close friends are a **one-directional, per-viewer tag** (like an address-book star, not mutual) — stored as `user_1_marked_close` / `user_2_marked_close` on the `friendships` row and surfaced via `get_close_friend_ids()`. A Move's `max_members` cap is enforced server-side by a trigger on `move_members`, not just in the UI.
 
 ## Schema overview
 
@@ -70,4 +87,7 @@ Everything funnels through a small set of `SECURITY DEFINER` helper functions (`
 
 ## Next steps
 
-Once this backend is confirmed, the next step is scaffolding the Expo Router app: `src/features/*` modules (each owning its own `api.ts` against these tables/RPCs), `src/theme/tokens.ts` design tokens, and the five core screens (Live Map & Feed, Create a Move wizard, Friends & Mutuals, Profile, Move Room).
+- Real map view for the Public feed (currently a distance-sorted card list, not pins on a map).
+- Phone/contact-sync auth (currently email/password only).
+- Avatar image upload (currently a pasted URL).
+- A re-request flow for a previously-declined join (the unique `(move_id, user_id)` constraint currently blocks re-inserting after a `rejected` row).
