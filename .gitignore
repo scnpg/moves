@@ -5,19 +5,38 @@ supabase/.temp
 .env.local
 .env.*.local
 
-# Node / Expo (future app code)
+# Node / Expo
 node_modules/
 .expo/
 .expo-shared/
 dist/
 web-build/
+expo-env.d.ts
 *.log
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.tsbuildinfo
+.metro-health-check*
+
+# Native (generated)
+/ios
+/android
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
 
 # Editors / OS
 .vscode/
 .idea/
 .DS_Store
+*.pem
 Thumbs.db
+
+# Local session tooling (keep .claude/launch.json)
+.claude/settings.local.json
+.claude/*.lock
