@@ -1,0 +1,23 @@
+# Supabase CLI
+supabase/.branches
+supabase/.temp
+.env
+.env.local
+.env.*.local
+
+# Node / Expo (future app code)
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
