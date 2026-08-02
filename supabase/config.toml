@@ -41,6 +41,13 @@ enable_confirmations = true
 max_frequency = "1m0s"
 otp_length = 8
 
+# GoTrue's own email-send cap - separate from the SMTP relay above and from
+# max_frequency (that's the per-address cooldown; this is the project-wide
+# hourly ceiling). Defaults to a low value even with custom SMTP enabled,
+# so it still throttled signups after Resend was wired up.
+[auth.rate_limit]
+email_sent = 30
+
 # {{ .ConfirmationURL }} already embeds {{ .RedirectTo }} as a query param
 # (it's the full "verify then redirect" link GoTrue builds server-side) -
 # no need to reference .RedirectTo separately in the template body.
