@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -36,10 +35,13 @@ import {
   type MoveMemberWithProfile,
   type MoveMessageWithSender,
 } from '@/features/moves/api';
+import { confirmAction, notify } from '@/lib/alerts';
 import type { EligibleMove, Move, MoveMember } from '@/lib/database.types';
 import { formatCountdown, formatWhen } from '@/lib/format';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, degreeLabel, font, radius, spacing } from '@/theme/tokens';
+import { borderWidth, color, degreeBadgeLabel, font, radius, spacing } from '@/theme/tokens';
+
+const DEGREE_TONE = { 1: 'green', 2: 'blue', 3: 'pink' } as const;
 
 export default function MoveRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -136,7 +138,7 @@ export default function MoveRoomScreen() {
       await requestToJoin(id, myId);
       await load();
     } catch (err) {
-      Alert.alert('Could not join', err instanceof Error ? err.message : 'Please try again.');
+      notify('Could not join', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setJoining(false);
     }
@@ -160,7 +162,7 @@ export default function MoveRoomScreen() {
     try {
       await sendMessage(id, myId, content);
     } catch (err) {
-      Alert.alert('Message not sent', err instanceof Error ? err.message : 'Please try again.');
+      notify('Message not sent', err instanceof Error ? err.message : 'Please try again.');
     }
   };
 
@@ -179,19 +181,16 @@ export default function MoveRoomScreen() {
     if (id) setMembers(await listMembers(id));
   };
 
-  const handleEndMove = () => {
+  const handleEndMove = async () => {
     if (!id) return;
-    Alert.alert('End this Move?', 'The room will close and be deleted after a short cooldown.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'End Move',
-        style: 'destructive',
-        onPress: async () => {
-          await endMoveEarly(id);
-          await load();
-        },
-      },
-    ]);
+    const confirmed = await confirmAction(
+      'End this Move?',
+      'The room will close and be deleted after a short cooldown.',
+      'End Move'
+    );
+    if (!confirmed) return;
+    await endMoveEarly(id);
+    await load();
   };
 
   if (loading) {
@@ -228,7 +227,12 @@ export default function MoveRoomScreen() {
         <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
         <View style={styles.previewContent}>
           <View style={styles.previewHeader}>
-            <Avatar uri={previewMove.host_avatar_url} name={previewMove.host_display_name ?? previewMove.host_username} size={56} />
+            <Avatar
+              uri={previewMove.host_avatar_url}
+              name={previewMove.host_display_name ?? previewMove.host_username}
+              size={56}
+              tint={previewMove.degree_limit}
+            />
             <Text style={styles.title}>{previewMove.title}</Text>
             <Text style={styles.hostLine}>Hosted by {previewMove.host_display_name ?? previewMove.host_username}</Text>
           </View>
@@ -236,9 +240,12 @@ export default function MoveRoomScreen() {
           {previewMove.description ? <Text style={styles.description}>{previewMove.description}</Text> : null}
 
           <View style={styles.metaRow}>
-            <Badge label={formatWhen(previewMove.starts_at, previewMove.expires_at)} tone="brand" />
-            <Badge label={degreeLabel[previewMove.degree_limit]} />
-            {previewMove.requires_approval ? <Badge label="Approval required" tone="warning" /> : null}
+            <Badge label={formatWhen(previewMove.starts_at, previewMove.expires_at)} tone="green" />
+            <Badge
+              label={degreeBadgeLabel[previewMove.degree_limit]}
+              tone={DEGREE_TONE[previewMove.degree_limit]}
+            />
+            {previewMove.requires_approval ? <Badge label="Approval required" tone="yellow" /> : null}
           </View>
 
           <Text style={styles.helperText}>
@@ -302,7 +309,7 @@ export default function MoveRoomScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.roomHeader}>
           <View style={styles.roomHeaderRow}>
-            <Badge label={isActive ? `Ends in ${formatCountdown(countdownTarget)}` : `Closing in ${formatCountdown(countdownTarget)}`} tone={isActive ? 'brand' : 'danger'} />
+            <Badge label={isActive ? `Ends in ${formatCountdown(countdownTarget)}` : `Closing in ${formatCountdown(countdownTarget)}`} tone={isActive ? 'green' : 'pink'} />
             <Text style={styles.memberCount}>
               {approvedMembers.length}
               {move.max_members ? `/${move.max_members}` : ''} here
@@ -401,12 +408,12 @@ const styles = StyleSheet.create({
 
   previewContent: { flex: 1, padding: spacing.lg, gap: spacing.md },
   previewHeader: { alignItems: 'center', gap: spacing.xxs, paddingVertical: spacing.md },
-  title: { color: color.textPrimary, fontSize: font.size.xl, fontWeight: font.weight.bold, textAlign: 'center', marginTop: spacing.sm },
-  hostLine: { color: color.textMuted, fontSize: font.size.sm },
+  title: { color: color.textPrimary, fontSize: font.size.xl, fontWeight: font.weight.heavy, textAlign: 'center', marginTop: spacing.sm },
+  hostLine: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.sm },
   description: { color: color.textSecondary, fontSize: font.size.md },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  helperText: { color: color.textMuted, fontSize: font.size.xs },
-  waitingText: { color: color.warning, fontSize: font.size.sm, fontWeight: font.weight.medium },
+  helperText: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs },
+  waitingText: { color: color.textPrimary, fontSize: font.size.sm, fontWeight: font.weight.bold },
 
   roomHeader: {
     flexDirection: 'row',
@@ -414,35 +421,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: color.borderSubtle,
+    borderBottomWidth: borderWidth.base,
+    borderBottomColor: color.border,
   },
   roomHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  memberCount: { color: color.textMuted, fontSize: font.size.xs },
-  endLink: { color: color.danger, fontSize: font.size.sm, fontWeight: font.weight.semibold },
+  memberCount: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs },
+  endLink: { fontFamily: font.family.mono, color: color.danger, fontSize: font.size.sm, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
 
-  requestsSection: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.xs, borderBottomWidth: 1, borderBottomColor: color.borderSubtle },
-  sectionTitle: { color: color.textSecondary, fontSize: font.size.xs, fontWeight: font.weight.semibold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  requestsSection: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.xs, borderBottomWidth: borderWidth.base, borderBottomColor: color.border },
+  sectionTitle: { fontFamily: font.family.mono, color: color.textSecondary, fontSize: font.size.xs, fontWeight: font.weight.bold, textTransform: 'uppercase', letterSpacing: font.tracking.wide },
   requestRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  requestName: { flex: 1, color: color.textPrimary, fontSize: font.size.sm },
-  approveButton: { backgroundColor: color.success, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
-  approveText: { color: color.textInverse, fontSize: font.size.xs, fontWeight: font.weight.semibold },
-  rejectButton: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1, borderColor: color.border },
-  rejectText: { color: color.textMuted, fontSize: font.size.xs, fontWeight: font.weight.medium },
+  requestName: { flex: 1, color: color.textPrimary, fontSize: font.size.sm, fontWeight: font.weight.medium },
+  approveButton: { backgroundColor: color.accentGreen, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, borderWidth: borderWidth.thin, borderColor: color.border },
+  approveText: { fontFamily: font.family.mono, color: color.textPrimary, fontSize: font.size.xs, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
+  rejectButton: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, borderWidth: borderWidth.thin, borderColor: color.border },
+  rejectText: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
 
   messagesContent: { padding: spacing.lg, gap: spacing.sm, flexGrow: 1 },
   messageRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, maxWidth: '85%' },
   messageRowMine: { alignSelf: 'flex-end' },
-  bubble: { borderRadius: radius.lg, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-  bubbleTheirs: { backgroundColor: color.bgCard, borderWidth: 1, borderColor: color.borderSubtle },
+  bubble: { borderRadius: radius.md, borderWidth: borderWidth.thin, borderColor: color.border, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  bubbleTheirs: { backgroundColor: color.bgCard },
   bubbleMine: { backgroundColor: color.brand },
-  senderName: { color: color.textMuted, fontSize: font.size.xs, fontWeight: font.weight.semibold, marginBottom: 2 },
+  senderName: { color: color.textMuted, fontSize: font.size.xs, fontWeight: font.weight.bold, marginBottom: 2 },
   messageText: { color: color.textPrimary, fontSize: font.size.sm },
 
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, padding: spacing.md, borderTopWidth: 1, borderTopColor: color.borderSubtle },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, padding: spacing.md, borderTopWidth: borderWidth.base, borderTopColor: color.border },
   composerInput: { flex: 1 },
-  sendButton: { backgroundColor: color.brand, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill },
-  sendText: { color: color.textInverse, fontWeight: font.weight.semibold },
+  sendButton: { backgroundColor: color.brand, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.sm, borderWidth: borderWidth.base, borderColor: color.border },
+  sendText: { fontFamily: font.family.mono, color: color.textPrimary, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
 
   closedBanner: { padding: spacing.md, alignItems: 'center' },
   closedText: { color: color.textMuted, fontSize: font.size.sm },
@@ -458,6 +465,8 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     backgroundColor: color.danger,
+    borderWidth: borderWidth.thin,
+    borderColor: color.border,
     alignItems: 'center',
     justifyContent: 'center',
   },

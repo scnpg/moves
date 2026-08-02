@@ -1,21 +1,31 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 
-import { color, font } from '@/theme/tokens';
+import { borderWidth, color, degreeColor, font, neonPalette, radius } from '@/theme/tokens';
 
 interface AvatarProps {
   uri?: string | null;
   name?: string | null;
   size?: number;
-  /** Gold ring: this person is one of the *viewer's* close friends. */
+  /** Yellow ring: this person is one of the *viewer's* close friends. */
   closeFriend?: boolean;
-  /** Green dot: this person currently hosts an active Move. */
+  /** Green pulse dot: this person currently hosts an active Move. */
   hosting?: boolean;
+  /** Cycles through the accent palette instead of the fixed brand tint. */
+  tint?: 1 | 2 | 3;
 }
 
-export function Avatar({ uri, name, size = 44, closeFriend, hosting }: AvatarProps) {
+function fallbackTint(name?: string | null): string {
+  if (!name) return neonPalette[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return neonPalette[hash % neonPalette.length];
+}
+
+export function Avatar({ uri, name, size = 44, closeFriend, hosting, tint }: AvatarProps) {
   const initial = (name ?? '?').trim().charAt(0).toUpperCase();
-  const ringWidth = closeFriend ? 2.5 : 0;
+  const ringWidth = closeFriend ? borderWidth.base : 0;
   const outerSize = size + ringWidth * 2;
+  const bgColor = tint ? degreeColor[tint] : fallbackTint(name);
 
   return (
     <View
@@ -24,26 +34,31 @@ export function Avatar({ uri, name, size = 44, closeFriend, hosting }: AvatarPro
         {
           width: outerSize,
           height: outerSize,
-          borderRadius: outerSize / 2,
+          borderRadius: radius.md,
           borderWidth: ringWidth,
           borderColor: closeFriend ? color.closeFriend : 'transparent',
         },
       ]}
     >
       {uri ? (
-        <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+        <Image source={{ uri }} style={{ width: size, height: size, borderRadius: radius.sm }} />
       ) : (
         <View
           style={[
             styles.fallback,
-            { width: size, height: size, borderRadius: size / 2 },
+            { width: size, height: size, borderRadius: radius.sm, backgroundColor: bgColor },
           ]}
         >
-          <Text style={[styles.initial, { fontSize: size * 0.4 }]}>{initial}</Text>
+          <Text style={[styles.initial, { fontSize: size * 0.42 }]}>{initial}</Text>
         </View>
       )}
       {hosting ? (
-        <View style={[styles.pulseDot, { width: size * 0.28, height: size * 0.28, borderRadius: size * 0.14 }]} />
+        <View
+          style={[
+            styles.pulseDot,
+            { width: size * 0.3, height: size * 0.3, borderRadius: radius.sm * 0.75 },
+          ]}
+        />
       ) : null}
     </View>
   );
@@ -55,20 +70,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fallback: {
-    backgroundColor: color.brandMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: borderWidth.thin,
+    borderColor: color.border,
   },
   initial: {
     color: color.textPrimary,
-    fontWeight: font.weight.bold,
+    fontWeight: font.weight.heavy,
   },
   pulseDot: {
     position: 'absolute',
-    right: -1,
-    bottom: -1,
-    backgroundColor: color.success,
-    borderWidth: 2,
-    borderColor: color.bg,
+    right: -2,
+    bottom: -2,
+    backgroundColor: color.accentGreen,
+    borderWidth: borderWidth.thin,
+    borderColor: color.border,
   },
 });

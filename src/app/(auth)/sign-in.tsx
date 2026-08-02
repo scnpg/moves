@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
+import { SunburstBackdrop } from '@/components/Streamline';
 import { TextField } from '@/components/TextField';
 import { signIn } from '@/features/auth/api';
+import { notify } from '@/lib/alerts';
 import { color, font, spacing } from '@/theme/tokens';
 
 export default function SignInScreen() {
@@ -19,7 +21,7 @@ export default function SignInScreen() {
     try {
       await signIn({ email: email.trim(), password });
     } catch (err) {
-      Alert.alert('Sign in failed', err instanceof Error ? err.message : 'Please try again.');
+      notify('Sign in failed', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setLoading(false);
     }
@@ -32,8 +34,11 @@ export default function SignInScreen() {
         style={styles.flex}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Moves?</Text>
-          <Text style={styles.subtitle}>Spontaneous hangouts, privately.</Text>
+          <View style={styles.logoWrap}>
+            <SunburstBackdrop />
+            <Text style={styles.title}>MOVES?</Text>
+            <Text style={styles.subtitle}>SPONTANEOUS HANGOUTS, PRIVATELY.</Text>
+          </View>
 
           <View style={styles.form}>
             <TextField
@@ -73,17 +78,22 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.lg,
   },
+  logoWrap: {
+    alignItems: 'center',
+  },
   title: {
-    fontSize: font.size.xxl,
-    fontWeight: font.weight.bold,
+    fontFamily: font.family.logo,
+    fontSize: font.size.hero + 12,
     color: color.textPrimary,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: font.size.md,
-    color: color.textSecondary,
+    fontFamily: font.family.mono,
+    fontSize: font.size.xs,
+    color: color.textMuted,
     textAlign: 'center',
-    marginTop: -spacing.md,
+    letterSpacing: font.tracking.wide,
+    marginTop: -spacing.sm,
   },
   form: {
     gap: spacing.md,
@@ -97,7 +107,8 @@ const styles = StyleSheet.create({
     fontSize: font.size.sm,
   },
   linkTextStrong: {
-    color: color.brand,
-    fontWeight: font.weight.semibold,
+    color: color.textPrimary,
+    fontWeight: font.weight.heavy,
+    textDecorationLine: 'underline',
   },
 });

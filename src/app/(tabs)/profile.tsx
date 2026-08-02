@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+﻿import { useCallback, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -10,7 +11,8 @@ import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { signOut } from '@/features/auth/api';
 import { getMyFriends } from '@/features/friends/api';
-import { getHostedActiveMoves, updateProfile } from '@/features/profile/api';
+import { getHostedActiveMoves, updateProfile, uploadAvatar } from '@/features/profile/api';
+import { notify } from '@/lib/alerts';
 import type { Move } from '@/lib/database.types';
 import { formatWhen } from '@/lib/format';
 import { useAuth } from '@/providers/AuthProvider';
@@ -21,8 +23,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
-  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [activeMoves, setActiveMoves] = useState<Move[]>([]);
   const [friendCount, setFriendCount] = useState<number | null>(null);
 
@@ -36,7 +38,6 @@ export default function ProfileScreen() {
 
   const startEditing = () => {
     setDisplayName(profile?.display_name ?? '');
-    setAvatarUrl(profile?.avatar_url ?? '');
     setEditing(true);
   };
 
@@ -46,14 +47,42 @@ export default function ProfileScreen() {
     try {
       await updateProfile(session.user.id, {
         display_name: displayName.trim() || null,
-        avatar_url: avatarUrl.trim() || null,
       });
       await refreshProfile();
       setEditing(false);
     } catch (err) {
-      Alert.alert('Could not save', err instanceof Error ? err.message : 'Please try again.');
+      notify('Could not save', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    if (!session?.user) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      notify('Photo access needed', 'Allow photo library access to set a profile picture.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    setUploadingAvatar(true);
+    try {
+      const publicUrl = await uploadAvatar(session.user.id, asset.uri, asset.mimeType ?? 'image/jpeg');
+      await updateProfile(session.user.id, { avatar_url: publicUrl });
+      await refreshProfile();
+    } catch (err) {
+      notify('Could not upload photo', err instanceof Error ? err.message : 'Please try again.');
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -61,7 +90,7 @@ export default function ProfileScreen() {
     try {
       await signOut();
     } catch (err) {
-      Alert.alert('Sign out failed', err instanceof Error ? err.message : 'Please try again.');
+      notify('Sign out failed', err instanceof Error ? err.message : 'Please try again.');
     }
   };
 
@@ -76,7 +105,16 @@ export default function ProfileScreen() {
             <Text style={styles.headerTitle}>Profile</Text>
 
             <Card style={styles.profileCard}>
-              <Avatar uri={profile?.avatar_url} name={profile?.display_name ?? profile?.username} size={72} />
+              <Pressable onPress={handlePickAvatar} style={styles.avatarWrap} disabled={uploadingAvatar}>
+                <Avatar uri={profile?.avatar_url} name={profile?.display_name ?? profile?.username} size={72} />
+                <View style={styles.avatarOverlay}>
+                  {uploadingAvatar ? (
+                    <ActivityIndicator size="small" color={color.textInverse} />
+                  ) : (
+                    <Text style={styles.avatarOverlayText}>EDIT</Text>
+                  )}
+                </View>
+              </Pressable>
               <View style={styles.profileText}>
                 <Text style={styles.displayName}>{profile?.display_name ?? profile?.username}</Text>
                 <Text style={styles.username}>@{profile?.username}</Text>
@@ -95,13 +133,6 @@ export default function ProfileScreen() {
             {editing ? (
               <Card style={styles.editCard}>
                 <TextField label="Display name" value={displayName} onChangeText={setDisplayName} />
-                <TextField
-                  label="Avatar URL"
-                  value={avatarUrl}
-                  onChangeText={setAvatarUrl}
-                  autoCapitalize="none"
-                  placeholder="https://…"
-                />
                 <View style={styles.editActions}>
                   <Button label="Cancel" variant="secondary" onPress={() => setEditing(false)} style={styles.flexButton} />
                   <Button label="Save" onPress={handleSave} loading={saving} style={styles.flexButton} />
@@ -120,7 +151,7 @@ export default function ProfileScreen() {
               {item.title}
             </Text>
             <View style={styles.moveMetaRow}>
-              <Badge label={formatWhen(item.starts_at, item.expires_at)} tone="brand" />
+              <Badge label={formatWhen(item.starts_at, item.expires_at)} tone="green" />
             </View>
           </Card>
         )}
@@ -148,7 +179,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: font.size.xl,
-    fontWeight: font.weight.bold,
+    fontWeight: font.weight.heavy,
     color: color.textPrimary,
   },
   profileCard: {
@@ -156,15 +187,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  avatarWrap: {
+    position: 'relative',
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    bottom: -6,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.border,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  avatarOverlayText: {
+    fontFamily: font.family.mono,
+    color: color.textInverse,
+    fontSize: 9,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
+  },
   profileText: {
     flex: 1,
   },
   displayName: {
     color: color.textPrimary,
     fontSize: font.size.lg,
-    fontWeight: font.weight.semibold,
+    fontWeight: font.weight.heavy,
   },
   username: {
+    fontFamily: font.family.mono,
     color: color.textMuted,
     fontSize: font.size.sm,
   },
@@ -174,9 +227,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   friendsLabel: {
+    fontFamily: font.family.mono,
     color: color.textPrimary,
-    fontSize: font.size.md,
-    fontWeight: font.weight.medium,
+    fontSize: font.size.sm,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
   },
   chevron: {
     color: color.textMuted,
@@ -193,11 +248,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionTitle: {
+    fontFamily: font.family.mono,
     color: color.textSecondary,
-    fontSize: font.size.sm,
-    fontWeight: font.weight.semibold,
+    fontSize: font.size.xs,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.wide,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
     marginTop: spacing.sm,
   },
   moveCard: {
@@ -206,7 +262,7 @@ const styles = StyleSheet.create({
   moveTitle: {
     color: color.textPrimary,
     fontSize: font.size.md,
-    fontWeight: font.weight.medium,
+    fontWeight: font.weight.bold,
   },
   moveMetaRow: {
     flexDirection: 'row',

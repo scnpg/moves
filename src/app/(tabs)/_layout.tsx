@@ -1,11 +1,13 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { color, font } from '@/theme/tokens';
+import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
-function TabIcon({ glyph, focused }: { glyph: string; focused: boolean }) {
+function TabLabel({ label, focused }: { label: string; focused: boolean }) {
   return (
-    <Text style={{ fontSize: font.size.lg, opacity: focused ? 1 : 0.5 }}>{glyph}</Text>
+    <View style={[styles.labelBox, focused && styles.labelBoxActive]}>
+      <Text style={[styles.labelText, focused && styles.labelTextActive]}>{label}</Text>
+    </View>
   );
 }
 
@@ -14,11 +16,12 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: color.brand,
-        tabBarInactiveTintColor: color.textMuted,
+        tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: color.bgElevated,
+          backgroundColor: color.bg,
           borderTopColor: color.border,
+          borderTopWidth: borderWidth.base,
+          height: 64,
         },
       }}
     >
@@ -26,23 +29,46 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Moves',
-          tabBarIcon: ({ focused }) => <TabIcon glyph="📍" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabLabel label="MOVES" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: 'Search',
-          tabBarIcon: ({ focused }) => <TabIcon glyph="🔍" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabLabel label="SEARCH" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ focused }) => <TabIcon glyph="👤" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabLabel label="PROFILE" focused={focused} />,
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  labelBox: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+  },
+  labelBoxActive: {
+    backgroundColor: color.brandMuted,
+    borderWidth: borderWidth.thin,
+    borderColor: color.border,
+  },
+  labelText: {
+    fontFamily: font.family.mono,
+    fontSize: 11,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
+    color: color.textMuted,
+  },
+  labelTextActive: {
+    color: color.textPrimary,
+  },
+});

@@ -4,8 +4,8 @@ import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { Card } from '@/components/Card';
 import type { EligibleMove } from '@/lib/database.types';
-import { formatDistance, formatWhen } from '@/lib/format';
-import { color, degreeLabel, font, spacing } from '@/theme/tokens';
+import { formatDistance, formatTimeRemaining, formatWhen } from '@/lib/format';
+import { color, degreeBadgeLabel, degreeColor, font, spacing } from '@/theme/tokens';
 
 interface MoveCardProps {
   move: EligibleMove;
@@ -13,48 +13,50 @@ interface MoveCardProps {
   onPress: () => void;
 }
 
+const DEGREE_TONE = { 1: 'green', 2: 'blue', 3: 'pink' } as const;
+
 export function MoveCard({ move, hostIsCloseFriend, onPress }: MoveCardProps) {
   const distance = formatDistance(move.distance_m);
+  const isLive = new Date(move.starts_at).getTime() <= Date.now();
 
   return (
     <Pressable onPress={onPress}>
-      <Card style={styles.card}>
+      <Card style={styles.card} accentColor={degreeColor[move.degree_limit]}>
         <View style={styles.header}>
           <Avatar
             uri={move.host_avatar_url}
             name={move.host_display_name ?? move.host_username}
-            size={40}
+            size={44}
             closeFriend={hostIsCloseFriend}
+            hosting={isLive}
+            tint={move.degree_limit}
           />
           <View style={styles.headerText}>
             <Text style={styles.title} numberOfLines={1}>
               {move.title}
             </Text>
-            <Text style={styles.host} numberOfLines={1}>
-              Hosted by {move.host_display_name ?? move.host_username}
-            </Text>
+            {move.description ? (
+              <Text style={styles.description} numberOfLines={1}>
+                {move.description}
+              </Text>
+            ) : (
+              <Text style={styles.host} numberOfLines={1}>
+                Hosted by {move.host_display_name ?? move.host_username}
+              </Text>
+            )}
           </View>
         </View>
 
-        {move.description ? (
-          <Text style={styles.description} numberOfLines={2}>
-            {move.description}
-          </Text>
-        ) : null}
-
         <View style={styles.metaRow}>
-          <Badge label={formatWhen(move.starts_at, move.expires_at)} tone="brand" />
-          <Badge label={degreeLabel[move.degree_limit]} />
-          {move.requires_approval ? <Badge label="Approval required" tone="warning" /> : null}
-          {move.is_full ? <Badge label="Full" tone="danger" /> : null}
+          <Badge label={degreeBadgeLabel[move.degree_limit]} tone={DEGREE_TONE[move.degree_limit]} />
+          <Text style={styles.metaText}>
+            {move.approved_count} in · {isLive ? formatTimeRemaining(move.expires_at) : formatWhen(move.starts_at, move.expires_at)}
+          </Text>
+          {move.requires_approval ? <Badge label="Approval" tone="yellow" /> : null}
+          {move.is_full ? <Badge label="Full" tone="ink" /> : null}
         </View>
 
-        <View style={styles.footerRow}>
-          <Text style={styles.footerText}>
-            {move.max_members ? `${move.approved_count}/${move.max_members} joined` : `${move.approved_count} joined`}
-          </Text>
-          {distance ? <Text style={styles.footerText}>{distance}</Text> : null}
-        </View>
+        {distance ? <Text style={styles.distanceText}>{distance}</Text> : null}
       </Card>
     </Pressable>
   );
@@ -71,11 +73,12 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
+    gap: 2,
   },
   title: {
     color: color.textPrimary,
     fontSize: font.size.md,
-    fontWeight: font.weight.semibold,
+    fontWeight: font.weight.heavy,
   },
   host: {
     color: color.textMuted,
@@ -87,14 +90,17 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     flexWrap: 'wrap',
     gap: spacing.xs,
   },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  metaText: {
+    fontFamily: font.family.mono,
+    color: color.textMuted,
+    fontSize: font.size.xs,
   },
-  footerText: {
+  distanceText: {
+    fontFamily: font.family.mono,
     color: color.textMuted,
     fontSize: font.size.xs,
   },

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
-import { color, font, radius, spacing } from '@/theme/tokens';
+import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
 interface TextFieldProps extends TextInputProps {
   label?: string;
@@ -10,7 +10,7 @@ interface TextFieldProps extends TextInputProps {
 export function TextField({ label, error, style, ...inputProps }: TextFieldProps) {
   return (
     <View style={styles.wrapper}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <Text style={styles.label}>{label.toUpperCase()}</Text> : null}
       <TextInput
         placeholderTextColor={color.textMuted}
         style={[styles.input, error ? styles.inputError : null, style]}
@@ -26,15 +26,17 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   label: {
+    fontFamily: font.family.mono,
     color: color.textSecondary,
-    fontSize: font.size.sm,
-    fontWeight: font.weight.medium,
+    fontSize: font.size.xs,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
   },
   input: {
     backgroundColor: color.bgCard,
-    borderWidth: 1,
+    borderWidth: borderWidth.base,
     borderColor: color.border,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     color: color.textPrimary,

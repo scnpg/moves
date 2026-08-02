@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
 
-import { color, font, radius, spacing } from '@/theme/tokens';
+import { borderWidth, color, font, radius, shadow, spacing } from '@/theme/tokens';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -30,15 +30,15 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         variantStyles[variant],
+        variant !== 'ghost' && !isDisabled && (pressed ? styles.pressed : shadow.small),
         isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? color.textPrimary : color.textInverse} />
+        <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? color.textPrimary : color.textPrimary} />
       ) : (
-        <Text style={[styles.label, textVariantStyles[variant]]}>{label}</Text>
+        <Text style={[styles.label, textVariantStyles[variant]]}>{label.toUpperCase()}</Text>
       )}
     </Pressable>
   );
@@ -48,34 +48,38 @@ const styles = StyleSheet.create({
   base: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
+    borderWidth: borderWidth.base,
+    borderColor: color.border,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: spacing.xs,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   pressed: {
-    opacity: 0.8,
+    transform: [{ translateX: 2 }, { translateY: 2 }],
   },
   label: {
-    fontSize: font.size.md,
-    fontWeight: font.weight.semibold,
+    fontFamily: font.family.mono,
+    fontSize: font.size.sm,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
   },
 });
 
 const variantStyles: Record<Variant, ViewStyle> = StyleSheet.create({
   primary: { backgroundColor: color.brand },
-  secondary: { backgroundColor: color.bgCard, borderWidth: 1, borderColor: color.border },
+  secondary: { backgroundColor: color.bgCard },
   danger: { backgroundColor: color.danger },
-  ghost: { backgroundColor: 'transparent' },
+  ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
 });
 
 const textVariantStyles = StyleSheet.create({
-  primary: { color: color.textInverse },
+  primary: { color: color.textPrimary },
   secondary: { color: color.textPrimary },
-  danger: { color: color.textInverse },
+  danger: { color: color.textPrimary },
   ghost: { color: color.textSecondary },
 });

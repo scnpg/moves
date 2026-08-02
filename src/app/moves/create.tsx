@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 
 import { Button } from '@/components/Button';
@@ -8,6 +8,7 @@ import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { TextField } from '@/components/TextField';
 import { createMove } from '@/features/moves/api';
+import { notify } from '@/lib/alerts';
 import type { DegreeLimit } from '@/lib/database.types';
 import { useUserLocation } from '@/lib/useLocation';
 import { useAuth } from '@/providers/AuthProvider';
@@ -50,17 +51,17 @@ export default function CreateMoveScreen() {
   const handleCreate = async () => {
     if (!session?.user) return;
     if (!title.trim()) {
-      Alert.alert('Title required', 'Give your Move a title.');
+      notify('Title required', 'Give your Move a title.');
       return;
     }
     if (useLocation && !coords) {
-      Alert.alert('Location unavailable', 'We could not get your location. Try again or turn off location.');
+      notify('Location unavailable', 'We could not get your location. Try again or turn off location.');
       return;
     }
 
     const parsedMax = maxMembers.trim() ? Number(maxMembers) : null;
     if (parsedMax != null && (!Number.isInteger(parsedMax) || parsedMax <= 0)) {
-      Alert.alert('Invalid cap', 'Max members must be a positive whole number.');
+      notify('Invalid cap', 'Max members must be a positive whole number.');
       return;
     }
 
@@ -83,7 +84,7 @@ export default function CreateMoveScreen() {
       });
       router.replace(`/moves/${move.id}`);
     } catch (err) {
-      Alert.alert('Could not create Move', err instanceof Error ? err.message : 'Please try again.');
+      notify('Could not create Move', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -178,9 +179,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   label: {
+    fontFamily: font.family.mono,
     color: color.textSecondary,
-    fontSize: font.size.sm,
-    fontWeight: font.weight.medium,
+    fontSize: font.size.xs,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
+    textTransform: 'uppercase',
   },
   helperText: {
     color: color.textMuted,
@@ -201,6 +205,6 @@ const styles = StyleSheet.create({
   toggleLabel: {
     color: color.textPrimary,
     fontSize: font.size.sm,
-    fontWeight: font.weight.medium,
+    fontWeight: font.weight.bold,
   },
 });

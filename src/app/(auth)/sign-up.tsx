@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { signUp } from '@/features/auth/api';
+import { notify } from '@/lib/alerts';
 import { color, font, spacing } from '@/theme/tokens';
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
@@ -31,16 +32,21 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      await signUp({
+      const { signedIn } = await signUp({
         email: email.trim(),
         password,
         username: normalizedUsername,
         displayName: displayName.trim() || normalizedUsername,
       });
-      Alert.alert('Check your email', 'Confirm your address, then sign in.');
-      router.replace('/(auth)/sign-in');
+      // If confirmations are on, there's no session yet and the root
+      // layout's redirect won't fire - send them to sign in ourselves.
+      // If they're already signed in, the root layout handles navigation.
+      if (!signedIn) {
+        notify('Check your email', 'Confirm your address, then sign in.');
+        router.replace('/(auth)/sign-in');
+      }
     } catch (err) {
-      Alert.alert('Sign up failed', err instanceof Error ? err.message : 'Please try again.');
+      notify('Sign up failed', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setLoading(false);
     }
@@ -109,7 +115,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: font.size.xl,
-    fontWeight: font.weight.bold,
+    fontWeight: font.weight.heavy,
     color: color.textPrimary,
     textAlign: 'center',
   },
@@ -125,7 +131,8 @@ const styles = StyleSheet.create({
     fontSize: font.size.sm,
   },
   linkTextStrong: {
-    color: color.brand,
-    fontWeight: font.weight.semibold,
+    color: color.textPrimary,
+    fontWeight: font.weight.heavy,
+    textDecorationLine: 'underline',
   },
 });

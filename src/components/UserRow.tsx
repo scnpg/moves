@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import type { SearchFriendshipStatus } from '@/lib/database.types';
-import { color, font, radius, spacing } from '@/theme/tokens';
+import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
 interface UserRowProps {
   avatarUrl?: string | null;
@@ -14,6 +14,7 @@ interface UserRowProps {
   onAdd?: () => void;
   onAccept?: () => void;
   onToggleClose?: () => void;
+  onUnfriend?: () => void;
 }
 
 export function UserRow({
@@ -26,6 +27,7 @@ export function UserRow({
   onAdd,
   onAccept,
   onToggleClose,
+  onUnfriend,
 }: UserRowProps) {
   return (
     <Pressable onPress={onPress} style={styles.row}>
@@ -40,23 +42,32 @@ export function UserRow({
       </View>
       {friendshipStatus === 'none' && onAdd ? (
         <Pressable onPress={onAdd} style={styles.actionPrimary}>
-          <Text style={styles.actionPrimaryText}>Add</Text>
+          <Text style={styles.actionPrimaryText}>ADD</Text>
         </Pressable>
       ) : null}
       {friendshipStatus === 'pending_sent' ? (
         <View style={styles.actionMuted}>
-          <Text style={styles.actionMutedText}>Requested</Text>
+          <Text style={styles.actionMutedText}>REQUESTED</Text>
         </View>
       ) : null}
       {friendshipStatus === 'pending_received' && onAccept ? (
         <Pressable onPress={onAccept} style={styles.actionPrimary}>
-          <Text style={styles.actionPrimaryText}>Accept</Text>
+          <Text style={styles.actionPrimaryText}>ACCEPT</Text>
         </Pressable>
       ) : null}
-      {friendshipStatus === 'accepted' && onToggleClose ? (
-        <Pressable onPress={onToggleClose} style={styles.starButton}>
-          <Text style={[styles.star, isCloseFriend && styles.starActive]}>★</Text>
-        </Pressable>
+      {friendshipStatus === 'accepted' ? (
+        <View style={styles.acceptedActions}>
+          {onToggleClose ? (
+            <Pressable onPress={onToggleClose} style={styles.starButton}>
+              <Text style={[styles.star, isCloseFriend && styles.starActive]}>★</Text>
+            </Pressable>
+          ) : null}
+          {onUnfriend ? (
+            <Pressable onPress={onUnfriend} style={styles.unfriendButton}>
+              <Text style={styles.unfriendText}>UNFRIEND</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </Pressable>
   );
@@ -75,43 +86,69 @@ const styles = StyleSheet.create({
   name: {
     color: color.textPrimary,
     fontSize: font.size.md,
-    fontWeight: font.weight.medium,
+    fontWeight: font.weight.bold,
   },
   username: {
+    fontFamily: font.family.mono,
     color: color.textMuted,
     fontSize: font.size.xs,
   },
   actionPrimary: {
     backgroundColor: color.brand,
+    borderWidth: borderWidth.thin,
+    borderColor: color.border,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
   },
   actionPrimaryText: {
-    color: color.textInverse,
+    fontFamily: font.family.mono,
+    color: color.textPrimary,
     fontSize: font.size.xs,
-    fontWeight: font.weight.semibold,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
   },
   actionMuted: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: color.border,
+    borderRadius: radius.sm,
+    borderWidth: borderWidth.thin,
+    borderColor: color.borderSubtle,
   },
   actionMutedText: {
+    fontFamily: font.family.mono,
     color: color.textMuted,
     fontSize: font.size.xs,
-    fontWeight: font.weight.medium,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
+  },
+  acceptedActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   starButton: {
     padding: spacing.xxs,
   },
   star: {
     fontSize: font.size.lg,
-    color: color.border,
+    color: color.borderSubtle,
   },
   starActive: {
     color: color.closeFriend,
+  },
+  unfriendButton: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.sm,
+    borderWidth: borderWidth.thin,
+    borderColor: color.border,
+  },
+  unfriendText: {
+    fontFamily: font.family.mono,
+    color: color.danger,
+    fontSize: 10,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
   },
 });

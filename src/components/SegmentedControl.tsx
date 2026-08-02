@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { color, font, radius, spacing } from '@/theme/tokens';
+import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
 interface Segment<T extends string> {
   value: T;
@@ -20,15 +20,19 @@ export function SegmentedControl<T extends string>({
 }: SegmentedControlProps<T>) {
   return (
     <View style={styles.track}>
-      {segments.map((segment) => {
+      {segments.map((segment, index) => {
         const active = segment.value === value;
         return (
           <Pressable
             key={segment.value}
             onPress={() => onChange(segment.value)}
-            style={[styles.segment, active && styles.segmentActive]}
+            style={[
+              styles.segment,
+              index > 0 && styles.segmentDivider,
+              active && styles.segmentActive,
+            ]}
           >
-            <Text style={[styles.label, active && styles.labelActive]}>{segment.label}</Text>
+            <Text style={[styles.label, active && styles.labelActive]}>{segment.label.toUpperCase()}</Text>
           </Pressable>
         );
       })}
@@ -40,24 +44,29 @@ const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
     backgroundColor: color.bgCard,
-    borderRadius: radius.pill,
-    padding: 4,
-    borderWidth: 1,
+    borderRadius: radius.sm,
+    borderWidth: borderWidth.base,
     borderColor: color.border,
+    overflow: 'hidden',
   },
   segment: {
     flex: 1,
     paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
     alignItems: 'center',
   },
+  segmentDivider: {
+    borderLeftWidth: borderWidth.base,
+    borderLeftColor: color.border,
+  },
   segmentActive: {
-    backgroundColor: color.brand,
+    backgroundColor: color.border,
   },
   label: {
+    fontFamily: font.family.mono,
     color: color.textSecondary,
-    fontSize: font.size.sm,
-    fontWeight: font.weight.semibold,
+    fontSize: font.size.xs,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
   },
   labelActive: {
     color: color.textInverse,

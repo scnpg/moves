@@ -25,6 +25,19 @@ export function formatDistance(meters: number | null | undefined): string | null
   return `${(meters / 1000).toFixed(1)} km away`;
 }
 
+/** Short "2h 14m" style remaining-time, for card meta rows. */
+export function formatTimeRemaining(targetIso: string): string {
+  const remainingMs = new Date(targetIso).getTime() - Date.now();
+  if (remainingMs <= 0) return 'ended';
+
+  const totalMinutes = Math.floor(remainingMs / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
 export function formatCountdown(targetIso: string): string {
   const remainingMs = new Date(targetIso).getTime() - Date.now();
   if (remainingMs <= 0) return '0:00';

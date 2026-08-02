@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: font.size.xl,
-    fontWeight: font.weight.bold,
+    fontWeight: font.weight.heavy,
     color: color.textPrimary,
   },
   searchBox: {
