@@ -1,4 +1,21 @@
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
 import { supabase } from '@/lib/supabase';
+
+// The confirmation email's link redirects here after verifying - same
+// origin the signup happened from (so local dev links go back to
+// localhost, and real users land back on the deployed site). The app's
+// base path (experiments.baseUrl in app.json) only applies to the static
+// `expo export` build GitHub Pages serves - the local dev server always
+// serves from "/", regardless of that setting.
+function emailRedirectTo(): string | undefined {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+  const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  if (isLocalDev) return window.location.origin;
+  const baseUrl = Constants.expoConfig?.experiments?.baseUrl ?? '';
+  return `${window.location.origin}${baseUrl}`;
+}
 
 /** Returns whether the caller is now signed in - false means email confirmation is pending. */
 export async function signUp(params: {
@@ -15,6 +32,7 @@ export async function signUp(params: {
     password,
     options: {
       data: { username, display_name: displayName },
+      emailRedirectTo: emailRedirectTo(),
     },
   });
   if (error) throw error;

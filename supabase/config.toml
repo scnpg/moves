@@ -29,15 +29,38 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://localhost:3000"]
+site_url = "https://scnpg.github.io/moves"
+additional_redirect_urls = ["https://scnpg.github.io/moves/*", "http://localhost:8081"]
 jwt_expiry = 3600
 enable_signup = true
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = false
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+# {{ .ConfirmationURL }} already embeds {{ .RedirectTo }} as a query param
+# (it's the full "verify then redirect" link GoTrue builds server-side) -
+# no need to reference .RedirectTo separately in the template body.
+[auth.email.template.confirmation]
+subject = "Confirm your Moves? signup"
+content_path = "./supabase/templates/confirmation.html"
+
+# Hosted "moves" project only - lifts Supabase's built-in mailer off its
+# ~2-4/hour cap. Secret comes from the RESEND_SMTP_PASS env var at
+# `supabase config push` time - never committed here. Local dev catches
+# confirmation emails with the built-in Inbucket UI below (view them at
+# http://127.0.0.1:55324), so this section is inert for `supabase start`.
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_SMTP_PASS)"
+admin_email = "onboarding@resend.dev"
+sender_name = "Moves?"
 
 [realtime]
 enabled = true

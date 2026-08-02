@@ -67,14 +67,14 @@ export default function SignUpScreen() {
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
-              placeholder="jordan_k"
+              placeholder="Ex. white_monster"
               error={usernameError}
             />
             <TextField
               label="Display name"
               value={displayName}
               onChangeText={setDisplayName}
-              placeholder="Jordan Kim"
+              placeholder="Ex. David D."
             />
             <TextField
               label="Email"
