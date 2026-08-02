@@ -11,28 +11,34 @@ Privacy-first, ephemeral social app for spontaneous real-world hangouts ("Moves"
 
 Requires the [Supabase CLI](https://supabase.com/docs/guides/cli) and Docker.
 
+The hosted project is `izvpxesuybpzzbfonbmp` (region `ap-south-1`, org `scnpg's Org`) — [dashboard](https://supabase.com/dashboard/project/izvpxesuybpzzbfonbmp). To push schema changes to it:
+
 ```bash
 supabase login
-supabase link --project-ref <your-project-ref>
+supabase link --project-ref izvpxesuybpzzbfonbmp
 supabase db push
 ```
 
-To run everything locally instead:
+To run everything locally instead (useful for schema work you don't want to push until it's ready):
 
 ```bash
 supabase start
 supabase db reset   # applies all migrations in supabase/migrations against the local db
 ```
 
-> `pg_cron` requires superuser-level extension privileges. On hosted Supabase this works directly via migration; on some other Postgres providers you may need to enable the extension from a dashboard first before `supabase db push` succeeds.
+> `pg_cron` requires superuser-level extension privileges — works directly via migration on hosted Supabase.
+>
+> PostGIS types must be schema-qualified (`extensions.geography(...)`, not bare `geography(...)`) in table DDL — the migration connection's default `search_path` doesn't include `extensions` on hosted projects the way it does locally. Functions instead set `search_path` explicitly (`set search_path = public, extensions`) in their own definition, which works on both.
 
 ## Getting started (app)
 
 ```bash
 npm install
-cp .env.example .env   # fill in your Supabase project URL + anon key
+cp .env.example .env   # fill in your Supabase project URL + anon key (see below for the hosted ones)
 npm run web             # or: npm run ios / npm run android
 ```
+
+`.env` (gitignored) currently points at the hosted `moves` project by default. Email/password auth is on with confirmation required — Supabase sends the confirmation email itself (no SMTP setup needed for testing), but **plus-addressed emails (`you+tag@gmail.com`) are rejected** by its default validator, so use a plain address. To develop against a disposable local database instead, run `supabase start` and point `.env` at `http://127.0.0.1:<api-port>` with the anon key `supabase status` prints (confirmations are disabled there by default, so signup logs you in immediately).
 
 The app is a single-page app (`app.json` → `web.output: "single"`) rather than statically rendered — Supabase's session client touches `window`/`localStorage` at init, which doesn't exist in Node's SSR context that `"static"` output would otherwise use.
 
@@ -49,7 +55,7 @@ Close friends are a **one-directional, per-viewer tag** (like an address-book st
 
 | Table | Purpose |
 |---|---|
-| `profiles` | One row per `auth.users` row. Auto-created on signup via `handle_new_user()` trigger. **No friend-count column exists anywhere** — friend counts are hidden by never being computed. |
+| `profiles` | One row per `auth.users` row. Auto-created on signup via `handle_new_user()` trigger. **No friend-count column exists anywhere** — friend counts are hidden by never being computed. Also carries `last_lat`/`last_lng` (rounded to ~1.1km, written only by `update_my_location()`) and `phone_hash` (a SHA-256 the user opts into) — both power friend suggestions, see below. |
 | `friendships` | Undirected edges, always stored normalized as `user_id_1 < user_id_2` (enforced by a trigger). `status` is `pending` or `accepted`; `requested_by` tracks who sent the request. |
 | `moves` | A hangout room. `location` is a PostGIS `geography(Point, 4326)` and is **never** selected directly by clients — see below. `degree_limit` (1/2/3) and `requires_approval` drive access control. Lifecycle: `active` → `cooldown` → hard-deleted. |
 | `move_members` | Join state per user per move (`pending` / `approved` / `rejected`). The host is auto-inserted as `approved` when a move is created. |
@@ -85,9 +91,20 @@ Everything funnels through a small set of `SECURITY DEFINER` helper functions (`
 
 `move_messages` and `move_members` are added to the `supabase_realtime` publication for live chat and live join-request queues. RLS still applies to realtime payloads — subscribers only ever receive rows their own `SELECT` policies allow.
 
+### Recommended friends
+
+Shown in Search when the query box is empty (`src/app/(tabs)/search.tsx`), from three RPCs, each excluding existing friends/pending requests:
+
+- `get_friend_of_friend_suggestions()` — degree-2 people ranked by mutual-friend count.
+- `get_nearby_user_suggestions(radius_m)` — against the caller's own rounded `last_lat`/`last_lng`.
+- `match_contacts(phone_hashes)` — the client normalizes + SHA-256-hashes device contacts (`src/lib/phone.ts`, `src/lib/contacts.ts`) and sends only hashes; raw numbers, the user's own or anyone in their contacts, never reach the server. Native only — no Contacts API on web.
+
+### Live map
+
+`src/components/LiveMap.web.tsx` is a real Leaflet map (OpenStreetMap tiles, no API key) on web, picked automatically by Metro over the `.tsx` fallback (a decorative panel, since no native map library is wired up yet). Pins use each move's `fuzzy_lat`/`fuzzy_lng` — rounded the same way as profile locations — so an approximate pin is always visible without waiting on approval, while the exact address stays gated behind membership as above.
+
 ## Next steps
 
-- Real map view for the Public feed (currently a distance-sorted card list, not pins on a map).
-- Phone/contact-sync auth (currently email/password only).
-- Avatar image upload (currently a pasted URL).
+- Native map (no `react-native-maps`/API keys configured yet — `LiveMap.tsx` is a placeholder on that platform).
+- Phone-number *login* (contacts matching exists via `phone_hash`, but sign-in is still email/password only).
 - A re-request flow for a previously-declined join (the unique `(move_id, user_id)` constraint currently blocks re-inserting after a `rejected` row).
