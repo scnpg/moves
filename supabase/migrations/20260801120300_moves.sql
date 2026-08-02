@@ -12,7 +12,7 @@ create table public.moves (
   host_id uuid not null references public.profiles (id) on delete cascade,
   title text not null,
   description text,
-  location geography(point, 4326),
+  location extensions.geography(point, 4326),
   degree_limit smallint not null default 3 check (degree_limit in (1, 2, 3)),
   requires_approval boolean not null default false,
   starts_at timestamptz not null,
