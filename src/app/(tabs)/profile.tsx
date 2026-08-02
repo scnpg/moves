@@ -190,7 +190,7 @@ export default function ProfileScreen() {
         }
         renderItem={({ item }) => (
           <Card style={styles.moveCard}>
-            <Text style={styles.moveTitle} onPress={() => router.push(`/moves/${item.id}`)}>
+            <Text style={styles.moveTitle} onPress={() => router.push(`/room/${item.id}`)}>
               {item.title}
             </Text>
             <View style={styles.moveMetaRow}>

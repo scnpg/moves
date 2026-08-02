@@ -68,7 +68,7 @@ function RootNavigation() {
       <StatusBar style="dark" />
       {!onSignIn ? <AppHeader /> : null}
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
-        <Stack.Screen name="moves/create" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="room/create" options={{ presentation: 'modal' }} />
       </Stack>
     </View>
   );

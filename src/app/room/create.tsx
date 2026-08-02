@@ -105,7 +105,7 @@ export default function CreateMoveScreen() {
         lat: location?.lat ?? null,
         lng: location?.lng ?? null,
       });
-      router.replace(`/moves/${move.id}`);
+      router.replace(`/room/${move.id}`);
     } catch (err) {
       notify('Could not create Move', err instanceof Error ? err.message : 'Please try again.');
     } finally {

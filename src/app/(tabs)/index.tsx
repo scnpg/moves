@@ -97,7 +97,7 @@ export default function MovesScreen() {
             <LiveMap
               moves={moves}
               center={coords}
-              onSelectMove={(moveId) => router.push(`/moves/${moveId}`)}
+              onSelectMove={(moveId) => router.push(`/room/${moveId}`)}
             />
 
             <View style={styles.controlsRow}>
@@ -111,7 +111,7 @@ export default function MovesScreen() {
                   onChange={setTab}
                 />
               </View>
-              <HoverPressable onPress={() => router.push('/moves/create')} style={styles.newButton}>
+              <HoverPressable onPress={() => router.push('/room/create')} style={styles.newButton}>
                 <Text style={styles.newButtonText}>+</Text>
               </HoverPressable>
             </View>
@@ -128,7 +128,7 @@ export default function MovesScreen() {
             <MoveCard
               move={item}
               hostIsCloseFriend={closeFriendIds.has(item.host_id)}
-              onPress={() => router.push(`/moves/${item.id}`)}
+              onPress={() => router.push(`/room/${item.id}`)}
             />
           </View>
         )}
