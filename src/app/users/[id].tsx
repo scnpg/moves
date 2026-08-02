@@ -140,6 +140,7 @@ export default function UserProfileScreen() {
           />
           <Text style={styles.displayName}>{profile.display_name ?? profile.username}</Text>
           <Text style={styles.username}>@{profile.username}</Text>
+          {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
 
           <View style={styles.actionsRow}>
             {status === 'none' ? (
@@ -218,6 +219,13 @@ const styles = StyleSheet.create({
     fontFamily: font.family.mono,
     color: color.textMuted,
     fontSize: font.size.sm,
+  },
+  bio: {
+    color: color.textSecondary,
+    fontSize: font.size.sm,
+    lineHeight: font.size.sm * 1.4,
+    textAlign: 'center',
+    marginTop: spacing.xs,
   },
   actionsRow: {
     marginTop: spacing.md,

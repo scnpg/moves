@@ -20,11 +20,14 @@ import { hashPhone } from '@/lib/phone';
 import { useAuth } from '@/providers/AuthProvider';
 import { color, font, spacing } from '@/theme/tokens';
 
+const BIO_MAX_LENGTH = 280;
+
 export default function ProfileScreen() {
   const { session, profile, refreshProfile } = useAuth();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
+  const [bioInput, setBioInput] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -41,12 +44,17 @@ export default function ProfileScreen() {
 
   const startEditing = () => {
     setDisplayName(profile?.display_name ?? '');
+    setBioInput(profile?.bio ?? '');
     setPhoneInput('');
     setEditing(true);
   };
 
   const handleSave = async () => {
     if (!session?.user) return;
+    if (bioInput.length > BIO_MAX_LENGTH) {
+      notify('Bio too long', `Keep it under ${BIO_MAX_LENGTH} characters.`);
+      return;
+    }
     setSaving(true);
     try {
       const phoneHash = phoneInput.trim() ? await hashPhone(phoneInput.trim()) : undefined;
@@ -57,6 +65,7 @@ export default function ProfileScreen() {
       }
       await updateProfile(session.user.id, {
         display_name: displayName.trim() || null,
+        bio: bioInput.trim() || null,
         ...(phoneHash ? { phone_hash: phoneHash } : {}),
       });
       await refreshProfile();
@@ -132,6 +141,8 @@ export default function ProfileScreen() {
               </View>
             </Card>
 
+            {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+
             <HoverPressable onPress={() => router.push('/friends')}>
               <Card style={styles.friendsRow}>
                 <Text style={styles.friendsLabel}>
@@ -144,6 +155,17 @@ export default function ProfileScreen() {
             {editing ? (
               <Card style={styles.editCard}>
                 <TextField label="Display name" value={displayName} onChangeText={setDisplayName} />
+                <TextField
+                  label="Bio (optional)"
+                  value={bioInput}
+                  onChangeText={setBioInput}
+                  placeholder="Say something about yourself"
+                  multiline
+                  maxLength={BIO_MAX_LENGTH}
+                />
+                <Text style={styles.charCount}>
+                  {bioInput.length}/{BIO_MAX_LENGTH}
+                </Text>
                 <TextField
                   label="Phone number (optional)"
                   value={phoneInput}
@@ -242,6 +264,11 @@ const styles = StyleSheet.create({
     color: color.textMuted,
     fontSize: font.size.sm,
   },
+  bio: {
+    color: color.textSecondary,
+    fontSize: font.size.sm,
+    lineHeight: font.size.sm * 1.4,
+  },
   friendsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -264,6 +291,13 @@ const styles = StyleSheet.create({
   helperText: {
     color: color.textMuted,
     fontSize: font.size.xs,
+    marginTop: -spacing.xs,
+  },
+  charCount: {
+    fontFamily: font.family.mono,
+    color: color.textMuted,
+    fontSize: font.size.xs,
+    textAlign: 'right',
     marginTop: -spacing.xs,
   },
   editActions: {

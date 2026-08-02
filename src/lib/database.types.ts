@@ -11,6 +11,7 @@ export interface Profile {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  bio: string | null;
   created_at: string;
   last_lat: number | null;
   last_lng: number | null;
