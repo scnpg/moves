@@ -1,5 +1,6 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, type ViewStyle } from 'react-native';
 
+import { HoverPressable } from '@/components/HoverPressable';
 import { borderWidth, color, font, radius, shadow, spacing } from '@/theme/tokens';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -24,23 +25,24 @@ export function Button({
   const isDisabled = disabled || loading;
 
   return (
-    <Pressable
+    <HoverPressable
       onPress={onPress}
       disabled={isDisabled}
+      lightenOpacity={variant === 'ghost' ? 0.08 : 0.18}
       style={({ pressed }) => [
         styles.base,
         variantStyles[variant],
-        variant !== 'ghost' && !isDisabled && (pressed ? styles.pressed : shadow.small),
+        variant !== 'ghost' && !isDisabled ? (pressed ? styles.pressed : shadow.small) : undefined,
         isDisabled && styles.disabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? color.textPrimary : color.textPrimary} />
+        <ActivityIndicator color={color.textPrimary} />
       ) : (
         <Text style={[styles.label, textVariantStyles[variant]]}>{label.toUpperCase()}</Text>
       )}
-    </Pressable>
+    </HoverPressable>
   );
 }
 

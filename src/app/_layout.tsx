@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AlertProvider } from '@/providers/AlertProvider';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { color } from '@/theme/tokens';
 
@@ -23,9 +24,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <RootNavigation />
-      </AuthProvider>
+      <AlertProvider>
+        <AuthProvider>
+          <RootNavigation />
+        </AuthProvider>
+      </AlertProvider>
     </SafeAreaProvider>
   );
 }

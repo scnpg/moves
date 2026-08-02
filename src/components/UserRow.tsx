@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { HoverPressable } from '@/components/HoverPressable';
 import type { SearchFriendshipStatus } from '@/lib/database.types';
 import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
@@ -41,9 +42,9 @@ export function UserRow({
         </Text>
       </View>
       {friendshipStatus === 'none' && onAdd ? (
-        <Pressable onPress={onAdd} style={styles.actionPrimary}>
+        <HoverPressable onPress={onAdd} style={styles.actionPrimary}>
           <Text style={styles.actionPrimaryText}>ADD</Text>
-        </Pressable>
+        </HoverPressable>
       ) : null}
       {friendshipStatus === 'pending_sent' ? (
         <View style={styles.actionMuted}>
@@ -51,21 +52,21 @@ export function UserRow({
         </View>
       ) : null}
       {friendshipStatus === 'pending_received' && onAccept ? (
-        <Pressable onPress={onAccept} style={styles.actionPrimary}>
+        <HoverPressable onPress={onAccept} style={styles.actionPrimary}>
           <Text style={styles.actionPrimaryText}>ACCEPT</Text>
-        </Pressable>
+        </HoverPressable>
       ) : null}
       {friendshipStatus === 'accepted' ? (
         <View style={styles.acceptedActions}>
           {onToggleClose ? (
-            <Pressable onPress={onToggleClose} style={styles.starButton}>
+            <HoverPressable onPress={onToggleClose} style={styles.starButton} lightenOpacity={0.25}>
               <Text style={[styles.star, isCloseFriend && styles.starActive]}>★</Text>
-            </Pressable>
+            </HoverPressable>
           ) : null}
           {onUnfriend ? (
-            <Pressable onPress={onUnfriend} style={styles.unfriendButton}>
+            <HoverPressable onPress={onUnfriend} style={styles.unfriendButton}>
               <Text style={styles.unfriendText}>UNFRIEND</Text>
-            </Pressable>
+            </HoverPressable>
           ) : null}
         </View>
       ) : null}
@@ -129,6 +130,7 @@ const styles = StyleSheet.create({
   },
   starButton: {
     padding: spacing.xxs,
+    borderRadius: radius.sm,
   },
   star: {
     fontSize: font.size.lg,

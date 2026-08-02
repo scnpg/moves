@@ -4,7 +4,6 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -15,6 +14,7 @@ import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { getCloseFriendIds } from '@/features/friends/api';
@@ -316,9 +316,9 @@ export default function MoveRoomScreen() {
             </Text>
           </View>
           {isHost && isActive ? (
-            <Pressable onPress={handleEndMove}>
+            <HoverPressable onPress={handleEndMove} style={styles.endLinkWrap}>
               <Text style={styles.endLink}>End Move</Text>
-            </Pressable>
+            </HoverPressable>
           ) : null}
         </View>
 
@@ -331,12 +331,12 @@ export default function MoveRoomScreen() {
                 <Text style={styles.requestName} numberOfLines={1}>
                   {pm.profile.display_name ?? pm.profile.username}
                 </Text>
-                <Pressable onPress={() => handleApprove(pm.id)} style={styles.approveButton}>
+                <HoverPressable onPress={() => handleApprove(pm.id)} style={styles.approveButton}>
                   <Text style={styles.approveText}>Approve</Text>
-                </Pressable>
-                <Pressable onPress={() => handleReject(pm.id)} style={styles.rejectButton}>
+                </HoverPressable>
+                <HoverPressable onPress={() => handleReject(pm.id)} style={styles.rejectButton}>
                   <Text style={styles.rejectText}>Decline</Text>
-                </Pressable>
+                </HoverPressable>
               </View>
             ))}
           </View>
@@ -369,9 +369,9 @@ export default function MoveRoomScreen() {
             <View style={styles.composerInput}>
               <TextField value={messageText} onChangeText={setMessageText} placeholder="Message the group" onSubmitEditing={handleSend} />
             </View>
-            <Pressable onPress={handleSend} style={styles.sendButton}>
+            <HoverPressable onPress={handleSend} style={styles.sendButton}>
               <Text style={styles.sendText}>Send</Text>
-            </Pressable>
+            </HoverPressable>
           </View>
         ) : (
           <View style={styles.closedBanner}>
@@ -384,14 +384,19 @@ export default function MoveRoomScreen() {
             <Text style={styles.sectionTitle}>Who&apos;s here</Text>
             <View style={styles.memberAvatars}>
               {approvedMembers.map((m) => (
-                <Pressable key={m.id} onPress={() => (m.user_id !== myId ? router.push(`/users/${m.user_id}`) : undefined)} style={styles.memberAvatarWrap}>
+                <HoverPressable
+                  key={m.id}
+                  onPress={() => (m.user_id !== myId ? router.push(`/users/${m.user_id}`) : undefined)}
+                  style={styles.memberAvatarWrap}
+                  lightenOpacity={0.2}
+                >
                   <Avatar uri={m.profile.avatar_url} name={m.profile.display_name ?? m.profile.username} size={36} closeFriend={closeFriendIds.has(m.user_id)} />
                   {isHost && m.user_id !== move.host_id ? (
-                    <Pressable onPress={() => handleKick(m.id)} style={styles.kickBadge}>
+                    <HoverPressable onPress={() => handleKick(m.id)} style={styles.kickBadge}>
                       <Text style={styles.kickText}>×</Text>
-                    </Pressable>
+                    </HoverPressable>
                   ) : null}
-                </Pressable>
+                </HoverPressable>
               ))}
             </View>
           </Card>
@@ -426,6 +431,7 @@ const styles = StyleSheet.create({
   },
   roomHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   memberCount: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs },
+  endLinkWrap: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs, borderRadius: radius.sm },
   endLink: { fontFamily: font.family.mono, color: color.danger, fontSize: font.size.sm, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
 
   requestsSection: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.xs, borderBottomWidth: borderWidth.base, borderBottomColor: color.border },
@@ -448,7 +454,7 @@ const styles = StyleSheet.create({
 
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, padding: spacing.md, borderTopWidth: borderWidth.base, borderTopColor: color.border },
   composerInput: { flex: 1 },
-  sendButton: { backgroundColor: color.brand, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.sm, borderWidth: borderWidth.base, borderColor: color.border },
+  sendButton: { backgroundColor: color.accentBlue, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.sm, borderWidth: borderWidth.base, borderColor: color.border },
   sendText: { fontFamily: font.family.mono, color: color.textPrimary, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
 
   closedBanner: { padding: spacing.md, alignItems: 'center' },

@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
+import { HoverPressable } from '@/components/HoverPressable';
 import { LiveMap } from '@/components/LiveMap';
 import { MoveCard } from '@/components/MoveCard';
 import { Screen } from '@/components/Screen';
@@ -115,9 +116,9 @@ export default function MovesScreen() {
                   onChange={setTab}
                 />
               </View>
-              <Pressable onPress={() => router.push('/moves/create')} style={styles.newButton}>
+              <HoverPressable onPress={() => router.push('/moves/create')} style={styles.newButton}>
                 <Text style={styles.newButtonText}>+</Text>
-              </Pressable>
+              </HoverPressable>
             </View>
 
             <View style={styles.sectionBar}>
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: color.brand,
+    backgroundColor: color.accentBlue,
     borderWidth: borderWidth.base,
     borderColor: color.border,
     borderRadius: radius.sm,

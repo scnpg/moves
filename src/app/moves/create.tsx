@@ -4,27 +4,28 @@ import { Stack, useRouter } from 'expo-router';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { LocationPicker, type LocationValue } from '@/components/LocationPicker';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { TextField } from '@/components/TextField';
+import { TimeField } from '@/components/TimeField';
 import { createMove } from '@/features/moves/api';
 import { notify } from '@/lib/alerts';
 import type { DegreeLimit } from '@/lib/database.types';
-import { useUserLocation } from '@/lib/useLocation';
+import { nextOccurrenceOf, timeAfter, timeString } from '@/lib/time';
 import { useAuth } from '@/providers/AuthProvider';
 import { color, degreeDescription, font, spacing } from '@/theme/tokens';
-
-const START_OPTIONS = [
-  { value: '0', label: 'Now' },
-  { value: '30', label: 'In 30 min' },
-  { value: '60', label: 'In 1 hour' },
-] as const;
 
 const DURATION_OPTIONS = [
   { value: '1', label: '1 hr' },
   { value: '2', label: '2 hrs' },
   { value: '4', label: '4 hrs' },
   { value: '6', label: '6 hrs' },
+] as const;
+
+const END_MODE_OPTIONS = [
+  { value: 'duration', label: 'Duration' },
+  { value: 'time', label: 'End time' },
 ] as const;
 
 const DEGREE_OPTIONS = [
@@ -36,26 +37,23 @@ const DEGREE_OPTIONS = [
 export default function CreateMoveScreen() {
   const { session } = useAuth();
   const router = useRouter();
-  const { coords } = useUserLocation();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [degreeLimit, setDegreeLimit] = useState<DegreeLimit>(3);
-  const [startsInMinutes, setStartsInMinutes] = useState<(typeof START_OPTIONS)[number]['value']>('0');
+  const [startTime, setStartTime] = useState(() => timeString(new Date()));
+  const [endMode, setEndMode] = useState<(typeof END_MODE_OPTIONS)[number]['value']>('duration');
   const [durationHours, setDurationHours] = useState<(typeof DURATION_OPTIONS)[number]['value']>('2');
+  const [endTime, setEndTime] = useState(() => timeString(new Date(Date.now() + 2 * 60 * 60_000)));
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [maxMembers, setMaxMembers] = useState('');
-  const [useLocation, setUseLocation] = useState(false);
+  const [location, setLocation] = useState<LocationValue | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleCreate = async () => {
     if (!session?.user) return;
     if (!title.trim()) {
       notify('Title required', 'Give your Move a title.');
-      return;
-    }
-    if (useLocation && !coords) {
-      notify('Location unavailable', 'We could not get your location. Try again or turn off location.');
       return;
     }
 
@@ -65,8 +63,13 @@ export default function CreateMoveScreen() {
       return;
     }
 
-    const startsAt = new Date(Date.now() + Number(startsInMinutes) * 60_000);
-    const expiresAt = new Date(startsAt.getTime() + Number(durationHours) * 60 * 60_000);
+    // A time in the past means "tomorrow" - Moves are same-day/spontaneous,
+    // there's no separate date picker.
+    const startsAt = nextOccurrenceOf(startTime);
+    const expiresAt =
+      endMode === 'duration'
+        ? new Date(startsAt.getTime() + Number(durationHours) * 60 * 60_000)
+        : timeAfter(endTime, startsAt, startsAt);
 
     setSubmitting(true);
     try {
@@ -79,8 +82,8 @@ export default function CreateMoveScreen() {
         startsAt: startsAt.toISOString(),
         expiresAt: expiresAt.toISOString(),
         maxMembers: parsedMax,
-        lat: useLocation ? coords?.lat ?? null : null,
-        lng: useLocation ? coords?.lng ?? null : null,
+        lat: location?.lat ?? null,
+        lng: location?.lng ?? null,
       });
       router.replace(`/moves/${move.id}`);
     } catch (err) {
@@ -110,14 +113,16 @@ export default function CreateMoveScreen() {
           multiline
         />
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Starts</Text>
-          <SegmentedControl segments={START_OPTIONS} value={startsInMinutes} onChange={setStartsInMinutes} />
-        </View>
+        <TimeField label="Starts" value={startTime} onChange={setStartTime} />
 
         <View style={styles.field}>
-          <Text style={styles.label}>Duration</Text>
-          <SegmentedControl segments={DURATION_OPTIONS} value={durationHours} onChange={setDurationHours} />
+          <Text style={styles.label}>Ends</Text>
+          <SegmentedControl segments={END_MODE_OPTIONS} value={endMode} onChange={setEndMode} />
+          {endMode === 'duration' ? (
+            <SegmentedControl segments={DURATION_OPTIONS} value={durationHours} onChange={setDurationHours} />
+          ) : (
+            <TimeField label="End time" value={endTime} onChange={setEndTime} />
+          )}
         </View>
 
         <View style={styles.field}>
@@ -150,19 +155,15 @@ export default function CreateMoveScreen() {
           keyboardType="number-pad"
         />
 
-        <Card style={styles.toggleCard}>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleText}>
-              <Text style={styles.toggleLabel}>Share my location</Text>
-              <Text style={styles.helperText}>
-                {degreeLimit === 1
-                  ? 'Exact location is visible once someone joins.'
-                  : 'Exact location stays hidden until someone joins or is approved.'}
-              </Text>
-            </View>
-            <Switch value={useLocation} onValueChange={setUseLocation} trackColor={{ true: color.brand, false: color.border }} />
-          </View>
-        </Card>
+        <View style={styles.field}>
+          <Text style={styles.label}>Location (optional)</Text>
+          <Text style={styles.helperText}>
+            {degreeLimit === 1
+              ? 'Exact location is visible once someone joins.'
+              : 'Exact location stays hidden until someone joins or is approved.'}
+          </Text>
+          <LocationPicker value={location} onChange={setLocation} />
+        </View>
 
         <Button label="Create Move" onPress={handleCreate} loading={submitting} />
       </ScrollView>

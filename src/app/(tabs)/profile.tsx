@@ -1,5 +1,5 @@
 ﻿import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -7,6 +7,7 @@ import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { signOut } from '@/features/auth/api';
@@ -115,7 +116,7 @@ export default function ProfileScreen() {
             <Text style={styles.headerTitle}>Profile</Text>
 
             <Card style={styles.profileCard}>
-              <Pressable onPress={handlePickAvatar} style={styles.avatarWrap} disabled={uploadingAvatar}>
+              <HoverPressable onPress={handlePickAvatar} style={styles.avatarWrap} disabled={uploadingAvatar}>
                 <Avatar uri={profile?.avatar_url} name={profile?.display_name ?? profile?.username} size={72} />
                 <View style={styles.avatarOverlay}>
                   {uploadingAvatar ? (
@@ -124,21 +125,21 @@ export default function ProfileScreen() {
                     <Text style={styles.avatarOverlayText}>EDIT</Text>
                   )}
                 </View>
-              </Pressable>
+              </HoverPressable>
               <View style={styles.profileText}>
                 <Text style={styles.displayName}>{profile?.display_name ?? profile?.username}</Text>
                 <Text style={styles.username}>@{profile?.username}</Text>
               </View>
             </Card>
 
-            <Pressable onPress={() => router.push('/friends')}>
+            <HoverPressable onPress={() => router.push('/friends')}>
               <Card style={styles.friendsRow}>
                 <Text style={styles.friendsLabel}>
                   Friends{friendCount != null ? ` · ${friendCount}` : ''}
                 </Text>
                 <Text style={styles.chevron}>›</Text>
               </Card>
-            </Pressable>
+            </HoverPressable>
 
             {editing ? (
               <Card style={styles.editCard}>
@@ -217,13 +218,13 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: color.border,
+    backgroundColor: color.accentBlue,
     paddingVertical: 2,
     borderRadius: 3,
   },
   avatarOverlayText: {
     fontFamily: font.family.mono,
-    color: color.textInverse,
+    color: color.textPrimary,
     fontSize: 9,
     fontWeight: font.weight.bold,
     letterSpacing: font.tracking.label,

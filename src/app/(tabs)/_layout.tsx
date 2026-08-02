@@ -1,11 +1,19 @@
+import { useState } from 'react';
 import { Tabs } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
 function TabLabel({ label, focused }: { label: string; focused: boolean }) {
+  const [hovered, setHovered] = useState(false);
+
   return (
-    <View style={[styles.labelBox, focused && styles.labelBoxActive]}>
+    <View
+      style={[styles.labelBox, focused && styles.labelBoxActive, hovered && styles.labelBoxHovered]}
+      // @ts-expect-error react-native-web forwards unrecognized props to the underlying DOM node; no-op on native.
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <Text style={[styles.labelText, focused && styles.labelTextActive]}>{label}</Text>
     </View>
   );
@@ -60,6 +68,9 @@ const styles = StyleSheet.create({
     backgroundColor: color.brandMuted,
     borderWidth: borderWidth.thin,
     borderColor: color.border,
+  },
+  labelBoxHovered: {
+    backgroundColor: color.bgElevated,
   },
   labelText: {
     fontFamily: font.family.mono,

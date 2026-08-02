@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
+import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { UserRow } from '@/components/UserRow';
@@ -207,11 +208,11 @@ export default function SearchScreen() {
                 />
               ))}
               {!contactsSynced ? (
-                <Pressable onPress={handleSyncContacts} style={styles.syncButton} disabled={contactsSyncing}>
+                <HoverPressable onPress={handleSyncContacts} style={styles.syncButton} disabled={contactsSyncing}>
                   <Text style={styles.syncButtonText}>
                     {contactsSyncing ? 'SYNCING…' : 'FIND FRIENDS FROM CONTACTS'}
                   </Text>
-                </Pressable>
+                </HoverPressable>
               ) : contacts.length === 0 ? (
                 <Text style={styles.emptyText}>No contacts on Moves yet.</Text>
               ) : null}
