@@ -37,7 +37,12 @@ enable_signup = true
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = true
+# Off for now: the Resend account has no verified domain, so its sandbox
+# mode only delivers to the account owner's own address (ian0205huang@
+# gmail.com) - every other signup's confirmation email fails to send,
+# which blocks the signup outright. Re-enable once a domain is verified
+# in Resend (see README) and the sandbox restriction is lifted.
+enable_confirmations = false
 max_frequency = "1m0s"
 otp_length = 8
 
