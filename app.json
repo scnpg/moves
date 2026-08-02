@@ -45,6 +45,12 @@
         {
           "photosPermission": "Moves uses your photo library so you can set a profile picture."
         }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Moves can check your contacts against people already on Moves to suggest friends - numbers never leave your device unhashed."
+        }
       ]
     ],
     "experiments": {}

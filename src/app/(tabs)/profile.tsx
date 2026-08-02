@@ -15,6 +15,7 @@ import { getHostedActiveMoves, updateProfile, uploadAvatar } from '@/features/pr
 import { notify } from '@/lib/alerts';
 import type { Move } from '@/lib/database.types';
 import { formatWhen } from '@/lib/format';
+import { hashPhone } from '@/lib/phone';
 import { useAuth } from '@/providers/AuthProvider';
 import { color, font, spacing } from '@/theme/tokens';
 
@@ -23,6 +24,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
+  const [phoneInput, setPhoneInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [activeMoves, setActiveMoves] = useState<Move[]>([]);
@@ -38,6 +40,7 @@ export default function ProfileScreen() {
 
   const startEditing = () => {
     setDisplayName(profile?.display_name ?? '');
+    setPhoneInput('');
     setEditing(true);
   };
 
@@ -45,8 +48,15 @@ export default function ProfileScreen() {
     if (!session?.user) return;
     setSaving(true);
     try {
+      const phoneHash = phoneInput.trim() ? await hashPhone(phoneInput.trim()) : undefined;
+      if (phoneInput.trim() && !phoneHash) {
+        notify('Phone number too short', 'Enter a full number so contacts can find you.');
+        setSaving(false);
+        return;
+      }
       await updateProfile(session.user.id, {
         display_name: displayName.trim() || null,
+        ...(phoneHash ? { phone_hash: phoneHash } : {}),
       });
       await refreshProfile();
       setEditing(false);
@@ -133,6 +143,16 @@ export default function ProfileScreen() {
             {editing ? (
               <Card style={styles.editCard}>
                 <TextField label="Display name" value={displayName} onChangeText={setDisplayName} />
+                <TextField
+                  label="Phone number (optional)"
+                  value={phoneInput}
+                  onChangeText={setPhoneInput}
+                  keyboardType="phone-pad"
+                  placeholder={profile?.phone_hash ? 'Already added — replace it' : 'So contacts can find you'}
+                />
+                <Text style={styles.helperText}>
+                  Only a one-way hash of this number is ever stored - never the number itself.
+                </Text>
                 <View style={styles.editActions}>
                   <Button label="Cancel" variant="secondary" onPress={() => setEditing(false)} style={styles.flexButton} />
                   <Button label="Save" onPress={handleSave} loading={saving} style={styles.flexButton} />
@@ -239,6 +259,11 @@ const styles = StyleSheet.create({
   },
   editCard: {
     gap: spacing.sm,
+  },
+  helperText: {
+    color: color.textMuted,
+    fontSize: font.size.xs,
+    marginTop: -spacing.xs,
   },
   editActions: {
     flexDirection: 'row',

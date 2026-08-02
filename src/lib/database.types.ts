@@ -12,6 +12,10 @@ export interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   created_at: string;
+  last_lat: number | null;
+  last_lng: number | null;
+  last_location_at: string | null;
+  phone_hash: string | null;
 }
 
 export interface Friendship {
@@ -77,6 +81,8 @@ export interface EligibleMove {
   location_visible: boolean;
   lat: number | null;
   lng: number | null;
+  fuzzy_lat: number | null;
+  fuzzy_lng: number | null;
 }
 
 export type SearchFriendshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'accepted';
@@ -103,4 +109,27 @@ export interface FriendListItem {
   display_name: string | null;
   avatar_url: string | null;
   is_close_friend: boolean;
+}
+
+export interface FriendOfFriendSuggestion {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  mutual_count: number;
+}
+
+export interface NearbyUserSuggestion {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  distance_m: number;
+}
+
+export interface ContactSuggestion {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
 }

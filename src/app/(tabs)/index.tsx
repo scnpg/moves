@@ -1,29 +1,24 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
+import { LiveMap } from '@/components/LiveMap';
 import { MoveCard } from '@/components/MoveCard';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { SunburstBackdrop } from '@/components/Streamline';
-import { getCloseFriendIds } from '@/features/friends/api';
+import { getCloseFriendIds, updateMyLocation } from '@/features/friends/api';
 import { getEligibleMoves } from '@/features/moves/api';
 import type { EligibleMove } from '@/lib/database.types';
 import { useUserLocation } from '@/lib/useLocation';
 import { useAuth } from '@/providers/AuthProvider';
-import { borderWidth, color, degreeColor, font, radius, spacing } from '@/theme/tokens';
+import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
 type Tab = 'friends' | 'public';
 
 function isLiveNow(move: EligibleMove) {
   const now = Date.now();
   return new Date(move.starts_at).getTime() <= now && new Date(move.expires_at).getTime() > now;
-}
-
-function pinPosition(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return { left: `${12 + (hash % 76)}%`, top: `${18 + ((hash >> 8) % 55)}%` };
 }
 
 export default function MovesScreen() {
@@ -79,8 +74,6 @@ export default function MovesScreen() {
       return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();
     });
 
-  const mapPins = moves.slice(0, 8);
-
   return (
     <Screen>
       <FlatList
@@ -105,21 +98,11 @@ export default function MovesScreen() {
               </View>
             </View>
 
-            <View style={styles.mapPanel}>
-              <Text style={styles.mapLabel}>LIVE MAP</Text>
-              {mapPins.map((move) => {
-                const pos = pinPosition(move.id);
-                const dotColor = degreeColor[move.degree_limit];
-                return (
-                  <View key={move.id} style={[styles.pinWrap, pos as object]}>
-                    {isLiveNow(move) ? (
-                      <View style={[styles.pinRing, { borderColor: dotColor }]} />
-                    ) : null}
-                    <View style={[styles.pinDot, { backgroundColor: dotColor }]} />
-                  </View>
-                );
-              })}
-            </View>
+            <LiveMap
+              moves={moves}
+              center={coords}
+              onSelectMove={(moveId) => router.push(`/moves/${moveId}`)}
+            />
 
             <View style={styles.controlsRow}>
               <View style={styles.segmentFlex}>
@@ -209,52 +192,6 @@ const styles = StyleSheet.create({
     fontSize: font.size.xs,
     fontWeight: font.weight.bold,
     letterSpacing: font.tracking.label,
-  },
-  mapPanel: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    height: 160,
-    backgroundColor: color.bgElevated,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web'
-      ? ({
-          backgroundImage:
-            'linear-gradient(#E1E1E1 1px, transparent 1px), linear-gradient(90deg, #E1E1E1 1px, transparent 1px)',
-          backgroundSize: '20px 20px',
-        } as object)
-      : null),
-  },
-  mapLabel: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.wide,
-  },
-  pinWrap: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pinDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: borderWidth.thin,
-    borderColor: color.border,
-  },
-  pinRing: {
-    position: 'absolute',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: borderWidth.thin,
-    opacity: 0.5,
   },
   controlsRow: {
     flexDirection: 'row',

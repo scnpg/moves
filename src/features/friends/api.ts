@@ -1,5 +1,12 @@
 import { supabase } from '@/lib/supabase';
-import type { FriendListItem, MutualFriend, SearchFriendshipStatus } from '@/lib/database.types';
+import type {
+  ContactSuggestion,
+  FriendListItem,
+  FriendOfFriendSuggestion,
+  MutualFriend,
+  NearbyUserSuggestion,
+  SearchFriendshipStatus,
+} from '@/lib/database.types';
 
 export async function getFriendshipStatus(
   myUserId: string,
@@ -81,4 +88,34 @@ export async function getMyFriends(): Promise<FriendListItem[]> {
   const { data, error } = await supabase.rpc('get_my_friends');
   if (error) throw error;
   return (data ?? []) as FriendListItem[];
+}
+
+/** Rounds server-side (see update_my_location() migration) - never stores exact location. */
+export async function updateMyLocation(lat: number, lng: number) {
+  const { error } = await supabase.rpc('update_my_location', { p_lat: lat, p_lng: lng });
+  if (error) throw error;
+}
+
+export async function getFriendOfFriendSuggestions(limit = 20): Promise<FriendOfFriendSuggestion[]> {
+  const { data, error } = await supabase.rpc('get_friend_of_friend_suggestions', { p_limit: limit });
+  if (error) throw error;
+  return (data ?? []) as FriendOfFriendSuggestion[];
+}
+
+/** Empty until the caller has called updateMyLocation() at least once. */
+export async function getNearbyUserSuggestions(radiusM = 5000, limit = 20): Promise<NearbyUserSuggestion[]> {
+  const { data, error } = await supabase.rpc('get_nearby_user_suggestions', {
+    p_radius_m: radiusM,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  return (data ?? []) as NearbyUserSuggestion[];
+}
+
+/** phoneHashes must already be normalized+hashed client-side (see src/lib/phone.ts) - raw numbers never sent. */
+export async function matchContacts(phoneHashes: string[]): Promise<ContactSuggestion[]> {
+  if (phoneHashes.length === 0) return [];
+  const { data, error } = await supabase.rpc('match_contacts', { p_phone_hashes: phoneHashes });
+  if (error) throw error;
+  return (data ?? []) as ContactSuggestion[];
 }

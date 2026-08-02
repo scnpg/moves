@@ -1,0 +1,96 @@
+import { useEffect, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+
+import type { EligibleMove } from '@/lib/database.types';
+import { borderWidth, color, degreeColor, radius, spacing } from '@/theme/tokens';
+
+interface LiveMapProps {
+  moves: EligibleMove[];
+  center: { lat: number; lng: number } | null;
+  onSelectMove: (moveId: string) => void;
+}
+
+// Only used if we have neither the viewer's location nor any pin to center
+// on - an empty map has to point somewhere.
+const DEFAULT_CENTER: [number, number] = [40.7128, -74.006];
+
+function Recenter({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([lat, lng]);
+  }, [lat, lng, map]);
+  return null;
+}
+
+/**
+ * Real interactive map (OpenStreetMap tiles via Leaflet, no API key
+ * needed). Pins use each move's fuzzy_lat/fuzzy_lng - a ~1.1km-precision
+ * point that's visible regardless of membership - never the exact
+ * location, which stays gated behind approved membership everywhere else
+ * in the app.
+ */
+export function LiveMap({ moves, center, onSelectMove }: LiveMapProps) {
+  const pins = useMemo(
+    () => moves.filter((m): m is EligibleMove & { fuzzy_lat: number; fuzzy_lng: number } =>
+      m.fuzzy_lat != null && m.fuzzy_lng != null
+    ),
+    [moves]
+  );
+
+  const mapCenter: [number, number] = center
+    ? [center.lat, center.lng]
+    : pins[0]
+      ? [pins[0].fuzzy_lat, pins[0].fuzzy_lng]
+      : DEFAULT_CENTER;
+
+  return (
+    <View style={styles.panel}>
+      <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Recenter lat={mapCenter[0]} lng={mapCenter[1]} />
+        {center ? (
+          <CircleMarker
+            center={[center.lat, center.lng]}
+            radius={7}
+            pathOptions={{ color: '#111111', weight: 2, fillColor: '#FFFFFF', fillOpacity: 1 }}
+          />
+        ) : null}
+        {pins.map((move) => (
+          <CircleMarker
+            key={move.id}
+            center={[move.fuzzy_lat, move.fuzzy_lng]}
+            radius={9}
+            pathOptions={{
+              color: '#111111',
+              weight: 2,
+              fillColor: degreeColor[move.degree_limit],
+              fillOpacity: 1,
+            }}
+            eventHandlers={{ click: () => onSelectMove(move.id) }}
+          >
+            <Tooltip direction="top" offset={[0, -8]}>
+              {move.title}
+            </Tooltip>
+          </CircleMarker>
+        ))}
+      </MapContainer>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  panel: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    height: 240,
+    borderWidth: borderWidth.base,
+    borderColor: color.border,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+});
