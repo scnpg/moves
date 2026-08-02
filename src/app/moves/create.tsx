@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { LocationPicker, type LocationValue } from '@/components/LocationPicker';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
+import { SubHeader } from '@/components/SubHeader';
 import { TextField } from '@/components/TextField';
 import { TimeField } from '@/components/TimeField';
 import { createMove } from '@/features/moves/api';
-import { notify } from '@/lib/alerts';
+import { confirmAction, notify } from '@/lib/alerts';
 import type { DegreeLimit } from '@/lib/database.types';
 import { nextOccurrenceOf, timeAfter, timeString } from '@/lib/time';
 import { useAuth } from '@/providers/AuthProvider';
@@ -49,6 +50,25 @@ export default function CreateMoveScreen() {
   const [maxMembers, setMaxMembers] = useState('');
   const [location, setLocation] = useState<LocationValue | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const hasUnsavedInput =
+    title.trim() !== '' ||
+    description.trim() !== '' ||
+    maxMembers.trim() !== '' ||
+    requiresApproval ||
+    location != null;
+
+  const handleClose = async () => {
+    if (hasUnsavedInput) {
+      const confirmed = await confirmAction(
+        'Discard this Move?',
+        "You've filled out some details - going back will lose them.",
+        'Discard'
+      );
+      if (!confirmed) return;
+    }
+    router.back();
+  };
 
   const handleCreate = async () => {
     if (!session?.user) return;
@@ -95,14 +115,7 @@ export default function CreateMoveScreen() {
 
   return (
     <Screen>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'New Move',
-          headerStyle: { backgroundColor: color.bg },
-          headerTintColor: color.textPrimary,
-        }}
-      />
+      <SubHeader title="New Move" onBack={handleClose} variant="close" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TextField label="Title" value={title} onChangeText={setTitle} placeholder="Tacos at 8 PM" />
         <TextField

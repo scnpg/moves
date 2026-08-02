@@ -6,7 +6,7 @@ import { color } from '@/theme/tokens';
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
       <View style={[styles.container, style]}>{children}</View>
     </SafeAreaView>
   );

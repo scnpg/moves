@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -16,6 +16,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
+import { SubHeader } from '@/components/SubHeader';
 import { TextField } from '@/components/TextField';
 import { getCloseFriendIds } from '@/features/friends/api';
 import {
@@ -181,6 +182,8 @@ export default function MoveRoomScreen() {
     if (id) setMembers(await listMembers(id));
   };
 
+  const handleBack = () => router.back();
+
   const handleEndMove = async () => {
     if (!id) return;
     const confirmed = await confirmAction(
@@ -196,7 +199,7 @@ export default function MoveRoomScreen() {
   if (loading) {
     return (
       <Screen>
-        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
+        <SubHeader title="" onBack={handleBack} />
         <View style={styles.center}>
           <ActivityIndicator color={color.brand} />
         </View>
@@ -209,7 +212,7 @@ export default function MoveRoomScreen() {
     if (!previewMove) {
       return (
         <Screen>
-          <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
+          <SubHeader title="" onBack={handleBack} />
           <View style={styles.center}>
             <Text style={styles.emptyText}>This Move isn&apos;t available anymore.</Text>
           </View>
@@ -224,7 +227,7 @@ export default function MoveRoomScreen() {
 
     return (
       <Screen>
-        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
+        <SubHeader title={previewMove.title} onBack={handleBack} />
         <View style={styles.previewContent}>
           <View style={styles.previewHeader}>
             <Avatar
@@ -279,7 +282,7 @@ export default function MoveRoomScreen() {
   if (!move) {
     return (
       <Screen>
-        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
+        <SubHeader title="" onBack={handleBack} />
         <View style={styles.center}>
           <ActivityIndicator color={color.brand} />
         </View>
@@ -298,14 +301,7 @@ export default function MoveRoomScreen() {
 
   return (
     <Screen>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: move.title,
-          headerStyle: { backgroundColor: color.bg },
-          headerTintColor: color.textPrimary,
-        }}
-      />
+      <SubHeader title={move.title} onBack={handleBack} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.roomHeader}>
           <View style={styles.roomHeaderRow}>

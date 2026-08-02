@@ -37,7 +37,6 @@ export default function SignInScreen() {
           <View style={styles.logoWrap}>
             <SunburstBackdrop />
             <Text style={styles.title}>MOVES?</Text>
-            <Text style={styles.subtitle}>SPONTANEOUS HANGOUTS, PRIVATELY.</Text>
           </View>
 
           <View style={styles.form}>
@@ -86,14 +85,6 @@ const styles = StyleSheet.create({
     fontSize: font.size.hero + 12,
     color: color.textPrimary,
     textAlign: 'center',
-  },
-  subtitle: {
-    fontFamily: font.family.mono,
-    fontSize: font.size.xs,
-    color: color.textMuted,
-    textAlign: 'center',
-    letterSpacing: font.tracking.wide,
-    marginTop: -spacing.sm,
   },
   form: {
     gap: spacing.md,

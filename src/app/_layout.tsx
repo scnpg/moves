@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppHeader } from '@/components/AppHeader';
 import { AlertProvider } from '@/providers/AlertProvider';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { color } from '@/theme/tokens';
@@ -57,17 +58,26 @@ function RootNavigation() {
     );
   }
 
+  // The sign-in screen carries its own full-size hero logo, so the slim
+  // global bar (which would just navigate back to this same screen) is
+  // redundant there.
+  const onSignIn = segments.join('/') === '(auth)/sign-in';
+
   return (
-    <>
+    <View style={styles.flex}>
       <StatusBar style="dark" />
+      {!onSignIn ? <AppHeader /> : null}
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
         <Stack.Screen name="moves/create" options={{ presentation: 'modal' }} />
       </Stack>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   loading: {
     flex: 1,
     alignItems: 'center',

@@ -7,7 +7,6 @@ import { LiveMap } from '@/components/LiveMap';
 import { MoveCard } from '@/components/MoveCard';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
-import { SunburstBackdrop } from '@/components/Streamline';
 import { getCloseFriendIds, updateMyLocation } from '@/features/friends/api';
 import { getEligibleMoves } from '@/features/moves/api';
 import type { EligibleMove } from '@/lib/database.types';
@@ -87,13 +86,9 @@ export default function MovesScreen() {
         ListHeaderComponent={
           <View>
             <View style={styles.topBar}>
-              <View style={styles.logoWrap}>
-                <SunburstBackdrop />
-                <Text style={styles.logo}>MOVES?</Text>
-                <Text style={styles.subtitle}>
-                  {coords ? 'NEARBY' : 'ALL MOVES'} · {clockLabel}
-                </Text>
-              </View>
+              <Text style={styles.subtitle}>
+                {coords ? 'NEARBY' : 'ALL MOVES'} · {clockLabel}
+              </Text>
               <View style={styles.liveBadge}>
                 <Text style={styles.liveBadgeText}>{liveCount} LIVE</Text>
               </View>
@@ -157,26 +152,15 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-  },
-  logoWrap: {
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  logo: {
-    fontFamily: font.family.logo,
-    fontSize: font.size.hero,
-    color: color.textPrimary,
-    lineHeight: font.size.hero + 2,
   },
   subtitle: {
     fontFamily: font.family.mono,
     color: color.textMuted,
     fontSize: font.size.xs,
     letterSpacing: font.tracking.wide,
-    marginTop: 2,
   },
   liveBadge: {
     backgroundColor: color.accentGreen,
@@ -185,7 +169,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
-    marginTop: 4,
   },
   liveBadgeText: {
     fontFamily: font.family.mono,
