@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { MutualFriend, SearchFriendshipStatus } from '@/lib/database.types';
+import type { FriendListItem, MutualFriend, SearchFriendshipStatus } from '@/lib/database.types';
 
 export async function getFriendshipStatus(
   myUserId: string,
@@ -73,4 +73,12 @@ export async function getMutualFriends(userA: string, userB: string): Promise<Mu
   });
   if (error) throw error;
   return (data ?? []) as MutualFriend[];
+}
+
+/** The caller's own full friends list. Safe to call for yourself only -
+ * there is no equivalent for looking up someone else's list. */
+export async function getMyFriends(): Promise<FriendListItem[]> {
+  const { data, error } = await supabase.rpc('get_my_friends');
+  if (error) throw error;
+  return (data ?? []) as FriendListItem[];
 }

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { Avatar } from '@/components/Avatar';
@@ -9,6 +9,7 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { signOut } from '@/features/auth/api';
+import { getMyFriends } from '@/features/friends/api';
 import { getHostedActiveMoves, updateProfile } from '@/features/profile/api';
 import type { Move } from '@/lib/database.types';
 import { formatWhen } from '@/lib/format';
@@ -23,11 +24,13 @@ export default function ProfileScreen() {
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
   const [saving, setSaving] = useState(false);
   const [activeMoves, setActiveMoves] = useState<Move[]>([]);
+  const [friendCount, setFriendCount] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       if (!session?.user) return;
       getHostedActiveMoves(session.user.id).then(setActiveMoves).catch(() => {});
+      getMyFriends().then((friends) => setFriendCount(friends.length)).catch(() => {});
     }, [session?.user])
   );
 
@@ -79,6 +82,15 @@ export default function ProfileScreen() {
                 <Text style={styles.username}>@{profile?.username}</Text>
               </View>
             </Card>
+
+            <Pressable onPress={() => router.push('/friends')}>
+              <Card style={styles.friendsRow}>
+                <Text style={styles.friendsLabel}>
+                  Friends{friendCount != null ? ` · ${friendCount}` : ''}
+                </Text>
+                <Text style={styles.chevron}>›</Text>
+              </Card>
+            </Pressable>
 
             {editing ? (
               <Card style={styles.editCard}>
@@ -155,6 +167,20 @@ const styles = StyleSheet.create({
   username: {
     color: color.textMuted,
     fontSize: font.size.sm,
+  },
+  friendsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  friendsLabel: {
+    color: color.textPrimary,
+    fontSize: font.size.md,
+    fontWeight: font.weight.medium,
+  },
+  chevron: {
+    color: color.textMuted,
+    fontSize: font.size.lg,
   },
   editCard: {
     gap: spacing.sm,

@@ -96,3 +96,11 @@ export interface MutualFriend {
   display_name: string | null;
   avatar_url: string | null;
 }
+
+export interface FriendListItem {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  is_close_friend: boolean;
+}
