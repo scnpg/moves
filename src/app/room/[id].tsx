@@ -43,7 +43,7 @@ import { formatCountdown, formatWhen } from '@/lib/format';
 import { useAuth } from '@/providers/AuthProvider';
 import { borderWidth, color, degreeBadgeLabel, font, radius, spacing } from '@/theme/tokens';
 
-const DEGREE_TONE = { 1: 'green', 2: 'blue', 3: 'pink' } as const;
+const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink' } as const;
 
 export default function MoveRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

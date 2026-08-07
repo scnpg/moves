@@ -154,25 +154,29 @@ export const shadow = {
   }),
 } as const;
 
-export const degreeLabel: Record<1 | 2 | 3, string> = {
+export const degreeLabel: Record<0 | 1 | 2 | 3, string> = {
+  0: 'Invite only',
   1: 'Friends only',
   2: 'Friends of friends',
   3: 'Open',
 };
 
-export const degreeDescription: Record<1 | 2 | 3, string> = {
+export const degreeDescription: Record<0 | 1 | 2 | 3, string> = {
+  0: 'Only people you explicitly invite below can see or join.',
   1: 'Only your direct friends can see and join.',
   2: 'Friends and friends-of-friends can see and join.',
   3: 'Anyone nearby can see and join.',
 };
 
-export const degreeBadgeLabel: Record<1 | 2 | 3, string> = {
+export const degreeBadgeLabel: Record<0 | 1 | 2 | 3, string> = {
+  0: 'INVITE ONLY',
   1: '1ST DEGREE',
   2: '2ND DEGREE',
   3: 'OPEN',
 };
 
-export const degreeColor: Record<1 | 2 | 3, string> = {
+export const degreeColor: Record<0 | 1 | 2 | 3, string> = {
+  0: accent.violet,
   1: accent.green,
   2: accent.blue,
   3: accent.pink,

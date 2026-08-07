@@ -4,7 +4,7 @@
 export type FriendshipStatus = 'pending' | 'accepted' | 'declined';
 export type MoveMemberStatus = 'pending' | 'approved' | 'rejected';
 export type MoveStatus = 'active' | 'cooldown' | 'expired';
-export type DegreeLimit = 1 | 2 | 3;
+export type DegreeLimit = 0 | 1 | 2 | 3;
 
 export interface Profile {
   id: string;

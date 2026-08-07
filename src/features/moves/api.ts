@@ -125,6 +125,20 @@ export async function deleteMove(moveId: string) {
   if (error) throw error;
 }
 
+/**
+ * Host-only: adds specific friends as already-approved members - i.e.
+ * invites them straight into the move and its chat, no join request
+ * needed. Silently skips anyone in the list who isn't an accepted friend.
+ */
+export async function inviteFriendsToMove(moveId: string, friendIds: string[]) {
+  if (friendIds.length === 0) return;
+  const { error } = await supabase.rpc('invite_friends_to_move', {
+    p_move_id: moveId,
+    p_friend_ids: friendIds,
+  });
+  if (error) throw error;
+}
+
 export async function listMessages(moveId: string): Promise<MoveMessageWithSender[]> {
   const { data, error } = await supabase
     .from('move_messages')

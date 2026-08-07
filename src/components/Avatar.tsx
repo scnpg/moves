@@ -11,7 +11,7 @@ interface AvatarProps {
   /** Green pulse dot: this person currently hosts an active Move. */
   hosting?: boolean;
   /** Cycles through the accent palette instead of the fixed brand tint. */
-  tint?: 1 | 2 | 3;
+  tint?: 0 | 1 | 2 | 3;
 }
 
 function fallbackTint(name?: string | null): string {
