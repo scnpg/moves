@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { HoverPressable } from '@/components/HoverPressable';
 import { TextField } from '@/components/TextField';
-import { useUserLocation } from '@/lib/useLocation';
+import { notify } from '@/lib/alerts';
+import { getCurrentLocation } from '@/lib/useLocation';
 import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
 export interface LocationValue {
@@ -22,49 +23,70 @@ interface LocationPickerProps {
  * location" still work, they just can't show a pin on a map here.
  */
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
-  const { coords } = useUserLocation();
   const [address, setAddress] = useState('');
   const [searching, setSearching] = useState(false);
+  const [locating, setLocating] = useState(false);
 
-  const handleSearch = async () => {
-    if (!address.trim()) return;
-    setSearching(true);
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address.trim())}`
-      );
-      const results = await response.json();
-      if (results[0]) {
-        onChange({ lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) });
+  // Debounced forward-geocoding: search fires 300ms after typing stops.
+  useEffect(() => {
+    const trimmed = address.trim();
+    if (!trimmed) return;
+
+    const timeout = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(trimmed)}`
+        );
+        const results = await response.json();
+        if (results[0]) {
+          onChange({ lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) });
+        }
+      } finally {
+        setSearching(false);
       }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
+
+  const handleUseMyLocation = async () => {
+    setLocating(true);
+    try {
+      const here = await getCurrentLocation();
+      onChange(here);
+    } catch (err) {
+      notify(
+        'Could not get your location',
+        err instanceof Error ? err.message : 'Check your location permission and try again.'
+      );
     } finally {
-      setSearching(false);
+      setLocating(false);
     }
   };
 
   return (
     <View style={styles.wrapper}>
-      <TextField
-        value={address}
-        onChangeText={setAddress}
-        placeholder="Search an address (optional)"
-        autoCapitalize="none"
-        onSubmitEditing={handleSearch}
-      />
+      <View style={styles.searchRow}>
+        <View style={styles.searchInput}>
+          <TextField
+            value={address}
+            onChangeText={setAddress}
+            placeholder="Search an address (optional)"
+            autoCapitalize="none"
+          />
+        </View>
+        {searching ? <ActivityIndicator size="small" color={color.textMuted} /> : null}
+      </View>
       <View style={styles.actionsRow}>
         <Text style={styles.hint}>
           {value ? `Pinned at ${value.lat.toFixed(3)}, ${value.lng.toFixed(3)}` : 'No location set.'}
         </Text>
         <View style={styles.actionButtons}>
-          {coords ? (
-            <HoverPressable
-              onPress={() => onChange({ lat: coords.lat, lng: coords.lng })}
-              style={styles.smallButton}
-              disabled={searching}
-            >
-              <Text style={styles.smallButtonText}>USE MY LOCATION</Text>
-            </HoverPressable>
-          ) : null}
+          <HoverPressable onPress={handleUseMyLocation} style={styles.smallButton} disabled={locating}>
+            <Text style={styles.smallButtonText}>{locating ? 'LOCATING…' : 'USE MY LOCATION'}</Text>
+          </HoverPressable>
           {value ? (
             <HoverPressable onPress={() => onChange(null)} style={styles.smallButton}>
               <Text style={styles.smallButtonText}>CLEAR</Text>
@@ -79,6 +101,14 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 const styles = StyleSheet.create({
   wrapper: {
     gap: spacing.sm,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  searchInput: {
+    flex: 1,
   },
   actionsRow: {
     flexDirection: 'row',
