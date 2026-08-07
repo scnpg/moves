@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { CircleMarker, MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
+import { CircleMarker, MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import { HoverPressable } from '@/components/HoverPressable';
@@ -27,6 +27,25 @@ function ClickToPin({ onPick }: { onPick: (lat: number, lng: number) => void }) 
       onPick(e.latlng.lat, e.latlng.lng);
     },
   });
+  return null;
+}
+
+// MapContainer's center/zoom props only apply on first mount in
+// react-leaflet - without this, neither the ambient location resolving
+// after the map is already up, nor pressing "use my location", actually
+// moves the view. The pin was always placed correctly; it just wasn't in
+// frame.
+function Recenter({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    // The map lives inside a fixed-height card that react-native-web lays
+    // out after Leaflet's own initial size measurement, so Leaflet's
+    // cached container size can be stale by the time this runs -
+    // setView() then computes the wrong pixel origin and silently doesn't
+    // move anything. invalidateSize() forces a fresh measurement first.
+    map.invalidateSize();
+    map.setView([lat, lng], zoom, { animate: false });
+  }, [lat, lng, zoom, map]);
   return null;
 }
 
@@ -115,6 +134,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
+          <Recenter lat={center[0]} lng={center[1]} zoom={value ? 15 : 12} />
           <ClickToPin onPick={(lat, lng) => onChange({ lat, lng })} />
           {value ? (
             <CircleMarker

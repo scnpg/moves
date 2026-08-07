@@ -19,7 +19,13 @@ const DEFAULT_CENTER: [number, number] = [40.7128, -74.006];
 function Recenter({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lng]);
+    // The map lives inside a fixed-height card that react-native-web lays
+    // out after Leaflet's own initial size measurement, so Leaflet's
+    // cached container size can be stale by the time this runs -
+    // setView() then computes the wrong pixel origin and silently doesn't
+    // move anything. invalidateSize() forces a fresh measurement first.
+    map.invalidateSize();
+    map.setView([lat, lng], map.getZoom(), { animate: false });
   }, [lat, lng, map]);
   return null;
 }
