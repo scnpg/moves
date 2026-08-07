@@ -21,6 +21,7 @@ import { TextField } from '@/components/TextField';
 import { getCloseFriendIds } from '@/features/friends/api';
 import {
   approveMember,
+  deleteMove,
   endMoveEarly,
   getEligibleMoves,
   getMove,
@@ -182,7 +183,7 @@ export default function MoveRoomScreen() {
     if (id) setMembers(await listMembers(id));
   };
 
-  const handleBack = () => router.back();
+  const handleBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   const handleEndMove = async () => {
     if (!id) return;
@@ -194,6 +195,22 @@ export default function MoveRoomScreen() {
     if (!confirmed) return;
     await endMoveEarly(id);
     await load();
+  };
+
+  const handleDeleteMove = async () => {
+    if (!id) return;
+    const confirmed = await confirmAction(
+      'Delete this Move?',
+      'This permanently removes the Move and its chat for everyone. This cannot be undone.',
+      'Delete'
+    );
+    if (!confirmed) return;
+    try {
+      await deleteMove(id);
+      router.replace('/');
+    } catch (err) {
+      notify('Could not delete', err instanceof Error ? err.message : 'Please try again.');
+    }
   };
 
   if (loading) {
@@ -292,6 +309,7 @@ export default function MoveRoomScreen() {
 
   const approvedMembers = members.filter((m) => m.status === 'approved');
   const pendingMembers = members.filter((m) => m.status === 'pending');
+  const hostMember = members.find((m) => m.user_id === move.host_id);
   const isActive = move.status === 'active';
   const countdownTarget = isActive
     ? move.expires_at
@@ -303,6 +321,17 @@ export default function MoveRoomScreen() {
     <Screen>
       <SubHeader title={move.title} onBack={handleBack} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.metaSection}>
+          <Text style={styles.hostLine}>
+            Hosted by {hostMember ? hostMember.profile.display_name ?? hostMember.profile.username : '…'}
+          </Text>
+          <View style={styles.metaRow}>
+            <Badge label={formatWhen(move.starts_at, move.expires_at)} tone="green" />
+            <Badge label={degreeBadgeLabel[move.degree_limit]} tone={DEGREE_TONE[move.degree_limit]} />
+            {move.requires_approval ? <Badge label="Approval required" tone="yellow" /> : null}
+          </View>
+        </View>
+
         <View style={styles.roomHeader}>
           <View style={styles.roomHeaderRow}>
             <Badge label={isActive ? `Ends in ${formatCountdown(countdownTarget)}` : `Closing in ${formatCountdown(countdownTarget)}`} tone={isActive ? 'green' : 'pink'} />
@@ -311,10 +340,17 @@ export default function MoveRoomScreen() {
               {move.max_members ? `/${move.max_members}` : ''} here
             </Text>
           </View>
-          {isHost && isActive ? (
-            <HoverPressable onPress={handleEndMove} style={styles.endLinkWrap}>
-              <Text style={styles.endLink}>End Move</Text>
-            </HoverPressable>
+          {isHost ? (
+            <View style={styles.hostActionsRow}>
+              {isActive ? (
+                <HoverPressable onPress={handleEndMove} style={styles.endLinkWrap}>
+                  <Text style={styles.endLink}>End Move</Text>
+                </HoverPressable>
+              ) : null}
+              <HoverPressable onPress={handleDeleteMove} style={styles.endLinkWrap}>
+                <Text style={styles.deleteLink}>Delete</Text>
+              </HoverPressable>
+            </View>
           ) : null}
         </View>
 
@@ -416,6 +452,12 @@ const styles = StyleSheet.create({
   helperText: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs },
   waitingText: { color: color.textPrimary, fontSize: font.size.sm, fontWeight: font.weight.bold },
 
+  metaSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    gap: spacing.xxs,
+  },
   roomHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -427,8 +469,10 @@ const styles = StyleSheet.create({
   },
   roomHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   memberCount: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs },
+  hostActionsRow: { flexDirection: 'row', alignItems: 'center' },
   endLinkWrap: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs, borderRadius: radius.sm },
   endLink: { fontFamily: font.family.mono, color: color.danger, fontSize: font.size.sm, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
+  deleteLink: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.sm, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
 
   requestsSection: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.xs, borderBottomWidth: borderWidth.base, borderBottomColor: color.border },
   sectionTitle: { fontFamily: font.family.mono, color: color.textSecondary, fontSize: font.size.xs, fontWeight: font.weight.bold, textTransform: 'uppercase', letterSpacing: font.tracking.wide },

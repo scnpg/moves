@@ -67,7 +67,11 @@ export default function CreateMoveScreen() {
       );
       if (!confirmed) return;
     }
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
   };
 
   const handleCreate = async () => {

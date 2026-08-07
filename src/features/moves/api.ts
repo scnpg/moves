@@ -119,6 +119,12 @@ export async function endMoveEarly(moveId: string) {
   if (error) throw error;
 }
 
+/** Permanently removes the move (and, via cascade, its members and chat). Host-only per RLS. */
+export async function deleteMove(moveId: string) {
+  const { error } = await supabase.from('moves').delete().eq('id', moveId);
+  if (error) throw error;
+}
+
 export async function listMessages(moveId: string): Promise<MoveMessageWithSender[]> {
   const { data, error } = await supabase
     .from('move_messages')
