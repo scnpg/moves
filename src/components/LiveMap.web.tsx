@@ -76,7 +76,7 @@ export function LiveMap({ moves, center, onSelectMove }: LiveMapProps) {
     <View style={styles.panel}>
       <MapContainer
         center={mapCenter}
-        zoom={15}
+        zoom={17}
         style={{ height: '100%', width: '100%', touchAction: 'none' } as object}
         scrollWheelZoom
       >
