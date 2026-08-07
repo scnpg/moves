@@ -126,15 +126,15 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       <View style={styles.mapWrap}>
         <MapContainer
           center={center}
-          zoom={value ? 15 : 12}
+          zoom={value ? 17 : 14}
           style={{ height: '100%', width: '100%', touchAction: 'none' } as object}
-          scrollWheelZoom={false}
+          scrollWheelZoom
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
-          <Recenter lat={center[0]} lng={center[1]} zoom={value ? 15 : 12} />
+          <Recenter lat={center[0]} lng={center[1]} zoom={value ? 17 : 14} />
           <ClickToPin onPick={(lat, lng) => onChange({ lat, lng })} />
           {value ? (
             <CircleMarker

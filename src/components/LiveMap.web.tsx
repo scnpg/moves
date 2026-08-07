@@ -1,10 +1,11 @@
 import { useEffect, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
+import { HoverPressable } from '@/components/HoverPressable';
 import type { EligibleMove } from '@/lib/database.types';
-import { borderWidth, color, degreeColor, radius, spacing } from '@/theme/tokens';
+import { borderWidth, color, degreeColor, font, radius, spacing } from '@/theme/tokens';
 
 interface LiveMapProps {
   moves: EligibleMove[];
@@ -28,6 +29,23 @@ function Recenter({ lat, lng }: { lat: number; lng: number }) {
     map.setView([lat, lng], map.getZoom(), { animate: false });
   }, [lat, lng, map]);
   return null;
+}
+
+/** Floating button that jumps the view back to the viewer's own location - for after panning/zooming away while browsing pins. */
+function RecenterButton({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap();
+  return (
+    <HoverPressable
+      onPress={() => {
+        map.invalidateSize();
+        map.setView([lat, lng], map.getZoom());
+      }}
+      style={styles.recenterButton}
+      lightenOpacity={0.25}
+    >
+      <Text style={styles.recenterIcon}>◎</Text>
+    </HoverPressable>
+  );
 }
 
 /**
@@ -58,9 +76,9 @@ export function LiveMap({ moves, center, onSelectMove }: LiveMapProps) {
     <View style={styles.panel}>
       <MapContainer
         center={mapCenter}
-        zoom={13}
+        zoom={15}
         style={{ height: '100%', width: '100%', touchAction: 'none' } as object}
-        scrollWheelZoom={false}
+        scrollWheelZoom
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -68,11 +86,14 @@ export function LiveMap({ moves, center, onSelectMove }: LiveMapProps) {
         />
         <Recenter lat={mapCenter[0]} lng={mapCenter[1]} />
         {center ? (
-          <CircleMarker
-            center={[center.lat, center.lng]}
-            radius={6}
-            pathOptions={{ color: '#111111', weight: 1.5, fillColor: '#FFFFFF', fillOpacity: 0.9 }}
-          />
+          <>
+            <CircleMarker
+              center={[center.lat, center.lng]}
+              radius={6}
+              pathOptions={{ color: '#111111', weight: 1.5, fillColor: '#FFFFFF', fillOpacity: 0.9 }}
+            />
+            <RecenterButton lat={center.lat} lng={center.lng} />
+          </>
         ) : null}
         {pins.map((move) => (
           <CircleMarker
@@ -106,5 +127,25 @@ const styles = StyleSheet.create({
     borderColor: color.border,
     borderRadius: radius.md,
     overflow: 'hidden',
+  },
+  recenterButton: {
+    position: 'absolute',
+    right: spacing.sm,
+    bottom: spacing.sm,
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    borderWidth: borderWidth.base,
+    borderColor: color.border,
+    backgroundColor: color.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  } as object,
+  recenterIcon: {
+    fontSize: 18,
+    fontWeight: font.weight.bold,
+    color: color.accentBlue,
+    lineHeight: 20,
   },
 });
