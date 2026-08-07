@@ -3,6 +3,7 @@ import type {
   ContactSuggestion,
   FriendListItem,
   FriendOfFriendSuggestion,
+  FriendRequest,
   MutualFriend,
   NearbyUserSuggestion,
   SearchFriendshipStatus,
@@ -30,13 +31,31 @@ export async function getFriendshipStatus(
   return { status: data.requested_by === myUserId ? 'pending_sent' : 'pending_received', isCloseFriend: false };
 }
 
-export async function sendFriendRequest(otherUserId: string, myUserId: string) {
-  const { error } = await supabase.from('friendships').insert({
-    user_id_1: myUserId,
-    user_id_2: otherUserId,
-    requested_by: myUserId,
-  });
+/**
+ * Handles both a fresh request and re-requesting someone who previously
+ * declined you (which revives their existing row instead of erroring on
+ * the unique-pair constraint) - see send_friend_request() in the migration.
+ */
+export async function sendFriendRequest(otherUserId: string) {
+  const { error } = await supabase.rpc('send_friend_request', { p_other_user_id: otherUserId });
   if (error) throw error;
+}
+
+export async function declineFriendRequest(myUserId: string, otherUserId: string) {
+  const { error } = await supabase
+    .from('friendships')
+    .update({ status: 'declined' })
+    .or(
+      `and(user_id_1.eq.${myUserId},user_id_2.eq.${otherUserId}),and(user_id_1.eq.${otherUserId},user_id_2.eq.${myUserId})`
+    );
+  if (error) throw error;
+}
+
+/** Both directions of the caller's pending friend requests, with the other person's profile. */
+export async function getFriendRequests(): Promise<FriendRequest[]> {
+  const { data, error } = await supabase.rpc('get_friend_requests');
+  if (error) throw error;
+  return (data ?? []) as FriendRequest[];
 }
 
 export async function acceptFriendRequest(myUserId: string, otherUserId: string) {

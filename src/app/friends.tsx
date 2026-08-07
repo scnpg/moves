@@ -3,34 +3,48 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 
 import { Screen } from '@/components/Screen';
+import { SegmentedControl } from '@/components/SegmentedControl';
 import { UserRow } from '@/components/UserRow';
-import { getMyFriends, removeFriendship, setCloseFriend } from '@/features/friends/api';
+import {
+  acceptFriendRequest,
+  declineFriendRequest,
+  getFriendRequests,
+  getMyFriends,
+  removeFriendship,
+  setCloseFriend,
+} from '@/features/friends/api';
 import { confirmAction, notify } from '@/lib/alerts';
-import type { FriendListItem } from '@/lib/database.types';
+import type { FriendListItem, FriendRequest } from '@/lib/database.types';
 import { useAuth } from '@/providers/AuthProvider';
 import { color, font, spacing } from '@/theme/tokens';
+
+type Tab = 'friends' | 'requests';
 
 export default function FriendsScreen() {
   const router = useRouter();
   const { session } = useAuth();
+  const [tab, setTab] = useState<Tab>('friends');
   const [friends, setFriends] = useState<FriendListItem[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    const [friendsData, requestsData] = await Promise.all([getMyFriends(), getFriendRequests()]);
+    setFriends(friendsData);
+    setRequests(requestsData);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       setLoading(true);
-      getMyFriends()
-        .then((data) => {
-          if (!cancelled) setFriends(data);
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
+      load().finally(() => {
+        if (!cancelled) setLoading(false);
+      });
       return () => {
         cancelled = true;
       };
-    }, [])
+    }, [load])
   );
 
   const handleToggleClose = async (friend: FriendListItem) => {
@@ -59,6 +73,43 @@ export default function FriendsScreen() {
     }
   };
 
+  const handleAccept = async (request: FriendRequest) => {
+    if (!session?.user) return;
+    setRequests((prev) => prev.filter((r) => r.id !== request.id));
+    try {
+      await acceptFriendRequest(session.user.id, request.other_user_id);
+      load();
+    } catch (err) {
+      setRequests((prev) => [request, ...prev]);
+      notify('Could not accept', err instanceof Error ? err.message : 'Please try again.');
+    }
+  };
+
+  const handleDecline = async (request: FriendRequest) => {
+    if (!session?.user) return;
+    setRequests((prev) => prev.filter((r) => r.id !== request.id));
+    try {
+      await declineFriendRequest(session.user.id, request.other_user_id);
+    } catch (err) {
+      setRequests((prev) => [request, ...prev]);
+      notify('Could not decline', err instanceof Error ? err.message : 'Please try again.');
+    }
+  };
+
+  const handleCancel = async (request: FriendRequest) => {
+    if (!session?.user) return;
+    setRequests((prev) => prev.filter((r) => r.id !== request.id));
+    try {
+      await removeFriendship(session.user.id, request.other_user_id);
+    } catch (err) {
+      setRequests((prev) => [request, ...prev]);
+      notify('Could not cancel', err instanceof Error ? err.message : 'Please try again.');
+    }
+  };
+
+  const incoming = requests.filter((r) => r.direction === 'incoming');
+  const outgoing = requests.filter((r) => r.direction === 'outgoing');
+
   return (
     <Screen>
       <Stack.Screen
@@ -69,11 +120,22 @@ export default function FriendsScreen() {
           headerTintColor: color.textPrimary,
         }}
       />
+      <View style={styles.tabsRow}>
+        <SegmentedControl
+          segments={[
+            { value: 'friends', label: 'Friends' },
+            { value: 'requests', label: `Requests${requests.length ? ` (${requests.length})` : ''}` },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </View>
+
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={color.brand} />
         </View>
-      ) : (
+      ) : tab === 'friends' ? (
         <FlatList
           data={friends}
           keyExtractor={(item) => item.id}
@@ -99,6 +161,55 @@ export default function FriendsScreen() {
             </View>
           }
         />
+      ) : (
+        <FlatList
+          data={[]}
+          keyExtractor={() => 'x'}
+          renderItem={null}
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <View style={styles.requestsWrap}>
+              <Text style={styles.sectionTitle}>
+                {incoming.length > 0 ? `RECEIVED (${incoming.length})` : 'RECEIVED'}
+              </Text>
+              {incoming.length === 0 ? (
+                <Text style={styles.emptySectionText}>No incoming requests.</Text>
+              ) : (
+                incoming.map((r) => (
+                  <UserRow
+                    key={r.id}
+                    avatarUrl={r.avatar_url}
+                    name={r.display_name ?? r.username}
+                    username={r.username}
+                    friendshipStatus="pending_received"
+                    onPress={() => router.push(`/users/${r.other_user_id}`)}
+                    onAccept={() => handleAccept(r)}
+                    onDecline={() => handleDecline(r)}
+                  />
+                ))
+              )}
+
+              <Text style={[styles.sectionTitle, styles.sentTitle]}>
+                {outgoing.length > 0 ? `SENT (${outgoing.length})` : 'SENT'}
+              </Text>
+              {outgoing.length === 0 ? (
+                <Text style={styles.emptySectionText}>No outgoing requests.</Text>
+              ) : (
+                outgoing.map((r) => (
+                  <UserRow
+                    key={r.id}
+                    avatarUrl={r.avatar_url}
+                    name={r.display_name ?? r.username}
+                    username={r.username}
+                    friendshipStatus="pending_sent"
+                    onPress={() => router.push(`/users/${r.other_user_id}`)}
+                    onCancel={() => handleCancel(r)}
+                  />
+                ))
+              )}
+            </View>
+          }
+        />
       )}
     </Screen>
   );
@@ -110,9 +221,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  tabsRow: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+  },
+  requestsWrap: {
+    gap: spacing.xs,
+  },
+  sectionTitle: {
+    fontFamily: font.family.mono,
+    color: color.textSecondary,
+    fontSize: font.size.xs,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.wide,
+    marginTop: spacing.sm,
+  },
+  sentTitle: {
+    marginTop: spacing.lg,
+  },
+  emptySectionText: {
+    color: color.textMuted,
+    fontSize: font.size.sm,
+    paddingVertical: spacing.xs,
   },
   separator: {
     height: 1,

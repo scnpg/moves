@@ -11,7 +11,7 @@ import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { signOut } from '@/features/auth/api';
-import { getMyFriends } from '@/features/friends/api';
+import { getFriendRequests, getMyFriends } from '@/features/friends/api';
 import { getHostedActiveMoves, updateProfile, uploadAvatar } from '@/features/profile/api';
 import { notify } from '@/lib/alerts';
 import type { Move } from '@/lib/database.types';
@@ -33,12 +33,16 @@ export default function ProfileScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [activeMoves, setActiveMoves] = useState<Move[]>([]);
   const [friendCount, setFriendCount] = useState<number | null>(null);
+  const [incomingRequestCount, setIncomingRequestCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       if (!session?.user) return;
       getHostedActiveMoves(session.user.id).then(setActiveMoves).catch(() => {});
       getMyFriends().then((friends) => setFriendCount(friends.length)).catch(() => {});
+      getFriendRequests()
+        .then((requests) => setIncomingRequestCount(requests.filter((r) => r.direction === 'incoming').length))
+        .catch(() => {});
     }, [session?.user])
   );
 
@@ -148,6 +152,11 @@ export default function ProfileScreen() {
                 <Text style={styles.friendsLabel}>
                   Friends{friendCount != null ? ` · ${friendCount}` : ''}
                 </Text>
+                {incomingRequestCount > 0 ? (
+                  <View style={styles.requestBadge}>
+                    <Text style={styles.requestBadgeText}>{incomingRequestCount}</Text>
+                  </View>
+                ) : null}
                 <Text style={styles.chevron}>›</Text>
               </Card>
             </HoverPressable>
@@ -284,6 +293,21 @@ const styles = StyleSheet.create({
   chevron: {
     color: color.textMuted,
     fontSize: font.size.lg,
+  },
+  requestBadge: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    backgroundColor: color.accentPink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestBadgeText: {
+    fontFamily: font.family.mono,
+    color: color.textPrimary,
+    fontSize: 11,
+    fontWeight: font.weight.bold,
   },
   editCard: {
     gap: spacing.sm,

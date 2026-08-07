@@ -1,7 +1,7 @@
 // Hand-written mirror of the schema in supabase/migrations. Keep in sync
 // manually until the project is linked and `supabase gen types` can run.
 
-export type FriendshipStatus = 'pending' | 'accepted';
+export type FriendshipStatus = 'pending' | 'accepted' | 'declined';
 export type MoveMemberStatus = 'pending' | 'approved' | 'rejected';
 export type MoveStatus = 'active' | 'cooldown' | 'expired';
 export type DegreeLimit = 1 | 2 | 3;
@@ -110,6 +110,16 @@ export interface FriendListItem {
   display_name: string | null;
   avatar_url: string | null;
   is_close_friend: boolean;
+}
+
+export interface FriendRequest {
+  id: string;
+  other_user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  direction: 'incoming' | 'outgoing';
+  created_at: string;
 }
 
 export interface FriendOfFriendSuggestion {

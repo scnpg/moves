@@ -14,6 +14,8 @@ interface UserRowProps {
   onPress?: () => void;
   onAdd?: () => void;
   onAccept?: () => void;
+  onDecline?: () => void;
+  onCancel?: () => void;
   onToggleClose?: () => void;
   onUnfriend?: () => void;
 }
@@ -27,6 +29,8 @@ export function UserRow({
   onPress,
   onAdd,
   onAccept,
+  onDecline,
+  onCancel,
   onToggleClose,
   onUnfriend,
 }: UserRowProps) {
@@ -47,14 +51,30 @@ export function UserRow({
         </HoverPressable>
       ) : null}
       {friendshipStatus === 'pending_sent' ? (
-        <View style={styles.actionMuted}>
-          <Text style={styles.actionMutedText}>REQUESTED</Text>
+        <View style={styles.acceptedActions}>
+          <View style={styles.actionMuted}>
+            <Text style={styles.actionMutedText}>REQUESTED</Text>
+          </View>
+          {onCancel ? (
+            <HoverPressable onPress={onCancel} style={styles.unfriendButton}>
+              <Text style={styles.unfriendText}>CANCEL</Text>
+            </HoverPressable>
+          ) : null}
         </View>
       ) : null}
-      {friendshipStatus === 'pending_received' && onAccept ? (
-        <HoverPressable onPress={onAccept} style={styles.actionPrimary}>
-          <Text style={styles.actionPrimaryText}>ACCEPT</Text>
-        </HoverPressable>
+      {friendshipStatus === 'pending_received' ? (
+        <View style={styles.acceptedActions}>
+          {onAccept ? (
+            <HoverPressable onPress={onAccept} style={styles.actionPrimary}>
+              <Text style={styles.actionPrimaryText}>ACCEPT</Text>
+            </HoverPressable>
+          ) : null}
+          {onDecline ? (
+            <HoverPressable onPress={onDecline} style={styles.unfriendButton}>
+              <Text style={styles.unfriendText}>DECLINE</Text>
+            </HoverPressable>
+          ) : null}
+        </View>
       ) : null}
       {friendshipStatus === 'accepted' ? (
         <View style={styles.acceptedActions}>

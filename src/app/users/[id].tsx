@@ -62,7 +62,7 @@ export default function UserProfileScreen() {
     if (!session?.user || !id) return;
     setActionLoading(true);
     try {
-      await sendFriendRequest(id, session.user.id);
+      await sendFriendRequest(id);
       setStatus('pending_sent');
     } finally {
       setActionLoading(false);

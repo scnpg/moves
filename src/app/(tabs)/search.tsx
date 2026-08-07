@@ -99,7 +99,7 @@ export default function SearchScreen() {
     if (!session?.user) return;
     updateResult(target.id, { friendship_status: 'pending_sent' });
     try {
-      await sendFriendRequest(target.id, session.user.id);
+      await sendFriendRequest(target.id);
     } catch {
       updateResult(target.id, { friendship_status: 'none' });
     }
@@ -134,7 +134,7 @@ export default function SearchScreen() {
     if (removeFrom === 'nearby') setNearby((prev) => prev.filter((s) => s.id !== userId));
     if (removeFrom === 'contacts') setContacts((prev) => prev.filter((s) => s.id !== userId));
     try {
-      await sendFriendRequest(userId, session.user.id);
+      await sendFriendRequest(userId);
     } catch {
       // best-effort; if it failed the request just won't show up as "pending" anywhere yet
     }
