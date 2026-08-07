@@ -3,14 +3,21 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } fr
 import { Link } from 'expo-router';
 
 import { Button } from '@/components/Button';
+import { PhoneAuth } from '@/components/PhoneAuth';
 import { Screen } from '@/components/Screen';
+import { SegmentedControl } from '@/components/SegmentedControl';
 import { SunburstBackdrop } from '@/components/Streamline';
 import { TextField } from '@/components/TextField';
 import { signIn } from '@/features/auth/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { color, font, spacing } from '@/theme/tokens';
 
+type AuthMethod = 'email' | 'phone';
+
 export default function SignInScreen() {
+  const { t } = useLocale();
+  const [method, setMethod] = useState<AuthMethod>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +28,7 @@ export default function SignInScreen() {
     try {
       await signIn({ email: email.trim(), password });
     } catch (err) {
-      notify('Sign in failed', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('auth.signInFailed'), err instanceof Error ? err.message : t('auth.pleaseTryAgain'));
     } finally {
       setLoading(false);
     }
@@ -39,28 +46,41 @@ export default function SignInScreen() {
             <Text style={styles.title}>MOVES?</Text>
           </View>
 
-          <View style={styles.form}>
-            <TextField
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="you@example.com"
-            />
-            <TextField
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="••••••••"
-            />
-            <Button label="Sign in" onPress={handleSignIn} loading={loading} />
-          </View>
+          <SegmentedControl
+            segments={[
+              { value: 'email', label: t('auth.email') },
+              { value: 'phone', label: t('auth.phone') },
+            ]}
+            value={method}
+            onChange={setMethod}
+          />
+
+          {method === 'email' ? (
+            <View style={styles.form}>
+              <TextField
+                label={t('auth.email')}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder={t('auth.emailPlaceholder')}
+              />
+              <TextField
+                label={t('auth.password')}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                placeholder={t('auth.passwordPlaceholder')}
+              />
+              <Button label={t('auth.signIn')} onPress={handleSignIn} loading={loading} />
+            </View>
+          ) : (
+            <PhoneAuth onDone={() => {}} />
+          )}
 
           <Link href="/(auth)/sign-up" style={styles.link}>
             <Text style={styles.linkText}>
-              New here? <Text style={styles.linkTextStrong}>Create an account</Text>
+              {t('auth.newHere')} <Text style={styles.linkTextStrong}>{t('auth.createAccount')}</Text>
             </Text>
           </Link>
         </ScrollView>

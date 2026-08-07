@@ -1,0 +1,90 @@
+import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { QRCodeSVG } from 'qrcode.react';
+
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { notify } from '@/lib/alerts';
+import { profileShareUrl } from '@/lib/links';
+import { borderWidth, color, font, spacing } from '@/theme/tokens';
+
+interface ShareProfilePanelProps {
+  userId: string;
+}
+
+export function ShareProfilePanel({ userId }: ShareProfilePanelProps) {
+  const [copying, setCopying] = useState(false);
+  const url = profileShareUrl(userId);
+
+  const handleCopy = async () => {
+    setCopying(true);
+    try {
+      await navigator.clipboard.writeText(url);
+      notify('Link copied', 'Share it however you like.');
+    } catch {
+      notify('Could not copy', 'Select and copy the link manually.');
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  return (
+    <Card style={styles.card}>
+      <Text style={styles.label}>SHARE PROFILE</Text>
+      <Text style={styles.helperText}>Anyone with this link or QR code can view your profile - no account needed.</Text>
+      <View style={styles.body}>
+        <View style={styles.qrWrap}>
+          <QRCodeSVG value={url} size={96} fgColor={color.textPrimary} bgColor={color.bgCard} />
+        </View>
+        <View style={styles.linkCol}>
+          <Text style={styles.url} numberOfLines={2}>
+            {url}
+          </Text>
+          <Button label="Copy Link" variant="secondary" onPress={handleCopy} loading={copying} />
+        </View>
+      </View>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    gap: spacing.xs,
+  },
+  label: {
+    fontFamily: font.family.mono,
+    color: color.textSecondary,
+    fontSize: font.size.xs,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.wide,
+  },
+  helperText: {
+    color: color.textMuted,
+    fontSize: font.size.xs,
+  },
+  body: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  qrWrap: {
+    padding: spacing.xs,
+    borderWidth: borderWidth.thin,
+    borderColor: color.borderSubtle,
+    borderRadius: 4,
+  },
+  linkCol: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  url: {
+    fontFamily: font.family.mono,
+    color: color.textPrimary,
+    fontSize: font.size.xs,
+    borderWidth: borderWidth.thin,
+    borderColor: color.borderSubtle,
+    borderRadius: 4,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+});

@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { signUp } from '@/features/auth/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
+import { USERNAME_PATTERN } from '@/lib/username';
 import { color, font, spacing } from '@/theme/tokens';
 
-const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
-
 export default function SignUpScreen() {
+  const { t } = useLocale();
   const router = useRouter();
+  const { ref: referredBy } = useLocalSearchParams<{ ref?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -23,7 +25,7 @@ export default function SignUpScreen() {
   const handleSignUp = async () => {
     const normalizedUsername = username.trim().toLowerCase();
     if (!USERNAME_PATTERN.test(normalizedUsername)) {
-      setUsernameError('3-20 characters: lowercase letters, numbers, underscores.');
+      setUsernameError(t('auth.usernameHelp'));
       return;
     }
     setUsernameError(null);
@@ -37,16 +39,17 @@ export default function SignUpScreen() {
         password,
         username: normalizedUsername,
         displayName: displayName.trim() || normalizedUsername,
+        referredBy: referredBy || null,
       });
       // If confirmations are on, there's no session yet and the root
       // layout's redirect won't fire - send them to sign in ourselves.
       // If they're already signed in, the root layout handles navigation.
       if (!signedIn) {
-        notify('Check your email', 'Confirm your address, then sign in.');
+        notify(t('auth.checkEmailTitle'), t('auth.checkEmailMessage'));
         router.replace('/(auth)/sign-in');
       }
     } catch (err) {
-      notify('Sign up failed', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('auth.signUpFailed'), err instanceof Error ? err.message : t('auth.pleaseTryAgain'));
     } finally {
       setLoading(false);
     }
@@ -59,44 +62,44 @@ export default function SignUpScreen() {
         style={styles.flex}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.title}>{t('auth.createYourAccount')}</Text>
 
           <View style={styles.form}>
             <TextField
-              label="Username"
+              label={t('auth.username')}
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
-              placeholder="Ex. white_monster"
+              placeholder={t('auth.usernamePlaceholder')}
               error={usernameError}
             />
             <TextField
-              label="Display name"
+              label={t('auth.displayName')}
               value={displayName}
               onChangeText={setDisplayName}
-              placeholder="Ex. David D."
+              placeholder={t('auth.displayNamePlaceholder')}
             />
             <TextField
-              label="Email"
+              label={t('auth.email')}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
             />
             <TextField
-              label="Password"
+              label={t('auth.password')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              placeholder="At least 6 characters"
+              placeholder={t('auth.passwordMinPlaceholder')}
             />
-            <Button label="Create account" onPress={handleSignUp} loading={loading} />
+            <Button label={t('auth.signUp')} onPress={handleSignUp} loading={loading} />
           </View>
 
           <Link href="/(auth)/sign-in" style={styles.link}>
             <Text style={styles.linkText}>
-              Already have an account? <Text style={styles.linkTextStrong}>Sign in</Text>
+              {t('auth.alreadyHaveAccount')} <Text style={styles.linkTextStrong}>{t('auth.signIn')}</Text>
             </Text>
           </Link>
         </ScrollView>

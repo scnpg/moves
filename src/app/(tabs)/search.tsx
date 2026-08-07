@@ -16,7 +16,7 @@ import {
   updateMyLocation,
 } from '@/features/friends/api';
 import { searchUsers } from '@/features/search/api';
-import { getDeviceContactPhoneHashes } from '@/lib/contacts';
+import { getDeviceContactPhoneHashes, getWebContactPhoneHashes, isWebContactPickerAvailable } from '@/lib/contacts';
 import type {
   ContactSuggestion,
   FriendOfFriendSuggestion,
@@ -76,13 +76,8 @@ export default function SearchScreen() {
   const handleSyncContacts = async () => {
     setContactsSyncing(true);
     try {
-      const hashes = await getDeviceContactPhoneHashes();
-      if (hashes == null) {
-        if (Platform.OS === 'web') {
-          setContactsSynced(true); // nothing to sync on web; don't re-show the prompt
-        }
-        return;
-      }
+      const hashes = Platform.OS === 'web' ? await getWebContactPhoneHashes() : await getDeviceContactPhoneHashes();
+      if (hashes == null) return; // unavailable, cancelled, or denied - leave the prompt up to retry
       const matches = await matchContacts(hashes);
       setContacts(matches);
       setContactsSynced(true);
@@ -141,6 +136,7 @@ export default function SearchScreen() {
   };
 
   const showingSuggestions = !query.trim();
+  const showContactsSection = Platform.OS !== 'web' || isWebContactPickerAvailable();
   const hasAnySuggestions = fof.length > 0 || nearby.length > 0 || contacts.length > 0;
 
   return (
@@ -193,7 +189,7 @@ export default function SearchScreen() {
             </View>
           ) : null}
 
-          {Platform.OS !== 'web' ? (
+          {showContactsSection ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>From your contacts</Text>
               {contacts.map((item) => (
@@ -219,7 +215,7 @@ export default function SearchScreen() {
             </View>
           ) : null}
 
-          {!hasAnySuggestions && Platform.OS === 'web' ? (
+          {!hasAnySuggestions && !showContactsSection ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>
                 No suggestions yet - add a few friends and check back, or search by name above.

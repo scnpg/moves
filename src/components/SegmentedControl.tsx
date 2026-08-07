@@ -5,6 +5,8 @@ import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 interface Segment<T extends string> {
   value: T;
   label: string;
+  /** Locked behind a milestone (e.g. referral count) - shown greyed out with a lock glyph, taps ignored. */
+  disabled?: boolean;
 }
 
 interface SegmentedControlProps<T extends string> {
@@ -25,14 +27,18 @@ export function SegmentedControl<T extends string>({
         return (
           <Pressable
             key={segment.value}
-            onPress={() => onChange(segment.value)}
+            onPress={() => !segment.disabled && onChange(segment.value)}
             style={[
               styles.segment,
               index > 0 && styles.segmentDivider,
               active && styles.segmentActive,
+              segment.disabled && styles.segmentDisabled,
             ]}
           >
-            <Text style={[styles.label, active && styles.labelActive]}>{segment.label.toUpperCase()}</Text>
+            <Text style={[styles.label, active && styles.labelActive, segment.disabled && styles.labelDisabled]}>
+              {segment.disabled ? '🔒 ' : ''}
+              {segment.label.toUpperCase()}
+            </Text>
           </Pressable>
         );
       })}
@@ -61,6 +67,9 @@ const styles = StyleSheet.create({
   segmentActive: {
     backgroundColor: color.border,
   },
+  segmentDisabled: {
+    backgroundColor: color.bgElevated,
+  },
   label: {
     fontFamily: font.family.mono,
     color: color.textSecondary,
@@ -70,5 +79,8 @@ const styles = StyleSheet.create({
   },
   labelActive: {
     color: color.textInverse,
+  },
+  labelDisabled: {
+    color: color.textMuted,
   },
 });

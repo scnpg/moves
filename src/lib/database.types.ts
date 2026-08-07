@@ -4,7 +4,9 @@
 export type FriendshipStatus = 'pending' | 'accepted' | 'declined';
 export type MoveMemberStatus = 'pending' | 'approved' | 'rejected';
 export type MoveStatus = 'active' | 'cooldown' | 'expired';
-export type DegreeLimit = 0 | 1 | 2 | 3;
+// 0 = private (link/QR only), 1 = friends, 2 = friends-of-friends
+// ("mutuals"), 3 = open, 4 = close friends only.
+export type DegreeLimit = 0 | 1 | 2 | 3 | 4;
 
 export interface Profile {
   id: string;
@@ -17,6 +19,7 @@ export interface Profile {
   last_lng: number | null;
   last_location_at: string | null;
   phone_hash: string | null;
+  referred_by: string | null;
 }
 
 export interface Friendship {
@@ -43,6 +46,7 @@ export interface Move {
   cooldown_started_at: string | null;
   max_members: number | null;
   created_at: string;
+  share_token: string;
 }
 
 export interface MoveMember {
@@ -143,4 +147,36 @@ export interface ContactSuggestion {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+}
+
+export interface MoveByShareToken {
+  id: string;
+  title: string;
+  description: string | null;
+  host_username: string;
+  host_display_name: string | null;
+  host_avatar_url: string | null;
+  starts_at: string;
+  expires_at: string;
+  status: MoveStatus;
+  max_members: number | null;
+  approved_count: number;
+  is_full: boolean;
+  already_member: boolean;
+}
+
+export interface PublicProfile {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+}
+
+export interface UserSettings {
+  user_id: string;
+  push_token: string | null;
+  notify_friend_moves: boolean;
+  notify_mutual_moves: boolean;
+  updated_at: string;
 }

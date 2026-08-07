@@ -2,23 +2,22 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
-import { HoverPressable } from '@/components/HoverPressable';
 import { LocationPicker, type LocationValue } from '@/components/LocationPicker';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { SubHeader } from '@/components/SubHeader';
 import { TextField } from '@/components/TextField';
 import { TimeField } from '@/components/TimeField';
-import { getMyFriends } from '@/features/friends/api';
-import { createMove, inviteFriendsToMove } from '@/features/moves/api';
+import { getReferralCount } from '@/features/friends/api';
+import { createMove } from '@/features/moves/api';
 import { confirmAction, notify } from '@/lib/alerts';
-import type { DegreeLimit, FriendListItem } from '@/lib/database.types';
+import type { DegreeLimit } from '@/lib/database.types';
+import { isCloseFriendsUnlocked, isPrivateUnlocked, nextMilestoneLabel } from '@/lib/referrals';
 import { nextOccurrenceOf, timeAfter, timeString } from '@/lib/time';
 import { useAuth } from '@/providers/AuthProvider';
-import { borderWidth, color, degreeDescription, font, radius, spacing } from '@/theme/tokens';
+import { color, degreeDescription, font, spacing } from '@/theme/tokens';
 
 const DURATION_OPTIONS = [
   { value: '1', label: '1 hr' },
@@ -31,13 +30,6 @@ const END_MODE_OPTIONS = [
   { value: 'duration', label: 'Duration' },
   { value: 'time', label: 'End time' },
 ] as const;
-
-const DEGREE_OPTIONS = [
-  { value: '0', label: 'Invite only' },
-  { value: '1', label: 'Friends' },
-  { value: '2', label: 'Friends of friends' },
-  { value: '3', label: 'Open' },
-];
 
 export default function CreateMoveScreen() {
   const { session } = useAuth();
@@ -54,35 +46,32 @@ export default function CreateMoveScreen() {
   const [maxMembers, setMaxMembers] = useState('');
   const [location, setLocation] = useState<LocationValue | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [friends, setFriends] = useState<FriendListItem[]>([]);
-  const [invitedFriendIds, setInvitedFriendIds] = useState<Set<string>>(new Set());
+  const [referralCount, setReferralCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (degreeLimit !== 0 || friends.length > 0) return;
-    getMyFriends()
-      .then(setFriends)
-      .catch(() => {});
-  }, [degreeLimit, friends.length]);
+    if (!session?.user) return;
+    getReferralCount(session.user.id)
+      .then(setReferralCount)
+      .catch(() => setReferralCount(0));
+  }, [session?.user]);
 
-  const toggleInvitedFriend = (friendId: string) => {
-    setInvitedFriendIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(friendId)) {
-        next.delete(friendId);
-      } else {
-        next.add(friendId);
-      }
-      return next;
-    });
-  };
+  const privateLocked = !isPrivateUnlocked(referralCount ?? 0);
+  const closeFriendsLocked = !isCloseFriendsUnlocked(referralCount ?? 0);
+
+  const DEGREE_OPTIONS = [
+    { value: '4', label: 'Close Friends', disabled: closeFriendsLocked },
+    { value: '1', label: 'Friends' },
+    { value: '2', label: 'Mutuals' },
+    { value: '3', label: 'Open' },
+    { value: '0', label: 'Private (Link-Only)', disabled: privateLocked },
+  ] as const;
 
   const hasUnsavedInput =
     title.trim() !== '' ||
     description.trim() !== '' ||
     maxMembers.trim() !== '' ||
     requiresApproval ||
-    location != null ||
-    invitedFriendIds.size > 0;
+    location != null;
 
   const handleClose = async () => {
     if (hasUnsavedInput) {
@@ -113,11 +102,6 @@ export default function CreateMoveScreen() {
       return;
     }
 
-    if (degreeLimit === 0 && invitedFriendIds.size === 0) {
-      notify('Invite someone', 'Invite-only Moves need at least one invited friend, or pick a different visibility.');
-      return;
-    }
-
     // A time in the past means "tomorrow" - Moves are same-day/spontaneous,
     // there's no separate date picker.
     const startsAt = nextOccurrenceOf(startTime);
@@ -140,11 +124,6 @@ export default function CreateMoveScreen() {
         lat: location?.lat ?? null,
         lng: location?.lng ?? null,
       });
-      if (degreeLimit === 0 && invitedFriendIds.size > 0) {
-        await inviteFriendsToMove(move.id, Array.from(invitedFriendIds)).catch(() => {
-          notify('Move created', "Couldn't send all invites - you can add people from the room instead.");
-        });
-      }
       router.replace(`/room/${move.id}`);
     } catch (err) {
       notify('Could not create Move', err instanceof Error ? err.message : 'Please try again.');
@@ -186,45 +165,10 @@ export default function CreateMoveScreen() {
             onChange={(v) => setDegreeLimit(Number(v) as DegreeLimit)}
           />
           <Text style={styles.helperText}>{degreeDescription[degreeLimit]}</Text>
+          {nextMilestoneLabel(referralCount ?? 0) ? (
+            <Text style={styles.helperText}>Progress: {nextMilestoneLabel(referralCount ?? 0)}</Text>
+          ) : null}
         </View>
-
-        {degreeLimit === 0 ? (
-          <View style={styles.field}>
-            <Text style={styles.label}>Invite friends</Text>
-            <Text style={styles.helperText}>
-              They&apos;re added straight into the Move and its chat - no request needed.
-            </Text>
-            <Card style={styles.inviteCard}>
-              {friends.length === 0 ? (
-                <Text style={styles.helperText}>No friends yet to invite.</Text>
-              ) : (
-                friends.map((friend) => {
-                  const selected = invitedFriendIds.has(friend.id);
-                  return (
-                    <HoverPressable
-                      key={friend.id}
-                      onPress={() => toggleInvitedFriend(friend.id)}
-                      style={[styles.inviteRow, selected && styles.inviteRowSelected]}
-                    >
-                      <Avatar
-                        uri={friend.avatar_url}
-                        name={friend.display_name ?? friend.username}
-                        size={32}
-                        closeFriend={friend.is_close_friend}
-                      />
-                      <Text style={styles.inviteName} numberOfLines={1}>
-                        {friend.display_name ?? friend.username}
-                      </Text>
-                      <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
-                        {selected ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                      </View>
-                    </HoverPressable>
-                  );
-                })
-              )}
-            </Card>
-          </View>
-        ) : null}
 
         <Card style={styles.toggleCard}>
           <View style={styles.toggleRow}>
@@ -298,44 +242,5 @@ const styles = StyleSheet.create({
     color: color.textPrimary,
     fontSize: font.size.sm,
     fontWeight: font.weight.bold,
-  },
-  inviteCard: {
-    gap: 0,
-    padding: spacing.xs,
-  },
-  inviteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  inviteRowSelected: {
-    backgroundColor: color.brandMuted,
-  },
-  inviteName: {
-    flex: 1,
-    color: color.textPrimary,
-    fontSize: font.size.sm,
-    fontWeight: font.weight.medium,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: color.brand,
-  },
-  checkboxMark: {
-    fontSize: 12,
-    fontWeight: font.weight.bold,
-    color: color.textPrimary,
-    lineHeight: 14,
   },
 });

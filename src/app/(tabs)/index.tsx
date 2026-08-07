@@ -7,9 +7,10 @@ import { LiveMap } from '@/components/LiveMap';
 import { MoveCard } from '@/components/MoveCard';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
-import { getCloseFriendIds, updateMyLocation } from '@/features/friends/api';
+import { getCloseFriendIds, getReferralCount, updateMyLocation } from '@/features/friends/api';
 import { getEligibleMoves } from '@/features/moves/api';
 import type { EligibleMove } from '@/lib/database.types';
+import { nextMilestoneLabel } from '@/lib/referrals';
 import { useUserLocation } from '@/lib/useLocation';
 import { useAuth } from '@/providers/AuthProvider';
 import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
@@ -28,6 +29,7 @@ export default function MovesScreen() {
   const [tab, setTab] = useState<Tab>('friends');
   const [moves, setMoves] = useState<EligibleMove[]>([]);
   const [closeFriendIds, setCloseFriendIds] = useState<Set<string>>(new Set());
+  const [referralCount, setReferralCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [clockLabel] = useState(() =>
@@ -36,12 +38,14 @@ export default function MovesScreen() {
 
   const load = useCallback(async () => {
     if (!session?.user) return;
-    const [movesData, closeIds] = await Promise.all([
+    const [movesData, closeIds, referrals] = await Promise.all([
       getEligibleMoves({ userId: session.user.id, lat: coords?.lat, lng: coords?.lng }),
       getCloseFriendIds(),
+      getReferralCount(session.user.id).catch(() => 0),
     ]);
     setMoves(movesData);
     setCloseFriendIds(closeIds);
+    setReferralCount(referrals);
   }, [session?.user, coords]);
 
   useFocusEffect(
@@ -93,6 +97,12 @@ export default function MovesScreen() {
                 <Text style={styles.liveBadgeText}>{liveCount} LIVE</Text>
               </View>
             </View>
+
+            {referralCount != null && nextMilestoneLabel(referralCount) ? (
+              <HoverPressable onPress={() => router.push('/(tabs)/profile')} style={styles.referralBar}>
+                <Text style={styles.referralBarText}>🎟 Progress: {nextMilestoneLabel(referralCount)}</Text>
+              </HoverPressable>
+            ) : null}
 
             <LiveMap
               moves={moves}
@@ -176,6 +186,22 @@ const styles = StyleSheet.create({
     fontSize: font.size.xs,
     fontWeight: font.weight.bold,
     letterSpacing: font.tracking.label,
+  },
+  referralBar: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    backgroundColor: color.brandMuted,
+    borderWidth: borderWidth.thin,
+    borderColor: color.borderSubtle,
+    borderRadius: radius.sm,
+  },
+  referralBarText: {
+    fontFamily: font.family.mono,
+    color: color.textPrimary,
+    fontSize: font.size.xs,
+    fontWeight: font.weight.bold,
   },
   controlsRow: {
     flexDirection: 'row',

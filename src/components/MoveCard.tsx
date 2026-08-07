@@ -13,7 +13,7 @@ interface MoveCardProps {
   onPress: () => void;
 }
 
-const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink' } as const;
+const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink', 4: 'red' } as const;
 
 export function MoveCard({ move, hostIsCloseFriend, onPress }: MoveCardProps) {
   const distance = formatDistance(move.distance_m);

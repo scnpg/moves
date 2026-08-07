@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Tabs } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useLocale } from '@/i18n/LocaleProvider';
 import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
 function TabLabel({ label, focused }: { label: string; focused: boolean }) {
@@ -14,12 +15,14 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Text style={[styles.labelText, focused && styles.labelTextActive]}>{label}</Text>
+      <Text style={[styles.labelText, focused && styles.labelTextActive]}>{label.toUpperCase()}</Text>
     </View>
   );
 }
 
 export default function TabsLayout() {
+  const { t } = useLocale();
+
   return (
     <Tabs
       screenOptions={{
@@ -36,22 +39,22 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Moves',
-          tabBarIcon: ({ focused }) => <TabLabel label="MOVES" focused={focused} />,
+          title: t('nav.moves'),
+          tabBarIcon: ({ focused }) => <TabLabel label={t('nav.moves')} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
-          tabBarIcon: ({ focused }) => <TabLabel label="SEARCH" focused={focused} />,
+          title: t('nav.search'),
+          tabBarIcon: ({ focused }) => <TabLabel label={t('nav.search')} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ focused }) => <TabLabel label="PROFILE" focused={focused} />,
+          title: t('nav.profile'),
+          tabBarIcon: ({ focused }) => <TabLabel label={t('nav.profile')} focused={focused} />,
         }}
       />
     </Tabs>

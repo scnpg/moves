@@ -4,8 +4,12 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AppHeader } from '@/components/AppHeader';
+import { LocaleProvider } from '@/i18n/LocaleProvider';
+import { PENDING_JOIN_TOKEN_KEY } from '@/lib/links';
+import { isPlaceholderUsername } from '@/lib/username';
 import { AlertProvider } from '@/providers/AlertProvider';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { color } from '@/theme/tokens';
@@ -25,30 +29,50 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AlertProvider>
-        <AuthProvider>
-          <RootNavigation />
-        </AuthProvider>
-      </AlertProvider>
+      <LocaleProvider>
+        <AlertProvider>
+          <AuthProvider>
+            <RootNavigation />
+          </AuthProvider>
+        </AlertProvider>
+      </LocaleProvider>
     </SafeAreaProvider>
   );
 }
 
 function RootNavigation() {
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === '(auth)';
+    // /join/:token has its own signed-out preview (get_move_by_share_token
+    // is anon-callable) - don't bounce visitors to sign-in before they see it.
+    const onJoinRoute = segments[0] === 'join';
+    // /users/:id has its own signed-out preview too (get_public_profile is
+    // anon-callable) - for shared profile links/QR codes.
+    const onUsersRoute = segments[0] === 'users';
+    const onCompleteProfile = segments[0] === 'complete-profile';
+    // A phone-first signup (see PhoneAuth) lands with a placeholder
+    // username from handle_new_user()'s fallback - profile loads a beat
+    // after session does, so this re-fires and self-corrects once it does,
+    // wherever they ended up in the meantime.
+    const needsUsername = !!session && isPlaceholderUsername(profile?.username);
 
-    if (!session && !inAuthGroup) {
+    if (!session && !inAuthGroup && !onJoinRoute && !onUsersRoute) {
       router.replace('/(auth)/sign-in');
+    } else if (session && needsUsername && !onCompleteProfile) {
+      router.replace('/complete-profile');
     } else if (session && inAuthGroup) {
-      router.replace('/(tabs)');
+      // A token stashed by join/[share_token].tsx (visitor tapped "Sign in
+      // to join" while signed out) takes priority over the default landing.
+      AsyncStorage.getItem(PENDING_JOIN_TOKEN_KEY).then((token) => {
+        router.replace(token ? `/join/${token}` : '/(tabs)');
+      });
     }
-  }, [session, loading, segments, router]);
+  }, [session, profile?.username, loading, segments, router]);
 
   if (loading) {
     return (

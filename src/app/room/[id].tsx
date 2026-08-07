@@ -16,6 +16,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
+import { ShareMovePanel } from '@/components/ShareMovePanel';
 import { SubHeader } from '@/components/SubHeader';
 import { TextField } from '@/components/TextField';
 import { getCloseFriendIds } from '@/features/friends/api';
@@ -43,7 +44,7 @@ import { formatCountdown, formatWhen } from '@/lib/format';
 import { useAuth } from '@/providers/AuthProvider';
 import { borderWidth, color, degreeBadgeLabel, font, radius, spacing } from '@/theme/tokens';
 
-const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink' } as const;
+const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink', 4: 'red' } as const;
 
 export default function MoveRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -353,6 +354,8 @@ export default function MoveRoomScreen() {
             </View>
           ) : null}
         </View>
+
+        {move.degree_limit === 0 ? <ShareMovePanel shareToken={move.share_token} /> : null}
 
         {isHost && pendingMembers.length > 0 ? (
           <View style={styles.requestsSection}>

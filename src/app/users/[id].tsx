@@ -14,9 +14,9 @@ import {
   sendFriendRequest,
   setCloseFriend,
 } from '@/features/friends/api';
-import { getProfile } from '@/features/profile/api';
+import { getProfile, getPublicProfile } from '@/features/profile/api';
 import { confirmAction, notify } from '@/lib/alerts';
-import type { MutualFriend, Profile, SearchFriendshipStatus } from '@/lib/database.types';
+import type { MutualFriend, PublicProfile, SearchFriendshipStatus } from '@/lib/database.types';
 import { useAuth } from '@/providers/AuthProvider';
 import { color, font, spacing } from '@/theme/tokens';
 
@@ -25,30 +25,43 @@ export default function UserProfileScreen() {
   const { session } = useAuth();
   const router = useRouter();
 
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [mutuals, setMutuals] = useState<MutualFriend[]>([]);
   const [status, setStatus] = useState<SearchFriendshipStatus>('none');
   const [isCloseFriend, setIsCloseFriend] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Reachable while signed out - shared profile links/QR codes (see
+  // ShareProfilePanel, get_public_profile()) need to work for people who
+  // don't have an account yet. Friend status/mutuals only make sense once
+  // signed in, so those stay at their "none" defaults otherwise.
   useFocusEffect(
     useCallback(() => {
-      if (!id || !session?.user) return;
+      if (!id) return;
       let cancelled = false;
       setLoading(true);
 
       (async () => {
-        const [profileData, friendship, mutualData] = await Promise.all([
-          getProfile(id),
-          getFriendshipStatus(session.user.id, id),
-          getMutualFriends(session.user.id, id).catch(() => []),
-        ]);
-        if (cancelled) return;
-        setProfile(profileData);
-        setStatus(friendship.status);
-        setIsCloseFriend(friendship.isCloseFriend);
-        setMutuals(mutualData);
+        if (session?.user) {
+          const [profileData, friendship, mutualData] = await Promise.all([
+            getProfile(id),
+            getFriendshipStatus(session.user.id, id),
+            getMutualFriends(session.user.id, id).catch(() => []),
+          ]);
+          if (cancelled) return;
+          setProfile(profileData);
+          setStatus(friendship.status);
+          setIsCloseFriend(friendship.isCloseFriend);
+          setMutuals(mutualData);
+          setNotFound(!profileData);
+        } else {
+          const profileData = await getPublicProfile(id).catch(() => null);
+          if (cancelled) return;
+          setProfile(profileData);
+          setNotFound(!profileData);
+        }
         setLoading(false);
       })();
 
@@ -109,12 +122,23 @@ export default function UserProfileScreen() {
     }
   };
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <Screen>
         <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
         <View style={styles.loading}>
           <ActivityIndicator color={color.brand} />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (notFound || !profile) {
+    return (
+      <Screen>
+        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
+        <View style={styles.loading}>
+          <Text style={styles.emptyText}>This profile isn&apos;t available.</Text>
         </View>
       </Screen>
     );
@@ -143,16 +167,15 @@ export default function UserProfileScreen() {
           {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
 
           <View style={styles.actionsRow}>
-            {status === 'none' ? (
+            {!session?.user ? (
+              <Button label="Sign in to connect" onPress={() => router.push('/(auth)/sign-in')} />
+            ) : status === 'none' ? (
               <Button label="Add friend" onPress={handleAdd} loading={actionLoading} />
-            ) : null}
-            {status === 'pending_sent' ? (
+            ) : status === 'pending_sent' ? (
               <Button label="Request sent" variant="secondary" onPress={() => {}} disabled />
-            ) : null}
-            {status === 'pending_received' ? (
+            ) : status === 'pending_received' ? (
               <Button label="Accept request" onPress={handleAccept} loading={actionLoading} />
-            ) : null}
-            {status === 'accepted' ? (
+            ) : status === 'accepted' ? (
               <View style={styles.acceptedActionsRow}>
                 <Button
                   label={isCloseFriend ? '★ Close friend' : 'Mark as close friend'}
@@ -172,22 +195,26 @@ export default function UserProfileScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>
-          {mutuals.length > 0 ? `${mutuals.length} MUTUAL FRIEND${mutuals.length === 1 ? '' : 'S'}` : 'MUTUAL FRIENDS'}
-        </Text>
+        {session?.user ? (
+          <>
+            <Text style={styles.sectionTitle}>
+              {mutuals.length > 0 ? `${mutuals.length} MUTUAL FRIEND${mutuals.length === 1 ? '' : 'S'}` : 'MUTUAL FRIENDS'}
+            </Text>
 
-        <FlatList
-          data={mutuals}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Card style={styles.mutualCard} raised={false}>
-              <Avatar uri={item.avatar_url} name={item.display_name ?? item.username} size={36} />
-              <Text style={styles.mutualName}>{item.display_name ?? item.username}</Text>
-            </Card>
-          )}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
-          ListEmptyComponent={<Text style={styles.emptyText}>No mutual friends to show.</Text>}
-        />
+            <FlatList
+              data={mutuals}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <Card style={styles.mutualCard} raised={false}>
+                  <Avatar uri={item.avatar_url} name={item.display_name ?? item.username} size={36} />
+                  <Text style={styles.mutualName}>{item.display_name ?? item.username}</Text>
+                </Card>
+              )}
+              ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
+              ListEmptyComponent={<Text style={styles.emptyText}>No mutual friends to show.</Text>}
+            />
+          </>
+        ) : null}
       </View>
     </Screen>
   );

@@ -23,15 +23,19 @@ export async function signUp(params: {
   password: string;
   username: string;
   displayName: string;
+  referredBy?: string | null;
 }): Promise<{ signedIn: boolean }> {
-  const { email, password, username, displayName } = params;
-  // handle_new_user() (supabase/migrations/20260801120100_profiles.sql) reads
-  // these keys straight out of raw_user_meta_data to provision the profile row.
+  const { email, password, username, displayName, referredBy } = params;
+  // handle_new_user() (supabase/migrations/20260801120100_profiles.sql,
+  // extended in 20260803140200_referrals.sql) reads these keys straight out
+  // of raw_user_meta_data to provision the profile row. referred_by is the
+  // referrer's own user id (see src/lib/links.ts referralSignUpUrl()) -
+  // self-referral and invalid ids are silently dropped server-side.
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { username, display_name: displayName },
+      data: { username, display_name: displayName, referred_by: referredBy ?? null },
       emailRedirectTo: emailRedirectTo(),
     },
   });

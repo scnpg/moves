@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
-import type { Move, Profile } from '@/lib/database.types';
+import type { Move, Profile, PublicProfile } from '@/lib/database.types';
 
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
@@ -9,9 +9,16 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data as Profile;
 }
 
+/** Anon-callable preview for shareable profile links/QR codes - see get_public_profile(). */
+export async function getPublicProfile(userId: string): Promise<PublicProfile | null> {
+  const { data, error } = await supabase.rpc('get_public_profile', { p_user_id: userId });
+  if (error) throw error;
+  return ((data as PublicProfile[] | null)?.[0] as PublicProfile) ?? null;
+}
+
 export async function updateProfile(
   userId: string,
-  updates: Partial<Pick<Profile, 'display_name' | 'avatar_url' | 'phone_hash' | 'bio'>>
+  updates: Partial<Pick<Profile, 'username' | 'display_name' | 'avatar_url' | 'phone_hash' | 'bio'>>
 ) {
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
   if (error) throw error;

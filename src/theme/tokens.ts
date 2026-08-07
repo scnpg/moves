@@ -16,10 +16,11 @@ const accent = {
   green: '#4DE28F', // 1st degree, live/positive
   blue: '#3AC3F2', // 2nd degree, informational
   pink: '#FF3D8B', // open/public, alerts
-  yellow: '#FFD23D', // close friends, highlights
+  yellow: '#FFD23D', // close-friend tag highlight (star/ring on avatars)
   orange: '#FF8A3D',
-  violet: '#6B4DE6',
+  violet: '#6B4DE6', // private (link-only)
   teal: '#3DE0C9',
+  red: '#FF4D4D', // close-friends-only Moves accent border/glow
 } as const;
 
 export const color = {
@@ -52,6 +53,7 @@ export const color = {
   accentOrange: accent.orange,
   accentViolet: accent.violet,
   accentTeal: accent.teal,
+  accentRed: accent.red,
 } as const;
 
 /** Full neon set, for anything that wants to cycle through all seven (avatar tints, decorative accents). */
@@ -154,30 +156,34 @@ export const shadow = {
   }),
 } as const;
 
-export const degreeLabel: Record<0 | 1 | 2 | 3, string> = {
-  0: 'Invite only',
-  1: 'Friends only',
-  2: 'Friends of friends',
+export const degreeLabel: Record<0 | 1 | 2 | 3 | 4, string> = {
+  0: 'Private (Link-Only)',
+  1: 'Friends',
+  2: 'Mutuals',
   3: 'Open',
+  4: 'Close Friends',
 };
 
-export const degreeDescription: Record<0 | 1 | 2 | 3, string> = {
-  0: 'Only people you explicitly invite below can see or join.',
+export const degreeDescription: Record<0 | 1 | 2 | 3 | 4, string> = {
+  0: 'Hidden everywhere - only people with the share link or QR code can see or join.',
   1: 'Only your direct friends can see and join.',
   2: 'Friends and friends-of-friends can see and join.',
   3: 'Anyone nearby can see and join.',
+  4: 'Only friends you’ve personally tagged as close can see and join.',
 };
 
-export const degreeBadgeLabel: Record<0 | 1 | 2 | 3, string> = {
-  0: 'INVITE ONLY',
-  1: '1ST DEGREE',
-  2: '2ND DEGREE',
+export const degreeBadgeLabel: Record<0 | 1 | 2 | 3 | 4, string> = {
+  0: 'PRIVATE',
+  1: 'FRIENDS',
+  2: 'MUTUALS',
   3: 'OPEN',
+  4: 'CLOSE FRIENDS',
 };
 
-export const degreeColor: Record<0 | 1 | 2 | 3, string> = {
+export const degreeColor: Record<0 | 1 | 2 | 3 | 4, string> = {
   0: accent.violet,
   1: accent.green,
   2: accent.blue,
   3: accent.pink,
+  4: accent.red,
 };

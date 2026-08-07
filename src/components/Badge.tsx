@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
-type Tone = 'neutral' | 'green' | 'blue' | 'pink' | 'yellow' | 'orange' | 'violet' | 'teal' | 'ink';
+type Tone = 'neutral' | 'green' | 'blue' | 'pink' | 'yellow' | 'orange' | 'violet' | 'teal' | 'ink' | 'red';
 
 export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
   return (
@@ -39,4 +39,5 @@ const toneStyles = {
   violet: StyleSheet.create({ bg: { backgroundColor: color.accentViolet }, text: { color: color.textInverse } }),
   teal: StyleSheet.create({ bg: { backgroundColor: color.accentTeal }, text: { color: color.textPrimary } }),
   ink: StyleSheet.create({ bg: { backgroundColor: color.border }, text: { color: color.textInverse } }),
+  red: StyleSheet.create({ bg: { backgroundColor: color.accentRed }, text: { color: color.textInverse } }),
 };

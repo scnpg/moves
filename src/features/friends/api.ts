@@ -138,3 +138,10 @@ export async function matchContacts(phoneHashes: string[]): Promise<ContactSugge
   if (error) throw error;
   return (data ?? []) as ContactSuggestion[];
 }
+
+/** Self-only - how many people signed up with this user's referral link. Drives the invite-milestone unlocks. */
+export async function getReferralCount(uid: string): Promise<number> {
+  const { data, error } = await supabase.rpc('get_referral_count', { uid });
+  if (error) throw error;
+  return (data as number | null) ?? 0;
+}

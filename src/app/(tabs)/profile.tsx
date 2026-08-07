@@ -2,6 +2,7 @@
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -9,14 +10,19 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
+import { SegmentedControl } from '@/components/SegmentedControl';
+import { ShareProfilePanel } from '@/components/ShareProfilePanel';
 import { TextField } from '@/components/TextField';
 import { signOut } from '@/features/auth/api';
-import { getFriendRequests, getMyFriends } from '@/features/friends/api';
+import { getFriendRequests, getMyFriends, getReferralCount } from '@/features/friends/api';
 import { getHostedActiveMoves, updateProfile, uploadAvatar } from '@/features/profile/api';
+import { LOCALE_LABELS, SUPPORTED_LOCALES, useLocale, type Locale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import type { Move } from '@/lib/database.types';
 import { formatWhen } from '@/lib/format';
+import { referralSignUpUrl } from '@/lib/links';
 import { hashPhone } from '@/lib/phone';
+import { nextMilestoneLabel } from '@/lib/referrals';
 import { useAuth } from '@/providers/AuthProvider';
 import { color, font, spacing } from '@/theme/tokens';
 
@@ -24,6 +30,7 @@ const BIO_MAX_LENGTH = 280;
 
 export default function ProfileScreen() {
   const { session, profile, refreshProfile } = useAuth();
+  const { locale, setLocale, t } = useLocale();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
@@ -34,6 +41,9 @@ export default function ProfileScreen() {
   const [activeMoves, setActiveMoves] = useState<Move[]>([]);
   const [friendCount, setFriendCount] = useState<number | null>(null);
   const [incomingRequestCount, setIncomingRequestCount] = useState(0);
+  const [referralCount, setReferralCount] = useState<number | null>(null);
+  const [copyingReferral, setCopyingReferral] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -43,8 +53,20 @@ export default function ProfileScreen() {
       getFriendRequests()
         .then((requests) => setIncomingRequestCount(requests.filter((r) => r.direction === 'incoming').length))
         .catch(() => {});
+      getReferralCount(session.user.id).then(setReferralCount).catch(() => {});
     }, [session?.user])
   );
+
+  const handleCopyReferralLink = async () => {
+    if (!session?.user) return;
+    setCopyingReferral(true);
+    try {
+      await Clipboard.setStringAsync(referralSignUpUrl(session.user.id));
+      notify('Link copied', 'Share it - once they sign up, it counts toward your invites.');
+    } finally {
+      setCopyingReferral(false);
+    }
+  };
 
   const startEditing = () => {
     setDisplayName(profile?.display_name ?? '');
@@ -126,7 +148,18 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View style={styles.headerSection}>
-            <Text style={styles.headerTitle}>Profile</Text>
+            <View style={styles.headerRow}>
+              <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+              <HoverPressable
+                onPress={() => setShareOpen((open) => !open)}
+                style={styles.shareIconButton}
+                lightenOpacity={0.2}
+              >
+                <Text style={styles.shareIcon}>🔗</Text>
+              </HoverPressable>
+            </View>
+
+            {shareOpen && session?.user ? <ShareProfilePanel userId={session.user.id} /> : null}
 
             <Card style={styles.profileCard}>
               <HoverPressable onPress={handlePickAvatar} style={styles.avatarWrap} disabled={uploadingAvatar}>
@@ -150,7 +183,7 @@ export default function ProfileScreen() {
             <HoverPressable onPress={() => router.push('/friends')}>
               <Card style={styles.friendsRow}>
                 <Text style={styles.friendsLabel}>
-                  Friends{friendCount != null ? ` · ${friendCount}` : ''}
+                  {t('profile.friends')}{friendCount != null ? ` · ${friendCount}` : ''}
                 </Text>
                 {incomingRequestCount > 0 ? (
                   <View style={styles.requestBadge}>
@@ -160,6 +193,16 @@ export default function ProfileScreen() {
                 <Text style={styles.chevron}>›</Text>
               </Card>
             </HoverPressable>
+
+            <Card style={styles.referralCard}>
+              <Text style={styles.friendsLabel}>
+                {t('profile.inviteFriends')}{referralCount != null ? ` · ${referralCount}` : ''}
+              </Text>
+              <Text style={styles.helperText}>
+                {nextMilestoneLabel(referralCount ?? 0) ?? 'All visibility tiers unlocked - nice work.'}
+              </Text>
+              <Button label={t('profile.copyInviteLink')} variant="secondary" onPress={handleCopyReferralLink} loading={copyingReferral} />
+            </Card>
 
             {editing ? (
               <Card style={styles.editCard}>
@@ -191,10 +234,10 @@ export default function ProfileScreen() {
                 </View>
               </Card>
             ) : (
-              <Button label="Edit profile" variant="secondary" onPress={startEditing} />
+              <Button label={t('profile.edit')} variant="secondary" onPress={startEditing} />
             )}
 
-            <Text style={styles.sectionTitle}>Your active Moves</Text>
+            <Text style={styles.sectionTitle}>{t('profile.yourActiveMoves')}</Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -209,10 +252,20 @@ export default function ProfileScreen() {
         )}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>You&apos;re not hosting any Moves right now.</Text>
+          <Text style={styles.emptyText}>{t('profile.notHostingAnyMoves')}</Text>
         }
         ListFooterComponent={
-          <Button label="Sign out" variant="ghost" onPress={handleSignOut} style={styles.signOutButton} />
+          <View style={styles.footer}>
+            <Card style={styles.languageCard}>
+              <Text style={styles.friendsLabel}>{t('profile.language')}</Text>
+              <SegmentedControl
+                segments={SUPPORTED_LOCALES.map((l) => ({ value: l, label: LOCALE_LABELS[l] }))}
+                value={locale}
+                onChange={(next) => setLocale(next as Locale)}
+              />
+            </Card>
+            <Button label={t('profile.signOut')} variant="ghost" onPress={handleSignOut} style={styles.signOutButton} />
+          </View>
         }
       />
     </Screen>
@@ -229,10 +282,25 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   headerTitle: {
     fontSize: font.size.xl,
     fontWeight: font.weight.heavy,
     color: color.textPrimary,
+  },
+  shareIconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+  },
+  shareIcon: {
+    fontSize: font.size.lg,
   },
   profileCard: {
     flexDirection: 'row',
@@ -309,6 +377,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: font.weight.bold,
   },
+  referralCard: {
+    gap: spacing.xs,
+  },
   editCard: {
     gap: spacing.sm,
   },
@@ -356,7 +427,14 @@ const styles = StyleSheet.create({
     fontSize: font.size.sm,
     paddingVertical: spacing.md,
   },
-  signOutButton: {
+  footer: {
+    gap: spacing.md,
     marginTop: spacing.lg,
+  },
+  languageCard: {
+    gap: spacing.sm,
+  },
+  signOutButton: {
+    marginTop: 0,
   },
 });

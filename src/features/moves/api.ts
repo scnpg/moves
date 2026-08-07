@@ -1,5 +1,13 @@
 import { supabase } from '@/lib/supabase';
-import type { DegreeLimit, EligibleMove, Move, MoveMember, MoveMessage, Profile } from '@/lib/database.types';
+import type {
+  DegreeLimit,
+  EligibleMove,
+  Move,
+  MoveByShareToken,
+  MoveMember,
+  MoveMessage,
+  Profile,
+} from '@/lib/database.types';
 
 export interface MoveMemberWithProfile extends MoveMember {
   profile: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_url'>;
@@ -86,6 +94,19 @@ export async function requestToJoin(moveId: string, userId: string) {
   if (error) throw error;
 }
 
+/** Public preview for a Private (Link-Only) Move's share link - works while signed out. Null if the token is invalid/expired. */
+export async function getMoveByShareToken(shareToken: string): Promise<MoveByShareToken | null> {
+  const { data, error } = await supabase.rpc('get_move_by_share_token', { p_share_token: shareToken });
+  if (error) throw error;
+  return ((data as MoveByShareToken[] | null)?.[0] as MoveByShareToken) ?? null;
+}
+
+/** Self-service join via a Private (Link-Only) Move's share token. Authenticated only; idempotent if already a member. */
+export async function joinMoveViaToken(shareToken: string) {
+  const { error } = await supabase.rpc('join_move_via_token', { p_share_token: shareToken });
+  if (error) throw error;
+}
+
 export async function listMembers(moveId: string): Promise<MoveMemberWithProfile[]> {
   const { data, error } = await supabase
     .from('move_members')
@@ -122,20 +143,6 @@ export async function endMoveEarly(moveId: string) {
 /** Permanently removes the move (and, via cascade, its members and chat). Host-only per RLS. */
 export async function deleteMove(moveId: string) {
   const { error } = await supabase.from('moves').delete().eq('id', moveId);
-  if (error) throw error;
-}
-
-/**
- * Host-only: adds specific friends as already-approved members - i.e.
- * invites them straight into the move and its chat, no join request
- * needed. Silently skips anyone in the list who isn't an accepted friend.
- */
-export async function inviteFriendsToMove(moveId: string, friendIds: string[]) {
-  if (friendIds.length === 0) return;
-  const { error } = await supabase.rpc('invite_friends_to_move', {
-    p_move_id: moveId,
-    p_friend_ids: friendIds,
-  });
   if (error) throw error;
 }
 
