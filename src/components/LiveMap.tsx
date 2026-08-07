@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useLocale } from '@/i18n/LocaleProvider';
 import type { EligibleMove } from '@/lib/database.types';
 import { borderWidth, color, degreeColor, font, radius, spacing } from '@/theme/tokens';
 
@@ -28,11 +29,12 @@ function pinPosition(id: string) {
  * picks automatically on that platform.
  */
 export function LiveMap({ moves, onSelectMove }: LiveMapProps) {
+  const { t } = useLocale();
   const pins = moves.slice(0, 8);
 
   return (
     <View style={styles.panel}>
-      <Text style={styles.label}>LIVE MAP</Text>
+      <Text style={styles.label}>{t('liveMap.label')}</Text>
       {pins.map((move) => {
         const pos = pinPosition(move.id);
         const dotColor = degreeColor[move.degree_limit];

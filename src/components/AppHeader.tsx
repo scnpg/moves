@@ -1,8 +1,9 @@
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoverPressable } from '@/components/HoverPressable';
+import { LanguageToggle } from '@/components/LanguageToggle';
 import { useAuth } from '@/providers/AuthProvider';
 import { borderWidth, color, font, spacing } from '@/theme/tokens';
 
@@ -22,19 +23,28 @@ export function AppHeader() {
   };
 
   return (
-    <HoverPressable onPress={goHome} style={[styles.bar, { paddingTop: insets.top + spacing.xs }]} lightenOpacity={0.08}>
-      <Text style={styles.logo}>MOVES?</Text>
-    </HoverPressable>
+    <View style={[styles.bar, { paddingTop: insets.top + spacing.xs }]}>
+      <HoverPressable onPress={goHome} style={styles.logoWrap} lightenOpacity={0.08}>
+        <Text style={styles.logo}>MOVES?</Text>
+      </HoverPressable>
+      <LanguageToggle />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xs,
     borderBottomWidth: borderWidth.base,
     borderBottomColor: color.border,
     backgroundColor: color.bg,
+  },
+  logoWrap: {
+    flexShrink: 1,
   },
   logo: {
     fontFamily: font.family.logo,

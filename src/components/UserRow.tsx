@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { HoverPressable } from '@/components/HoverPressable';
+import { useLocale } from '@/i18n/LocaleProvider';
 import type { SearchFriendshipStatus } from '@/lib/database.types';
 import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
@@ -34,6 +35,8 @@ export function UserRow({
   onToggleClose,
   onUnfriend,
 }: UserRowProps) {
+  const { t } = useLocale();
+
   return (
     <Pressable onPress={onPress} style={styles.row}>
       <Avatar uri={avatarUrl} name={name} size={44} closeFriend={isCloseFriend} />
@@ -47,17 +50,17 @@ export function UserRow({
       </View>
       {friendshipStatus === 'none' && onAdd ? (
         <HoverPressable onPress={onAdd} style={styles.actionPrimary}>
-          <Text style={styles.actionPrimaryText}>ADD</Text>
+          <Text style={styles.actionPrimaryText}>{t('userRow.add')}</Text>
         </HoverPressable>
       ) : null}
       {friendshipStatus === 'pending_sent' ? (
         <View style={styles.acceptedActions}>
           <View style={styles.actionMuted}>
-            <Text style={styles.actionMutedText}>REQUESTED</Text>
+            <Text style={styles.actionMutedText}>{t('userRow.requested')}</Text>
           </View>
           {onCancel ? (
             <HoverPressable onPress={onCancel} style={styles.unfriendButton}>
-              <Text style={styles.unfriendText}>CANCEL</Text>
+              <Text style={styles.unfriendText}>{t('userRow.cancel')}</Text>
             </HoverPressable>
           ) : null}
         </View>
@@ -66,12 +69,12 @@ export function UserRow({
         <View style={styles.acceptedActions}>
           {onAccept ? (
             <HoverPressable onPress={onAccept} style={styles.actionPrimary}>
-              <Text style={styles.actionPrimaryText}>ACCEPT</Text>
+              <Text style={styles.actionPrimaryText}>{t('userRow.accept')}</Text>
             </HoverPressable>
           ) : null}
           {onDecline ? (
             <HoverPressable onPress={onDecline} style={styles.unfriendButton}>
-              <Text style={styles.unfriendText}>DECLINE</Text>
+              <Text style={styles.unfriendText}>{t('userRow.decline')}</Text>
             </HoverPressable>
           ) : null}
         </View>
@@ -85,7 +88,7 @@ export function UserRow({
           ) : null}
           {onUnfriend ? (
             <HoverPressable onPress={onUnfriend} style={styles.unfriendButton}>
-              <Text style={styles.unfriendText}>UNFRIEND</Text>
+              <Text style={styles.unfriendText}>{t('userRow.unfriend')}</Text>
             </HoverPressable>
           ) : null}
         </View>

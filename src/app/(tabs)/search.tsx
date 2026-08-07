@@ -16,6 +16,7 @@ import {
   updateMyLocation,
 } from '@/features/friends/api';
 import { searchUsers } from '@/features/search/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { getDeviceContactPhoneHashes, getWebContactPhoneHashes, isWebContactPickerAvailable } from '@/lib/contacts';
 import type {
   ContactSuggestion,
@@ -29,6 +30,7 @@ import { color, font, spacing } from '@/theme/tokens';
 
 export default function SearchScreen() {
   const { session } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const { coords } = useUserLocation();
   const [query, setQuery] = useState('');
@@ -142,13 +144,13 @@ export default function SearchScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Search</Text>
+        <Text style={styles.headerTitle}>{t('search.title')}</Text>
       </View>
       <View style={styles.searchBox}>
         <TextField
           value={query}
           onChangeText={setQuery}
-          placeholder="Search by username or name"
+          placeholder={t('search.placeholder')}
           autoCapitalize="none"
         />
       </View>
@@ -157,7 +159,7 @@ export default function SearchScreen() {
         <ScrollView contentContainerStyle={styles.listContent}>
           {fof.length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Friends of friends</Text>
+              <Text style={styles.sectionTitle}>{t('search.friendsOfFriends')}</Text>
               {fof.map((item) => (
                 <UserRow
                   key={item.id}
@@ -174,7 +176,7 @@ export default function SearchScreen() {
 
           {nearby.length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>People nearby</Text>
+              <Text style={styles.sectionTitle}>{t('search.peopleNearby')}</Text>
               {nearby.map((item) => (
                 <UserRow
                   key={item.id}
@@ -191,7 +193,7 @@ export default function SearchScreen() {
 
           {showContactsSection ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>From your contacts</Text>
+              <Text style={styles.sectionTitle}>{t('search.fromContacts')}</Text>
               {contacts.map((item) => (
                 <UserRow
                   key={item.id}
@@ -206,20 +208,18 @@ export default function SearchScreen() {
               {!contactsSynced ? (
                 <HoverPressable onPress={handleSyncContacts} style={styles.syncButton} disabled={contactsSyncing}>
                   <Text style={styles.syncButtonText}>
-                    {contactsSyncing ? 'SYNCING…' : 'FIND FRIENDS FROM CONTACTS'}
+                    {contactsSyncing ? t('search.syncing') : t('search.findFriendsFromContacts')}
                   </Text>
                 </HoverPressable>
               ) : contacts.length === 0 ? (
-                <Text style={styles.emptyText}>No contacts on Moves yet.</Text>
+                <Text style={styles.emptyText}>{t('search.noContactsYet')}</Text>
               ) : null}
             </View>
           ) : null}
 
           {!hasAnySuggestions && !showContactsSection ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>
-                No suggestions yet - add a few friends and check back, or search by name above.
-              </Text>
+              <Text style={styles.emptyText}>{t('search.noSuggestions')}</Text>
             </View>
           ) : null}
         </ScrollView>
@@ -243,7 +243,7 @@ export default function SearchScreen() {
           ))}
           {query.trim() && !loading && results.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No users found for &quot;{query.trim()}&quot;.</Text>
+              <Text style={styles.emptyText}>{t('search.noUsersFound', { query: query.trim() })}</Text>
             </View>
           ) : null}
         </View>

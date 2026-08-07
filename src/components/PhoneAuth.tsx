@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { updateProfile } from '@/features/profile/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { hashPhone } from '@/lib/phone';
 import { supabase } from '@/lib/supabase';
@@ -18,6 +19,7 @@ import { color, font, spacing } from '@/theme/tokens';
 type Step = 'phone' | 'code';
 
 export function PhoneAuth({ onDone }: { onDone: () => void }) {
+  const { t } = useLocale();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -26,7 +28,7 @@ export function PhoneAuth({ onDone }: { onDone: () => void }) {
   const handleSendCode = async () => {
     const trimmed = phone.trim();
     if (!trimmed.startsWith('+') || trimmed.length < 8) {
-      notify('Invalid number', 'Enter a full phone number with country code, e.g. +18885551234.');
+      notify(t('phoneAuth.invalidNumber'), t('phoneAuth.enterFullNumberNative'));
       return;
     }
     setLoading(true);
@@ -35,7 +37,7 @@ export function PhoneAuth({ onDone }: { onDone: () => void }) {
       if (error) throw error;
       setStep('code');
     } catch (err) {
-      notify('Could not send code', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('phoneAuth.couldNotSendCode'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ export function PhoneAuth({ onDone }: { onDone: () => void }) {
 
       onDone();
     } catch (err) {
-      notify('Could not verify code', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('phoneAuth.couldNotVerifyCode'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     } finally {
       setLoading(false);
     }
@@ -67,10 +69,10 @@ export function PhoneAuth({ onDone }: { onDone: () => void }) {
   if (step === 'code') {
     return (
       <View style={styles.wrap}>
-        <Text style={styles.helper}>Enter the code sent to {phone.trim()}.</Text>
-        <TextField label="Code" value={code} onChangeText={setCode} keyboardType="number-pad" placeholder="123456" />
-        <Button label="Verify" onPress={handleVerify} loading={loading} />
-        <Button label="Use a different number" variant="ghost" onPress={() => setStep('phone')} />
+        <Text style={styles.helper}>{t('phoneAuth.codeSentTo', { phone: phone.trim() })}</Text>
+        <TextField label={t('phoneAuth.codeLabel')} value={code} onChangeText={setCode} keyboardType="number-pad" placeholder="123456" />
+        <Button label={t('phoneAuth.verify')} onPress={handleVerify} loading={loading} />
+        <Button label={t('phoneAuth.useDifferentNumber')} variant="ghost" onPress={() => setStep('phone')} />
       </View>
     );
   }
@@ -78,13 +80,13 @@ export function PhoneAuth({ onDone }: { onDone: () => void }) {
   return (
     <View style={styles.wrap}>
       <TextField
-        label="Phone number"
+        label={t('phoneAuth.phoneNumberLabelNative')}
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
         placeholder="+1 555 123 4567"
       />
-      <Button label="Send code" onPress={handleSendCode} loading={loading} />
+      <Button label={t('phoneAuth.sendCode')} onPress={handleSendCode} loading={loading} />
     </View>
   );
 }

@@ -12,35 +12,28 @@ import { TextField } from '@/components/TextField';
 import { TimeField } from '@/components/TimeField';
 import { getReferralCount } from '@/features/friends/api';
 import { createMove } from '@/features/moves/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { DegreeLimit } from '@/lib/database.types';
 import { isCloseFriendsUnlocked, isPrivateUnlocked, nextMilestoneLabel } from '@/lib/referrals';
 import { nextOccurrenceOf, timeAfter, timeString } from '@/lib/time';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, degreeDescription, font, spacing } from '@/theme/tokens';
+import { color, font, spacing } from '@/theme/tokens';
 
-const DURATION_OPTIONS = [
-  { value: '1', label: '1 hr' },
-  { value: '2', label: '2 hrs' },
-  { value: '4', label: '4 hrs' },
-  { value: '6', label: '6 hrs' },
-] as const;
-
-const END_MODE_OPTIONS = [
-  { value: 'duration', label: 'Duration' },
-  { value: 'time', label: 'End time' },
-] as const;
+const DURATION_VALUES = ['1', '2', '4', '6'] as const;
+const END_MODE_VALUES = ['duration', 'time'] as const;
 
 export default function CreateMoveScreen() {
   const { session } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [degreeLimit, setDegreeLimit] = useState<DegreeLimit>(3);
   const [startTime, setStartTime] = useState(() => timeString(new Date()));
-  const [endMode, setEndMode] = useState<(typeof END_MODE_OPTIONS)[number]['value']>('duration');
-  const [durationHours, setDurationHours] = useState<(typeof DURATION_OPTIONS)[number]['value']>('2');
+  const [endMode, setEndMode] = useState<(typeof END_MODE_VALUES)[number]>('duration');
+  const [durationHours, setDurationHours] = useState<(typeof DURATION_VALUES)[number]>('2');
   const [endTime, setEndTime] = useState(() => timeString(new Date(Date.now() + 2 * 60 * 60_000)));
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [maxMembers, setMaxMembers] = useState('');
@@ -58,12 +51,24 @@ export default function CreateMoveScreen() {
   const privateLocked = !isPrivateUnlocked(referralCount ?? 0);
   const closeFriendsLocked = !isCloseFriendsUnlocked(referralCount ?? 0);
 
+  const DURATION_OPTIONS = [
+    { value: '1', label: t('createMove.oneHour') },
+    { value: '2', label: t('createMove.twoHours') },
+    { value: '4', label: t('createMove.fourHours') },
+    { value: '6', label: t('createMove.sixHours') },
+  ] as const;
+
+  const END_MODE_OPTIONS = [
+    { value: 'duration', label: t('createMove.duration') },
+    { value: 'time', label: t('createMove.endTime') },
+  ] as const;
+
   const DEGREE_OPTIONS = [
-    { value: '4', label: 'Close Friends', disabled: closeFriendsLocked },
-    { value: '1', label: 'Friends' },
-    { value: '2', label: 'Mutuals' },
-    { value: '3', label: 'Open' },
-    { value: '0', label: 'Private (Link-Only)', disabled: privateLocked },
+    { value: '4', label: t('createMove.closeFriendsOption'), disabled: closeFriendsLocked },
+    { value: '1', label: t('createMove.friendsOption') },
+    { value: '2', label: t('createMove.mutualsOption') },
+    { value: '3', label: t('createMove.openOption') },
+    { value: '0', label: t('createMove.privateOption'), disabled: privateLocked },
   ] as const;
 
   const hasUnsavedInput =
@@ -76,9 +81,9 @@ export default function CreateMoveScreen() {
   const handleClose = async () => {
     if (hasUnsavedInput) {
       const confirmed = await confirmAction(
-        'Discard this Move?',
-        "You've filled out some details - going back will lose them.",
-        'Discard'
+        t('createMove.discardTitle'),
+        t('createMove.discardMessage'),
+        t('createMove.discard')
       );
       if (!confirmed) return;
     }
@@ -92,13 +97,13 @@ export default function CreateMoveScreen() {
   const handleCreate = async () => {
     if (!session?.user) return;
     if (!title.trim()) {
-      notify('Title required', 'Give your Move a title.');
+      notify(t('createMove.titleRequired'), t('createMove.giveTitle'));
       return;
     }
 
     const parsedMax = maxMembers.trim() ? Number(maxMembers) : null;
     if (parsedMax != null && (!Number.isInteger(parsedMax) || parsedMax <= 0)) {
-      notify('Invalid cap', 'Max members must be a positive whole number.');
+      notify(t('createMove.invalidCap'), t('createMove.maxMembersError'));
       return;
     }
 
@@ -126,7 +131,7 @@ export default function CreateMoveScreen() {
       });
       router.replace(`/room/${move.id}`);
     } catch (err) {
-      notify('Could not create Move', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('createMove.couldNotCreate'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     } finally {
       setSubmitting(false);
     }
@@ -134,73 +139,69 @@ export default function CreateMoveScreen() {
 
   return (
     <Screen>
-      <SubHeader title="New Move" onBack={handleClose} variant="close" />
+      <SubHeader title={t('createMove.newMove')} onBack={handleClose} variant="close" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <TextField label="Title" value={title} onChangeText={setTitle} placeholder="Tacos at 8 PM" />
+        <TextField label={t('createMove.titleLabel')} value={title} onChangeText={setTitle} placeholder={t('createMove.titlePlaceholder')} />
         <TextField
-          label="Description"
+          label={t('createMove.descriptionLabel')}
           value={description}
           onChangeText={setDescription}
-          placeholder="Optional details"
+          placeholder={t('createMove.descriptionPlaceholder')}
           multiline
         />
 
-        <TimeField label="Starts" value={startTime} onChange={setStartTime} />
+        <TimeField label={t('createMove.starts')} value={startTime} onChange={setStartTime} />
 
         <View style={styles.field}>
-          <Text style={styles.label}>Ends</Text>
+          <Text style={styles.label}>{t('createMove.ends')}</Text>
           <SegmentedControl segments={END_MODE_OPTIONS} value={endMode} onChange={setEndMode} />
           {endMode === 'duration' ? (
             <SegmentedControl segments={DURATION_OPTIONS} value={durationHours} onChange={setDurationHours} />
           ) : (
-            <TimeField label="End time" value={endTime} onChange={setEndTime} />
+            <TimeField label={t('createMove.endTime')} value={endTime} onChange={setEndTime} />
           )}
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Who can see & join</Text>
+          <Text style={styles.label}>{t('createMove.whoCanSeeJoin')}</Text>
           <SegmentedControl
             segments={DEGREE_OPTIONS}
             value={String(degreeLimit)}
             onChange={(v) => setDegreeLimit(Number(v) as DegreeLimit)}
           />
-          <Text style={styles.helperText}>{degreeDescription[degreeLimit]}</Text>
-          {nextMilestoneLabel(referralCount ?? 0) ? (
-            <Text style={styles.helperText}>Progress: {nextMilestoneLabel(referralCount ?? 0)}</Text>
+          <Text style={styles.helperText}>{t(`degree.description.${degreeLimit}`)}</Text>
+          {nextMilestoneLabel(referralCount ?? 0, t) ? (
+            <Text style={styles.helperText}>{t('createMove.progress', { label: nextMilestoneLabel(referralCount ?? 0, t)! })}</Text>
           ) : null}
         </View>
 
         <Card style={styles.toggleCard}>
           <View style={styles.toggleRow}>
             <View style={styles.toggleText}>
-              <Text style={styles.toggleLabel}>Require approval to join</Text>
-              <Text style={styles.helperText}>
-                Requests land in your approval queue instead of joining instantly.
-              </Text>
+              <Text style={styles.toggleLabel}>{t('createMove.requireApproval')}</Text>
+              <Text style={styles.helperText}>{t('createMove.requireApprovalHelp')}</Text>
             </View>
             <Switch value={requiresApproval} onValueChange={setRequiresApproval} trackColor={{ true: color.brand, false: color.border }} />
           </View>
         </Card>
 
         <TextField
-          label="Max people (optional)"
+          label={t('createMove.maxPeopleLabel')}
           value={maxMembers}
           onChangeText={setMaxMembers}
-          placeholder="No cap"
+          placeholder={t('createMove.noCap')}
           keyboardType="number-pad"
         />
 
         <View style={styles.field}>
-          <Text style={styles.label}>Location (optional)</Text>
+          <Text style={styles.label}>{t('createMove.locationLabel')}</Text>
           <Text style={styles.helperText}>
-            {degreeLimit === 1
-              ? 'Exact location is visible once someone joins.'
-              : 'Exact location stays hidden until someone joins or is approved.'}
+            {degreeLimit === 1 ? t('createMove.locationVisibleFriends') : t('createMove.locationHiddenUntilApproved')}
           </Text>
           <LocationPicker value={location} onChange={setLocation} />
         </View>
 
-        <Button label="Create Move" onPress={handleCreate} loading={submitting} />
+        <Button label={t('createMove.createButton')} onPress={handleCreate} loading={submitting} />
       </ScrollView>
     </Screen>
   );

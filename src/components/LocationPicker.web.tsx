@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 
 import { HoverPressable } from '@/components/HoverPressable';
 import { TextField } from '@/components/TextField';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { getCurrentLocation, useUserLocation } from '@/lib/useLocation';
 import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
@@ -57,6 +58,7 @@ function Recenter({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }
  * pin, not a live feed.
  */
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
+  const { t } = useLocale();
   const { coords } = useUserLocation();
   const [address, setAddress] = useState('');
   const [searching, setSearching] = useState(false);
@@ -101,8 +103,8 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       onChange(here);
     } catch (err) {
       notify(
-        'Could not get your location',
-        err instanceof Error ? err.message : 'Check your location permission and try again.'
+        t('locationPicker.couldNotGetLocation'),
+        err instanceof Error ? err.message : t('locationPicker.checkPermission')
       );
     } finally {
       setLocating(false);
@@ -116,7 +118,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           <TextField
             value={address}
             onChangeText={setAddress}
-            placeholder="Search an address (optional)"
+            placeholder={t('locationPicker.searchPlaceholder')}
             autoCapitalize="none"
           />
         </View>
@@ -147,14 +149,14 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       </View>
 
       <View style={styles.actionsRow}>
-        <Text style={styles.hint}>{value ? 'Tap the map to move the pin.' : 'Tap the map to drop a pin.'}</Text>
+        <Text style={styles.hint}>{value ? t('locationPicker.tapToMove') : t('locationPicker.tapToPin')}</Text>
         <View style={styles.actionButtons}>
           <HoverPressable onPress={handleUseMyLocation} style={styles.smallButton} disabled={locating}>
-            <Text style={styles.smallButtonText}>{locating ? 'LOCATING…' : 'USE MY LOCATION'}</Text>
+            <Text style={styles.smallButtonText}>{locating ? t('locationPicker.locating') : t('locationPicker.useMyLocation')}</Text>
           </HoverPressable>
           {value ? (
             <HoverPressable onPress={() => onChange(null)} style={styles.smallButton}>
-              <Text style={styles.smallButtonText}>CLEAR</Text>
+              <Text style={styles.smallButtonText}>{t('locationPicker.clear')}</Text>
             </HoverPressable>
           ) : null}
         </View>

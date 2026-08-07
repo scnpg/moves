@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { LanguageToggle } from '@/components/LanguageToggle';
 import { PhoneAuth } from '@/components/PhoneAuth';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
@@ -17,6 +19,7 @@ type AuthMethod = 'email' | 'phone';
 
 export default function SignInScreen() {
   const { t } = useLocale();
+  const insets = useSafeAreaInsets();
   const [method, setMethod] = useState<AuthMethod>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +39,9 @@ export default function SignInScreen() {
 
   return (
     <Screen>
+      <View style={[styles.langCorner, { top: insets.top + spacing.xs }]}>
+        <LanguageToggle />
+      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
@@ -91,6 +97,11 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  langCorner: {
+    position: 'absolute',
+    right: spacing.lg,
+    zIndex: 1,
+  },
   content: {
     flexGrow: 1,
     justifyContent: 'center',

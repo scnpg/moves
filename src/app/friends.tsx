@@ -13,6 +13,7 @@ import {
   removeFriendship,
   setCloseFriend,
 } from '@/features/friends/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { FriendListItem, FriendRequest } from '@/lib/database.types';
 import { useAuth } from '@/providers/AuthProvider';
@@ -23,6 +24,7 @@ type Tab = 'friends' | 'requests';
 export default function FriendsScreen() {
   const router = useRouter();
   const { session } = useAuth();
+  const { t } = useLocale();
   const [tab, setTab] = useState<Tab>('friends');
   const [friends, setFriends] = useState<FriendListItem[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -60,7 +62,7 @@ export default function FriendsScreen() {
   const handleUnfriend = async (friend: FriendListItem) => {
     if (!session?.user) return;
     const name = friend.display_name ?? friend.username;
-    const confirmed = await confirmAction('Unfriend', `Remove ${name} from your friends?`, 'Unfriend');
+    const confirmed = await confirmAction(t('friendsScreen.unfriendTitle'), t('friendsScreen.unfriendMessage', { name }), t('friendsScreen.unfriendTitle'));
     if (!confirmed) return;
 
     const previous = friends;
@@ -69,7 +71,7 @@ export default function FriendsScreen() {
       await removeFriendship(session.user.id, friend.id);
     } catch (err) {
       setFriends(previous);
-      notify('Could not unfriend', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('friendsScreen.couldNotUnfriend'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     }
   };
 
@@ -81,7 +83,7 @@ export default function FriendsScreen() {
       load();
     } catch (err) {
       setRequests((prev) => [request, ...prev]);
-      notify('Could not accept', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('friendsScreen.couldNotAccept'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     }
   };
 
@@ -92,7 +94,7 @@ export default function FriendsScreen() {
       await declineFriendRequest(session.user.id, request.other_user_id);
     } catch (err) {
       setRequests((prev) => [request, ...prev]);
-      notify('Could not decline', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('friendsScreen.couldNotDecline'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     }
   };
 
@@ -103,7 +105,7 @@ export default function FriendsScreen() {
       await removeFriendship(session.user.id, request.other_user_id);
     } catch (err) {
       setRequests((prev) => [request, ...prev]);
-      notify('Could not cancel', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('friendsScreen.couldNotCancel'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     }
   };
 
@@ -115,7 +117,7 @@ export default function FriendsScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: 'Friends',
+          title: t('friendsScreen.title'),
           headerStyle: { backgroundColor: color.bg },
           headerTintColor: color.textPrimary,
         }}
@@ -123,8 +125,8 @@ export default function FriendsScreen() {
       <View style={styles.tabsRow}>
         <SegmentedControl
           segments={[
-            { value: 'friends', label: 'Friends' },
-            { value: 'requests', label: `Requests${requests.length ? ` (${requests.length})` : ''}` },
+            { value: 'friends', label: t('friendsScreen.friendsTab') },
+            { value: 'requests', label: `${t('friendsScreen.requestsTab')}${requests.length ? ` (${requests.length})` : ''}` },
           ]}
           value={tab}
           onChange={setTab}
@@ -155,9 +157,7 @@ export default function FriendsScreen() {
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>
-                No friends yet. Find people in Search and send a request.
-              </Text>
+              <Text style={styles.emptyText}>{t('friendsScreen.noFriendsYet')}</Text>
             </View>
           }
         />
@@ -170,10 +170,10 @@ export default function FriendsScreen() {
           ListHeaderComponent={
             <View style={styles.requestsWrap}>
               <Text style={styles.sectionTitle}>
-                {incoming.length > 0 ? `RECEIVED (${incoming.length})` : 'RECEIVED'}
+                {incoming.length > 0 ? `${t('friendsScreen.received')} (${incoming.length})` : t('friendsScreen.received')}
               </Text>
               {incoming.length === 0 ? (
-                <Text style={styles.emptySectionText}>No incoming requests.</Text>
+                <Text style={styles.emptySectionText}>{t('friendsScreen.noIncoming')}</Text>
               ) : (
                 incoming.map((r) => (
                   <UserRow
@@ -190,10 +190,10 @@ export default function FriendsScreen() {
               )}
 
               <Text style={[styles.sectionTitle, styles.sentTitle]}>
-                {outgoing.length > 0 ? `SENT (${outgoing.length})` : 'SENT'}
+                {outgoing.length > 0 ? `${t('friendsScreen.sent')} (${outgoing.length})` : t('friendsScreen.sent')}
               </Text>
               {outgoing.length === 0 ? (
-                <Text style={styles.emptySectionText}>No outgoing requests.</Text>
+                <Text style={styles.emptySectionText}>{t('friendsScreen.noOutgoing')}</Text>
               ) : (
                 outgoing.map((r) => (
                   <UserRow

@@ -156,30 +156,9 @@ export const shadow = {
   }),
 } as const;
 
-export const degreeLabel: Record<0 | 1 | 2 | 3 | 4, string> = {
-  0: 'Private (Link-Only)',
-  1: 'Friends',
-  2: 'Mutuals',
-  3: 'Open',
-  4: 'Close Friends',
-};
-
-export const degreeDescription: Record<0 | 1 | 2 | 3 | 4, string> = {
-  0: 'Hidden everywhere - only people with the share link or QR code can see or join.',
-  1: 'Only your direct friends can see and join.',
-  2: 'Friends and friends-of-friends can see and join.',
-  3: 'Anyone nearby can see and join.',
-  4: 'Only friends you’ve personally tagged as close can see and join.',
-};
-
-export const degreeBadgeLabel: Record<0 | 1 | 2 | 3 | 4, string> = {
-  0: 'PRIVATE',
-  1: 'FRIENDS',
-  2: 'MUTUALS',
-  3: 'OPEN',
-  4: 'CLOSE FRIENDS',
-};
-
+// Text labels for each degree_limit moved to the i18n dictionaries
+// (degree.label / degree.description / degree.badge in src/i18n/locales) -
+// only the (language-independent) accent colors stay here.
 export const degreeColor: Record<0 | 1 | 2 | 3 | 4, string> = {
   0: accent.violet,
   1: accent.green,

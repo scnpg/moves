@@ -3,9 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { Card } from '@/components/Card';
+import { useLocale } from '@/i18n/LocaleProvider';
 import type { EligibleMove } from '@/lib/database.types';
 import { formatDistance, formatTimeRemaining, formatWhen } from '@/lib/format';
-import { color, degreeBadgeLabel, degreeColor, font, spacing } from '@/theme/tokens';
+import { color, degreeColor, font, spacing } from '@/theme/tokens';
 
 interface MoveCardProps {
   move: EligibleMove;
@@ -16,7 +17,8 @@ interface MoveCardProps {
 const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink', 4: 'red' } as const;
 
 export function MoveCard({ move, hostIsCloseFriend, onPress }: MoveCardProps) {
-  const distance = formatDistance(move.distance_m);
+  const { t } = useLocale();
+  const distance = formatDistance(move.distance_m, t);
   const isLive = new Date(move.starts_at).getTime() <= Date.now();
 
   return (
@@ -41,19 +43,20 @@ export function MoveCard({ move, hostIsCloseFriend, onPress }: MoveCardProps) {
               </Text>
             ) : (
               <Text style={styles.host} numberOfLines={1}>
-                Hosted by {move.host_display_name ?? move.host_username}
+                {t('common.hostedByName', { name: move.host_display_name ?? move.host_username })}
               </Text>
             )}
           </View>
         </View>
 
         <View style={styles.metaRow}>
-          <Badge label={degreeBadgeLabel[move.degree_limit]} tone={DEGREE_TONE[move.degree_limit]} />
+          <Badge label={t(`degree.badge.${move.degree_limit}`)} tone={DEGREE_TONE[move.degree_limit]} />
           <Text style={styles.metaText}>
-            {move.approved_count} in · {isLive ? formatTimeRemaining(move.expires_at) : formatWhen(move.starts_at, move.expires_at)}
+            {t('moveCard.peopleIn', { count: move.approved_count })} ·{' '}
+            {isLive ? formatTimeRemaining(move.expires_at, t) : formatWhen(move.starts_at, move.expires_at, t)}
           </Text>
-          {move.requires_approval ? <Badge label="Approval" tone="yellow" /> : null}
-          {move.is_full ? <Badge label="Full" tone="ink" /> : null}
+          {move.requires_approval ? <Badge label={t('moveCard.approval')} tone="yellow" /> : null}
+          {move.is_full ? <Badge label={t('moveCard.full')} tone="ink" /> : null}
         </View>
 
         {distance ? <Text style={styles.distanceText}>{distance}</Text> : null}

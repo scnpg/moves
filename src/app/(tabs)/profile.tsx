@@ -10,13 +10,12 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
-import { SegmentedControl } from '@/components/SegmentedControl';
 import { ShareProfilePanel } from '@/components/ShareProfilePanel';
 import { TextField } from '@/components/TextField';
 import { signOut } from '@/features/auth/api';
 import { getFriendRequests, getMyFriends, getReferralCount } from '@/features/friends/api';
 import { getHostedActiveMoves, updateProfile, uploadAvatar } from '@/features/profile/api';
-import { LOCALE_LABELS, SUPPORTED_LOCALES, useLocale, type Locale } from '@/i18n/LocaleProvider';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import type { Move } from '@/lib/database.types';
 import { formatWhen } from '@/lib/format';
@@ -30,7 +29,7 @@ const BIO_MAX_LENGTH = 280;
 
 export default function ProfileScreen() {
   const { session, profile, refreshProfile } = useAuth();
-  const { locale, setLocale, t } = useLocale();
+  const { t } = useLocale();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
@@ -62,7 +61,7 @@ export default function ProfileScreen() {
     setCopyingReferral(true);
     try {
       await Clipboard.setStringAsync(referralSignUpUrl(session.user.id));
-      notify('Link copied', 'Share it - once they sign up, it counts toward your invites.');
+      notify(t('common.linkCopied'), t('profile.referralLinkCopiedMessage'));
     } finally {
       setCopyingReferral(false);
     }
@@ -78,14 +77,14 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     if (!session?.user) return;
     if (bioInput.length > BIO_MAX_LENGTH) {
-      notify('Bio too long', `Keep it under ${BIO_MAX_LENGTH} characters.`);
+      notify(t('profile.bioTooLong'), t('profile.bioTooLongMessage', { max: BIO_MAX_LENGTH }));
       return;
     }
     setSaving(true);
     try {
       const phoneHash = phoneInput.trim() ? await hashPhone(phoneInput.trim()) : undefined;
       if (phoneInput.trim() && !phoneHash) {
-        notify('Phone number too short', 'Enter a full number so contacts can find you.');
+        notify(t('profile.phoneTooShort'), t('profile.phoneTooShortMessage'));
         setSaving(false);
         return;
       }
@@ -97,7 +96,7 @@ export default function ProfileScreen() {
       await refreshProfile();
       setEditing(false);
     } catch (err) {
-      notify('Could not save', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('profile.couldNotSave'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -107,7 +106,7 @@ export default function ProfileScreen() {
     if (!session?.user) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      notify('Photo access needed', 'Allow photo library access to set a profile picture.');
+      notify(t('profile.photoAccessNeeded'), t('profile.photoAccessNeededMessage'));
       return;
     }
 
@@ -126,7 +125,7 @@ export default function ProfileScreen() {
       await updateProfile(session.user.id, { avatar_url: publicUrl });
       await refreshProfile();
     } catch (err) {
-      notify('Could not upload photo', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('profile.couldNotUploadPhoto'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     } finally {
       setUploadingAvatar(false);
     }
@@ -136,7 +135,7 @@ export default function ProfileScreen() {
     try {
       await signOut();
     } catch (err) {
-      notify('Sign out failed', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('profile.signOutFailed'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     }
   };
 
@@ -168,7 +167,7 @@ export default function ProfileScreen() {
                   {uploadingAvatar ? (
                     <ActivityIndicator size="small" color={color.textInverse} />
                   ) : (
-                    <Text style={styles.avatarOverlayText}>EDIT</Text>
+                    <Text style={styles.avatarOverlayText}>{t('profile.editShort')}</Text>
                   )}
                 </View>
               </HoverPressable>
@@ -199,19 +198,19 @@ export default function ProfileScreen() {
                 {t('profile.inviteFriends')}{referralCount != null ? ` · ${referralCount}` : ''}
               </Text>
               <Text style={styles.helperText}>
-                {nextMilestoneLabel(referralCount ?? 0) ?? 'All visibility tiers unlocked - nice work.'}
+                {nextMilestoneLabel(referralCount ?? 0, t) ?? t('profile.allTiersUnlocked')}
               </Text>
               <Button label={t('profile.copyInviteLink')} variant="secondary" onPress={handleCopyReferralLink} loading={copyingReferral} />
             </Card>
 
             {editing ? (
               <Card style={styles.editCard}>
-                <TextField label="Display name" value={displayName} onChangeText={setDisplayName} />
+                <TextField label={t('auth.displayName')} value={displayName} onChangeText={setDisplayName} />
                 <TextField
-                  label="Bio (optional)"
+                  label={t('profile.bioLabel')}
                   value={bioInput}
                   onChangeText={setBioInput}
-                  placeholder="Say something about yourself"
+                  placeholder={t('profile.bioPlaceholder')}
                   multiline
                   maxLength={BIO_MAX_LENGTH}
                 />
@@ -219,18 +218,16 @@ export default function ProfileScreen() {
                   {bioInput.length}/{BIO_MAX_LENGTH}
                 </Text>
                 <TextField
-                  label="Phone number (optional)"
+                  label={t('profile.phoneLabel')}
                   value={phoneInput}
                   onChangeText={setPhoneInput}
                   keyboardType="phone-pad"
-                  placeholder={profile?.phone_hash ? 'Already added — replace it' : 'So contacts can find you'}
+                  placeholder={profile?.phone_hash ? t('profile.phoneReplacePlaceholder') : t('profile.phoneFindPlaceholder')}
                 />
-                <Text style={styles.helperText}>
-                  Only a one-way hash of this number is ever stored - never the number itself.
-                </Text>
+                <Text style={styles.helperText}>{t('profile.phoneHelp')}</Text>
                 <View style={styles.editActions}>
-                  <Button label="Cancel" variant="secondary" onPress={() => setEditing(false)} style={styles.flexButton} />
-                  <Button label="Save" onPress={handleSave} loading={saving} style={styles.flexButton} />
+                  <Button label={t('profile.cancel')} variant="secondary" onPress={() => setEditing(false)} style={styles.flexButton} />
+                  <Button label={t('profile.save')} onPress={handleSave} loading={saving} style={styles.flexButton} />
                 </View>
               </Card>
             ) : (
@@ -246,7 +243,7 @@ export default function ProfileScreen() {
               {item.title}
             </Text>
             <View style={styles.moveMetaRow}>
-              <Badge label={formatWhen(item.starts_at, item.expires_at)} tone="green" />
+              <Badge label={formatWhen(item.starts_at, item.expires_at, t)} tone="green" />
             </View>
           </Card>
         )}
@@ -256,14 +253,6 @@ export default function ProfileScreen() {
         }
         ListFooterComponent={
           <View style={styles.footer}>
-            <Card style={styles.languageCard}>
-              <Text style={styles.friendsLabel}>{t('profile.language')}</Text>
-              <SegmentedControl
-                segments={SUPPORTED_LOCALES.map((l) => ({ value: l, label: LOCALE_LABELS[l] }))}
-                value={locale}
-                onChange={(next) => setLocale(next as Locale)}
-              />
-            </Card>
             <Button label={t('profile.signOut')} variant="ghost" onPress={handleSignOut} style={styles.signOutButton} />
           </View>
         }
@@ -430,9 +419,6 @@ const styles = StyleSheet.create({
   footer: {
     gap: spacing.md,
     marginTop: spacing.lg,
-  },
-  languageCard: {
-    gap: spacing.sm,
   },
   signOutButton: {
     marginTop: 0,

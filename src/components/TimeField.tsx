@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { TextField } from '@/components/TextField';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface TimeFieldProps {
   label: string;
@@ -34,6 +35,7 @@ function parse12Hour(text: string): string | null {
  * entry with lightweight "8:00 PM" parsing.
  */
 export function TimeField({ label, value, onChange }: TimeFieldProps) {
+  const { t } = useLocale();
   const [text, setText] = useState(() => (value ? to12Hour(value) : ''));
 
   const handleBlur = () => {
@@ -47,7 +49,7 @@ export function TimeField({ label, value, onChange }: TimeFieldProps) {
       value={text}
       onChangeText={setText}
       onBlur={handleBlur}
-      placeholder="e.g. 8:00 PM"
+      placeholder={t('common.timePlaceholder')}
     />
   );
 }

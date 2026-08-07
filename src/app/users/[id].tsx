@@ -15,6 +15,7 @@ import {
   setCloseFriend,
 } from '@/features/friends/api';
 import { getProfile, getPublicProfile } from '@/features/profile/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { MutualFriend, PublicProfile, SearchFriendshipStatus } from '@/lib/database.types';
 import { useAuth } from '@/providers/AuthProvider';
@@ -23,6 +24,7 @@ import { color, font, spacing } from '@/theme/tokens';
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -107,7 +109,7 @@ export default function UserProfileScreen() {
   const handleUnfriend = async () => {
     if (!session?.user || !id || !profile) return;
     const name = profile.display_name ?? profile.username;
-    const confirmed = await confirmAction('Unfriend', `Remove ${name} from your friends?`, 'Unfriend');
+    const confirmed = await confirmAction(t('friendsScreen.unfriendTitle'), t('friendsScreen.unfriendMessage', { name }), t('friendsScreen.unfriendTitle'));
     if (!confirmed) return;
 
     setActionLoading(true);
@@ -116,7 +118,7 @@ export default function UserProfileScreen() {
       setStatus('none');
       setIsCloseFriend(false);
     } catch (err) {
-      notify('Could not unfriend', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('friendsScreen.couldNotUnfriend'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     } finally {
       setActionLoading(false);
     }
@@ -138,7 +140,7 @@ export default function UserProfileScreen() {
       <Screen>
         <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
         <View style={styles.loading}>
-          <Text style={styles.emptyText}>This profile isn&apos;t available.</Text>
+          <Text style={styles.emptyText}>{t('userProfile.notAvailable')}</Text>
         </View>
       </Screen>
     );
@@ -168,23 +170,23 @@ export default function UserProfileScreen() {
 
           <View style={styles.actionsRow}>
             {!session?.user ? (
-              <Button label="Sign in to connect" onPress={() => router.push('/(auth)/sign-in')} />
+              <Button label={t('userProfile.signInToConnect')} onPress={() => router.push('/(auth)/sign-in')} />
             ) : status === 'none' ? (
-              <Button label="Add friend" onPress={handleAdd} loading={actionLoading} />
+              <Button label={t('userProfile.addFriend')} onPress={handleAdd} loading={actionLoading} />
             ) : status === 'pending_sent' ? (
-              <Button label="Request sent" variant="secondary" onPress={() => {}} disabled />
+              <Button label={t('userProfile.requestSent')} variant="secondary" onPress={() => {}} disabled />
             ) : status === 'pending_received' ? (
-              <Button label="Accept request" onPress={handleAccept} loading={actionLoading} />
+              <Button label={t('userProfile.acceptRequest')} onPress={handleAccept} loading={actionLoading} />
             ) : status === 'accepted' ? (
               <View style={styles.acceptedActionsRow}>
                 <Button
-                  label={isCloseFriend ? '★ Close friend' : 'Mark as close friend'}
+                  label={isCloseFriend ? t('userProfile.closeFriendActive') : t('userProfile.markAsCloseFriend')}
                   variant="secondary"
                   onPress={handleToggleClose}
                   style={styles.flexButton}
                 />
                 <Button
-                  label="Unfriend"
+                  label={t('userProfile.unfriend')}
                   variant="danger"
                   onPress={handleUnfriend}
                   loading={actionLoading}
@@ -198,7 +200,9 @@ export default function UserProfileScreen() {
         {session?.user ? (
           <>
             <Text style={styles.sectionTitle}>
-              {mutuals.length > 0 ? `${mutuals.length} MUTUAL FRIEND${mutuals.length === 1 ? '' : 'S'}` : 'MUTUAL FRIENDS'}
+              {mutuals.length > 0
+                ? t(mutuals.length === 1 ? 'userProfile.mutualFriendsCount' : 'userProfile.mutualFriendsCountPlural', { count: mutuals.length })
+                : t('userProfile.mutualFriends')}
             </Text>
 
             <FlatList
@@ -211,7 +215,7 @@ export default function UserProfileScreen() {
                 </Card>
               )}
               ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
-              ListEmptyComponent={<Text style={styles.emptyText}>No mutual friends to show.</Text>}
+              ListEmptyComponent={<Text style={styles.emptyText}>{t('userProfile.noMutualFriends')}</Text>}
             />
           </>
         ) : null}

@@ -9,6 +9,7 @@ import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { SubHeader } from '@/components/SubHeader';
 import { getMoveByShareToken, joinMoveViaToken } from '@/features/moves/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { formatWhen } from '@/lib/format';
 import { PENDING_JOIN_TOKEN_KEY } from '@/lib/links';
@@ -26,6 +27,7 @@ import { color, font, spacing } from '@/theme/tokens';
 export default function JoinMoveScreen() {
   const { share_token } = useLocalSearchParams<{ share_token: string }>();
   const { session, loading: authLoading } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export default function JoinMoveScreen() {
         router.replace(`/room/${preview.id}`);
       })
       .catch((err) => {
-        notify('Could not join', err instanceof Error ? err.message : 'Please try again.');
+        notify(t('join.couldNotJoin'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
         setJoining(false);
       });
   }, [session, authLoading, preview, share_token, router]);
@@ -98,7 +100,7 @@ export default function JoinMoveScreen() {
       <Screen>
         <SubHeader title="" onBack={handleBack} />
         <View style={styles.center}>
-          <Text style={styles.emptyText}>This link is invalid or has expired.</Text>
+          <Text style={styles.emptyText}>{t('join.linkInvalid')}</Text>
         </View>
       </Screen>
     );
@@ -111,24 +113,26 @@ export default function JoinMoveScreen() {
         <View style={styles.header}>
           <Avatar uri={preview.host_avatar_url} name={preview.host_display_name ?? preview.host_username} size={56} />
           <Text style={styles.title}>{preview.title}</Text>
-          <Text style={styles.hostLine}>Hosted by {preview.host_display_name ?? preview.host_username}</Text>
+          <Text style={styles.hostLine}>{t('common.hostedByName', { name: preview.host_display_name ?? preview.host_username })}</Text>
         </View>
 
         {preview.description ? <Text style={styles.description}>{preview.description}</Text> : null}
 
         <View style={styles.metaRow}>
-          <Badge label={formatWhen(preview.starts_at, preview.expires_at)} tone="green" />
-          <Badge label="PRIVATE" tone="violet" />
+          <Badge label={formatWhen(preview.starts_at, preview.expires_at, t)} tone="green" />
+          <Badge label={t('degree.badge.0')} tone="violet" />
         </View>
 
         <Text style={styles.helperText}>
-          {preview.max_members ? `${preview.approved_count}/${preview.max_members} joined` : `${preview.approved_count} joined`}
+          {preview.max_members
+            ? t('room.peopleJoined', { count: preview.approved_count, max: preview.max_members })
+            : t('room.peopleJoinedNoCap', { count: preview.approved_count })}
         </Text>
 
         {preview.is_full ? (
-          <Button label="This Move is full" variant="secondary" onPress={() => {}} disabled />
+          <Button label={t('room.moveFull')} variant="secondary" onPress={() => {}} disabled />
         ) : (
-          <Button label="Sign in to join" onPress={handleSignInToJoin} />
+          <Button label={t('join.signInToJoin')} onPress={handleSignInToJoin} />
         )}
       </View>
     </Screen>

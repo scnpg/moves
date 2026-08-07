@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { borderWidth, color, font, radius, shadow, spacing } from '@/theme/tokens';
 
 interface ToastItem {
@@ -32,6 +33,7 @@ export function showConfirm(title: string, message: string, confirmLabel: string
 }
 
 export function AlertProvider({ children }: { children: ReactNode }) {
+  const { t } = useLocale();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
 
@@ -82,7 +84,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
             <Text style={styles.confirmMessage}>{confirmRequest.message}</Text>
             <View style={styles.confirmActions}>
               <Button
-                label="Cancel"
+                label={t('common.cancel')}
                 variant="secondary"
                 onPress={() => resolveConfirm(false)}
                 style={styles.flexButton}

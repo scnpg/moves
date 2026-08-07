@@ -9,6 +9,7 @@ import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { getCloseFriendIds, getReferralCount, updateMyLocation } from '@/features/friends/api';
 import { getEligibleMoves } from '@/features/moves/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import type { EligibleMove } from '@/lib/database.types';
 import { nextMilestoneLabel } from '@/lib/referrals';
 import { useUserLocation } from '@/lib/useLocation';
@@ -24,6 +25,7 @@ function isLiveNow(move: EligibleMove) {
 
 export default function MovesScreen() {
   const { session } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const { coords } = useUserLocation();
   const [tab, setTab] = useState<Tab>('friends');
@@ -91,16 +93,16 @@ export default function MovesScreen() {
           <View>
             <View style={styles.topBar}>
               <Text style={styles.subtitle}>
-                {coords ? 'NEARBY' : 'ALL MOVES'} · {clockLabel}
+                {coords ? t('moves.nearby') : t('moves.allMoves')} · {clockLabel}
               </Text>
               <View style={styles.liveBadge}>
-                <Text style={styles.liveBadgeText}>{liveCount} LIVE</Text>
+                <Text style={styles.liveBadgeText}>{liveCount} {t('moves.live')}</Text>
               </View>
             </View>
 
-            {referralCount != null && nextMilestoneLabel(referralCount) ? (
+            {referralCount != null && nextMilestoneLabel(referralCount, t) ? (
               <HoverPressable onPress={() => router.push('/(tabs)/profile')} style={styles.referralBar}>
-                <Text style={styles.referralBarText}>🎟 Progress: {nextMilestoneLabel(referralCount)}</Text>
+                <Text style={styles.referralBarText}>🎟 {t('moves.progress')}: {nextMilestoneLabel(referralCount, t)}</Text>
               </HoverPressable>
             ) : null}
 
@@ -114,8 +116,8 @@ export default function MovesScreen() {
               <View style={styles.segmentFlex}>
                 <SegmentedControl
                   segments={[
-                    { value: 'friends', label: 'Friends' },
-                    { value: 'public', label: 'Public' },
+                    { value: 'friends', label: t('moves.friendsTab') },
+                    { value: 'public', label: t('moves.publicTab') },
                   ]}
                   value={tab}
                   onChange={setTab}
@@ -128,7 +130,7 @@ export default function MovesScreen() {
 
             <View style={styles.sectionBar}>
               <Text style={styles.sectionBarText}>
-                {tab === 'friends' ? "FRIENDS' MOVES" : 'ACTIVE NEAR YOU'} · {filtered.length}
+                {tab === 'friends' ? t('moves.friendsMoves') : t('moves.activeNearYou')} · {filtered.length}
               </Text>
             </View>
           </View>
@@ -146,9 +148,7 @@ export default function MovesScreen() {
           !loading ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>
-                {tab === 'friends'
-                  ? 'No Moves from your friends right now.'
-                  : 'No public Moves nearby right now.'}
+                {tab === 'friends' ? t('moves.noFriendsMoves') : t('moves.noPublicMoves')}
               </Text>
             </View>
           ) : null

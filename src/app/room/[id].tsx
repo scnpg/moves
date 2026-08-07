@@ -38,17 +38,19 @@ import {
   type MoveMemberWithProfile,
   type MoveMessageWithSender,
 } from '@/features/moves/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { EligibleMove, Move, MoveMember } from '@/lib/database.types';
 import { formatCountdown, formatWhen } from '@/lib/format';
 import { useAuth } from '@/providers/AuthProvider';
-import { borderWidth, color, degreeBadgeLabel, font, radius, spacing } from '@/theme/tokens';
+import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
 
 const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink', 4: 'red' } as const;
 
 export default function MoveRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const myId = session?.user.id;
 
@@ -141,7 +143,7 @@ export default function MoveRoomScreen() {
       await requestToJoin(id, myId);
       await load();
     } catch (err) {
-      notify('Could not join', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('room.couldNotJoin'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     } finally {
       setJoining(false);
     }
@@ -165,7 +167,7 @@ export default function MoveRoomScreen() {
     try {
       await sendMessage(id, myId, content);
     } catch (err) {
-      notify('Message not sent', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('room.messageNotSent'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     }
   };
 
@@ -189,9 +191,9 @@ export default function MoveRoomScreen() {
   const handleEndMove = async () => {
     if (!id) return;
     const confirmed = await confirmAction(
-      'End this Move?',
-      'The room will close and be deleted after a short cooldown.',
-      'End Move'
+      t('room.endMoveConfirmTitle'),
+      t('room.endMoveConfirmMessage'),
+      t('room.endMove')
     );
     if (!confirmed) return;
     await endMoveEarly(id);
@@ -201,16 +203,16 @@ export default function MoveRoomScreen() {
   const handleDeleteMove = async () => {
     if (!id) return;
     const confirmed = await confirmAction(
-      'Delete this Move?',
-      'This permanently removes the Move and its chat for everyone. This cannot be undone.',
-      'Delete'
+      t('room.deleteMoveConfirmTitle'),
+      t('room.deleteMoveConfirmMessage'),
+      t('room.delete')
     );
     if (!confirmed) return;
     try {
       await deleteMove(id);
       router.replace('/');
     } catch (err) {
-      notify('Could not delete', err instanceof Error ? err.message : 'Please try again.');
+      notify(t('room.couldNotDelete'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
     }
   };
 
@@ -232,7 +234,7 @@ export default function MoveRoomScreen() {
         <Screen>
           <SubHeader title="" onBack={handleBack} />
           <View style={styles.center}>
-            <Text style={styles.emptyText}>This Move isn&apos;t available anymore.</Text>
+            <Text style={styles.emptyText}>{t('room.notAvailable')}</Text>
           </View>
         </Screen>
       );
@@ -255,39 +257,42 @@ export default function MoveRoomScreen() {
               tint={previewMove.degree_limit}
             />
             <Text style={styles.title}>{previewMove.title}</Text>
-            <Text style={styles.hostLine}>Hosted by {previewMove.host_display_name ?? previewMove.host_username}</Text>
+            <Text style={styles.hostLine}>
+              {t('common.hostedByName', { name: previewMove.host_display_name ?? previewMove.host_username })}
+            </Text>
           </View>
 
           {previewMove.description ? <Text style={styles.description}>{previewMove.description}</Text> : null}
 
           <View style={styles.metaRow}>
-            <Badge label={formatWhen(previewMove.starts_at, previewMove.expires_at)} tone="green" />
+            <Badge label={formatWhen(previewMove.starts_at, previewMove.expires_at, t)} tone="green" />
             <Badge
-              label={degreeBadgeLabel[previewMove.degree_limit]}
+              label={t(`degree.badge.${previewMove.degree_limit}`)}
               tone={DEGREE_TONE[previewMove.degree_limit]}
             />
-            {previewMove.requires_approval ? <Badge label="Approval required" tone="yellow" /> : null}
+            {previewMove.requires_approval ? <Badge label={t('room.approvalRequired')} tone="yellow" /> : null}
           </View>
 
           <Text style={styles.helperText}>
             {previewMove.max_members
-              ? `${previewMove.approved_count}/${previewMove.max_members} joined`
-              : `${previewMove.approved_count} joined`}
-            {' · Exact location revealed once you join.'}
+              ? t('room.peopleJoined', { count: previewMove.approved_count, max: previewMove.max_members })
+              : t('room.peopleJoinedNoCap', { count: previewMove.approved_count })}
+            {' · '}
+            {t('room.locationRevealed')}
           </Text>
 
           {pending ? (
             <>
-              <Text style={styles.waitingText}>Your request is waiting for host approval.</Text>
-              <Button label="Cancel request" variant="secondary" onPress={handleCancelRequest} loading={joining} />
+              <Text style={styles.waitingText}>{t('room.waitingApproval')}</Text>
+              <Button label={t('room.cancelRequest')} variant="secondary" onPress={handleCancelRequest} loading={joining} />
             </>
           ) : rejected ? (
-            <Text style={styles.waitingText}>The host declined your request to join.</Text>
+            <Text style={styles.waitingText}>{t('room.requestDeclined')}</Text>
           ) : previewMove.is_full ? (
-            <Button label="This Move is full" variant="secondary" onPress={() => {}} disabled />
+            <Button label={t('room.moveFull')} variant="secondary" onPress={() => {}} disabled />
           ) : (
             <Button
-              label={previewMove.requires_approval ? 'Request to join' : 'Join Move'}
+              label={previewMove.requires_approval ? t('room.requestToJoin') : t('room.joinMove')}
               onPress={handleJoin}
               loading={joining}
             />
@@ -324,32 +329,34 @@ export default function MoveRoomScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.metaSection}>
           <Text style={styles.hostLine}>
-            Hosted by {hostMember ? hostMember.profile.display_name ?? hostMember.profile.username : '…'}
+            {t('common.hostedByName', { name: hostMember ? hostMember.profile.display_name ?? hostMember.profile.username : '…' })}
           </Text>
           <View style={styles.metaRow}>
-            <Badge label={formatWhen(move.starts_at, move.expires_at)} tone="green" />
-            <Badge label={degreeBadgeLabel[move.degree_limit]} tone={DEGREE_TONE[move.degree_limit]} />
-            {move.requires_approval ? <Badge label="Approval required" tone="yellow" /> : null}
+            <Badge label={formatWhen(move.starts_at, move.expires_at, t)} tone="green" />
+            <Badge label={t(`degree.badge.${move.degree_limit}`)} tone={DEGREE_TONE[move.degree_limit]} />
+            {move.requires_approval ? <Badge label={t('room.approvalRequired')} tone="yellow" /> : null}
           </View>
         </View>
 
         <View style={styles.roomHeader}>
           <View style={styles.roomHeaderRow}>
-            <Badge label={isActive ? `Ends in ${formatCountdown(countdownTarget)}` : `Closing in ${formatCountdown(countdownTarget)}`} tone={isActive ? 'green' : 'pink'} />
+            <Badge
+              label={isActive ? t('room.endsIn', { time: formatCountdown(countdownTarget) }) : t('room.closingIn', { time: formatCountdown(countdownTarget) })}
+              tone={isActive ? 'green' : 'pink'}
+            />
             <Text style={styles.memberCount}>
-              {approvedMembers.length}
-              {move.max_members ? `/${move.max_members}` : ''} here
+              {move.max_members ? t('room.hereWithCap', { count: approvedMembers.length, max: move.max_members }) : t('room.here', { count: approvedMembers.length })}
             </Text>
           </View>
           {isHost ? (
             <View style={styles.hostActionsRow}>
               {isActive ? (
                 <HoverPressable onPress={handleEndMove} style={styles.endLinkWrap}>
-                  <Text style={styles.endLink}>End Move</Text>
+                  <Text style={styles.endLink}>{t('room.endMove')}</Text>
                 </HoverPressable>
               ) : null}
               <HoverPressable onPress={handleDeleteMove} style={styles.endLinkWrap}>
-                <Text style={styles.deleteLink}>Delete</Text>
+                <Text style={styles.deleteLink}>{t('room.delete')}</Text>
               </HoverPressable>
             </View>
           ) : null}
@@ -359,7 +366,7 @@ export default function MoveRoomScreen() {
 
         {isHost && pendingMembers.length > 0 ? (
           <View style={styles.requestsSection}>
-            <Text style={styles.sectionTitle}>Requests ({pendingMembers.length})</Text>
+            <Text style={styles.sectionTitle}>{t('room.requests', { count: pendingMembers.length })}</Text>
             {pendingMembers.map((pm) => (
               <View key={pm.id} style={styles.requestRow}>
                 <Avatar uri={pm.profile.avatar_url} name={pm.profile.display_name ?? pm.profile.username} size={32} closeFriend={closeFriendIds.has(pm.user_id)} />
@@ -367,10 +374,10 @@ export default function MoveRoomScreen() {
                   {pm.profile.display_name ?? pm.profile.username}
                 </Text>
                 <HoverPressable onPress={() => handleApprove(pm.id)} style={styles.approveButton}>
-                  <Text style={styles.approveText}>Approve</Text>
+                  <Text style={styles.approveText}>{t('room.approve')}</Text>
                 </HoverPressable>
                 <HoverPressable onPress={() => handleReject(pm.id)} style={styles.rejectButton}>
-                  <Text style={styles.rejectText}>Decline</Text>
+                  <Text style={styles.rejectText}>{t('room.decline')}</Text>
                 </HoverPressable>
               </View>
             ))}
@@ -396,27 +403,27 @@ export default function MoveRoomScreen() {
               </View>
             );
           }}
-          ListEmptyComponent={<Text style={styles.emptyText}>No messages yet. Say hi 👋</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t('room.noMessagesYet')}</Text>}
         />
 
         {isActive ? (
           <View style={styles.composer}>
             <View style={styles.composerInput}>
-              <TextField value={messageText} onChangeText={setMessageText} placeholder="Message the group" onSubmitEditing={handleSend} />
+              <TextField value={messageText} onChangeText={setMessageText} placeholder={t('room.messagePlaceholder')} onSubmitEditing={handleSend} />
             </View>
             <HoverPressable onPress={handleSend} style={styles.sendButton}>
-              <Text style={styles.sendText}>Send</Text>
+              <Text style={styles.sendText}>{t('room.send')}</Text>
             </HoverPressable>
           </View>
         ) : (
           <View style={styles.closedBanner}>
-            <Text style={styles.closedText}>This Move has ended. The room will be deleted shortly.</Text>
+            <Text style={styles.closedText}>{t('room.moveEnded')}</Text>
           </View>
         )}
 
         {approvedMembers.length > 0 ? (
           <Card style={styles.memberListCard}>
-            <Text style={styles.sectionTitle}>Who&apos;s here</Text>
+            <Text style={styles.sectionTitle}>{t('room.whosHere')}</Text>
             <View style={styles.memberAvatars}>
               {approvedMembers.map((m) => (
                 <HoverPressable

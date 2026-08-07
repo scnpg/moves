@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { updateProfile } from '@/features/profile/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { USERNAME_PATTERN } from '@/lib/username';
 import { useAuth } from '@/providers/AuthProvider';
@@ -20,6 +21,7 @@ import { color, font, spacing } from '@/theme/tokens';
  */
 export default function CompleteProfileScreen() {
   const { session, profile, refreshProfile } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -30,7 +32,7 @@ export default function CompleteProfileScreen() {
     if (!session?.user) return;
     const normalized = username.trim().toLowerCase();
     if (!USERNAME_PATTERN.test(normalized)) {
-      setUsernameError('3-20 characters: lowercase letters, numbers, underscores.');
+      setUsernameError(t('auth.usernameHelp'));
       return;
     }
     setUsernameError(null);
@@ -43,7 +45,7 @@ export default function CompleteProfileScreen() {
       await refreshProfile();
       router.replace('/(tabs)');
     } catch (err) {
-      notify('Could not save', err instanceof Error ? err.message : 'That username may already be taken.');
+      notify(t('completeProfile.couldNotSave'), err instanceof Error ? err.message : t('completeProfile.usernameTaken'));
     } finally {
       setSaving(false);
     }
@@ -53,20 +55,22 @@ export default function CompleteProfileScreen() {
     <Screen>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>One more thing</Text>
-          <Text style={styles.subtitle}>Pick a username so friends can find you, {profile?.display_name ?? 'welcome'}.</Text>
+          <Text style={styles.title}>{t('completeProfile.oneMoreThing')}</Text>
+          <Text style={styles.subtitle}>
+            {t('completeProfile.pickUsername', { name: profile?.display_name ?? t('completeProfile.welcome') })}
+          </Text>
 
           <View style={styles.form}>
             <TextField
-              label="Username"
+              label={t('auth.username')}
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
-              placeholder="Ex. white_monster"
+              placeholder={t('auth.usernamePlaceholder')}
               error={usernameError}
             />
-            <TextField label="Display name" value={displayName} onChangeText={setDisplayName} placeholder="Ex. David D." />
-            <Button label="Continue" onPress={handleSave} loading={saving} />
+            <TextField label={t('auth.displayName')} value={displayName} onChangeText={setDisplayName} placeholder={t('auth.displayNamePlaceholder')} />
+            <Button label={t('completeProfile.continueButton')} onPress={handleSave} loading={saving} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

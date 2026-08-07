@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { profileShareUrl } from '@/lib/links';
 import { borderWidth, color, font, spacing } from '@/theme/tokens';
@@ -13,6 +14,7 @@ interface ShareProfilePanelProps {
 }
 
 export function ShareProfilePanel({ userId }: ShareProfilePanelProps) {
+  const { t } = useLocale();
   const [copying, setCopying] = useState(false);
   const url = profileShareUrl(userId);
 
@@ -20,9 +22,9 @@ export function ShareProfilePanel({ userId }: ShareProfilePanelProps) {
     setCopying(true);
     try {
       await navigator.clipboard.writeText(url);
-      notify('Link copied', 'Share it however you like.');
+      notify(t('common.linkCopied'), t('shareProfile.linkCopiedMessage'));
     } catch {
-      notify('Could not copy', 'Select and copy the link manually.');
+      notify(t('common.couldNotCopy'), t('common.copyManually'));
     } finally {
       setCopying(false);
     }
@@ -30,8 +32,8 @@ export function ShareProfilePanel({ userId }: ShareProfilePanelProps) {
 
   return (
     <Card style={styles.card}>
-      <Text style={styles.label}>SHARE PROFILE</Text>
-      <Text style={styles.helperText}>Anyone with this link or QR code can view your profile - no account needed.</Text>
+      <Text style={styles.label}>{t('shareProfile.label')}</Text>
+      <Text style={styles.helperText}>{t('shareProfile.helperLinkQr')}</Text>
       <View style={styles.body}>
         <View style={styles.qrWrap}>
           <QRCodeSVG value={url} size={96} fgColor={color.textPrimary} bgColor={color.bgCard} />
@@ -40,7 +42,7 @@ export function ShareProfilePanel({ userId }: ShareProfilePanelProps) {
           <Text style={styles.url} numberOfLines={2}>
             {url}
           </Text>
-          <Button label="Copy Link" variant="secondary" onPress={handleCopy} loading={copying} />
+          <Button label={t('common.copyLink')} variant="secondary" onPress={handleCopy} loading={copying} />
         </View>
       </View>
     </Card>

@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { HoverPressable } from '@/components/HoverPressable';
 import { TextField } from '@/components/TextField';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { getCurrentLocation } from '@/lib/useLocation';
 import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
@@ -23,6 +24,7 @@ interface LocationPickerProps {
  * location" still work, they just can't show a pin on a map here.
  */
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
+  const { t } = useLocale();
   const [address, setAddress] = useState('');
   const [searching, setSearching] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -58,8 +60,8 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       onChange(here);
     } catch (err) {
       notify(
-        'Could not get your location',
-        err instanceof Error ? err.message : 'Check your location permission and try again.'
+        t('locationPicker.couldNotGetLocation'),
+        err instanceof Error ? err.message : t('locationPicker.checkPermission')
       );
     } finally {
       setLocating(false);
@@ -73,7 +75,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           <TextField
             value={address}
             onChangeText={setAddress}
-            placeholder="Search an address (optional)"
+            placeholder={t('locationPicker.searchPlaceholder')}
             autoCapitalize="none"
           />
         </View>
@@ -81,15 +83,15 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       </View>
       <View style={styles.actionsRow}>
         <Text style={styles.hint}>
-          {value ? `Pinned at ${value.lat.toFixed(3)}, ${value.lng.toFixed(3)}` : 'No location set.'}
+          {value ? t('locationPicker.pinnedAt', { lat: value.lat.toFixed(3), lng: value.lng.toFixed(3) }) : t('locationPicker.noLocationSet')}
         </Text>
         <View style={styles.actionButtons}>
           <HoverPressable onPress={handleUseMyLocation} style={styles.smallButton} disabled={locating}>
-            <Text style={styles.smallButtonText}>{locating ? 'LOCATING…' : 'USE MY LOCATION'}</Text>
+            <Text style={styles.smallButtonText}>{locating ? t('locationPicker.locating') : t('locationPicker.useMyLocation')}</Text>
           </HoverPressable>
           {value ? (
             <HoverPressable onPress={() => onChange(null)} style={styles.smallButton}>
-              <Text style={styles.smallButtonText}>CLEAR</Text>
+              <Text style={styles.smallButtonText}>{t('locationPicker.clear')}</Text>
             </HoverPressable>
           ) : null}
         </View>
