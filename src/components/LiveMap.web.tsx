@@ -34,10 +34,11 @@ function Recenter({ lat, lng }: { lat: number; lng: number }) {
  * Real interactive map (Leaflet, no API key needed). Tiles are CartoDB's
  * "Positron" basemap - muted grayscale rather than default OSM's saturated
  * colors - so the flat-colored pins read clearly instead of competing with
- * a busy map underneath. Pins use each move's fuzzy_lat/fuzzy_lng - a
- * ~1.1km-precision point that's visible regardless of membership - never
- * the exact location, which stays gated behind approved membership
- * everywhere else in the app.
+ * a busy map underneath. Pins use each move's exact lat/lng when the RPC
+ * decided it's safe to send (host or approved member - get_eligible_moves_
+ * for_user() already gates that), falling back to fuzzy_lat/fuzzy_lng - a
+ * ~1.1km-precision point - for everyone else. The client never re-fuzzes
+ * data the server already cleared for exact display.
  */
 export function LiveMap({ moves, center, onSelectMove }: LiveMapProps) {
   const pins = useMemo(
@@ -50,7 +51,7 @@ export function LiveMap({ moves, center, onSelectMove }: LiveMapProps) {
   const mapCenter: [number, number] = center
     ? [center.lat, center.lng]
     : pins[0]
-      ? [pins[0].fuzzy_lat, pins[0].fuzzy_lng]
+      ? [pins[0].lat ?? pins[0].fuzzy_lat, pins[0].lng ?? pins[0].fuzzy_lng]
       : DEFAULT_CENTER;
 
   return (
@@ -76,7 +77,7 @@ export function LiveMap({ moves, center, onSelectMove }: LiveMapProps) {
         {pins.map((move) => (
           <CircleMarker
             key={move.id}
-            center={[move.fuzzy_lat, move.fuzzy_lng]}
+            center={[move.lat ?? move.fuzzy_lat, move.lng ?? move.fuzzy_lng]}
             radius={8}
             pathOptions={{
               color: '#111111',
