@@ -5,9 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { LanguageToggle } from '@/components/LanguageToggle';
-import { PhoneAuth } from '@/components/PhoneAuth';
 import { Screen } from '@/components/Screen';
-import { SegmentedControl } from '@/components/SegmentedControl';
 import { SunburstBackdrop } from '@/components/Streamline';
 import { TextField } from '@/components/TextField';
 import { signIn } from '@/features/auth/api';
@@ -15,21 +13,18 @@ import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { color, font, spacing } from '@/theme/tokens';
 
-type AuthMethod = 'email' | 'phone';
-
 export default function SignInScreen() {
   const { t } = useLocale();
   const insets = useSafeAreaInsets();
-  const [method, setMethod] = useState<AuthMethod>('email');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
-    if (!email || !password) return;
+    if (!identifier || !password) return;
     setLoading(true);
     try {
-      await signIn({ email: email.trim(), password });
+      await signIn({ identifier: identifier.trim(), password });
     } catch (err) {
       notify(t('auth.signInFailed'), err instanceof Error ? err.message : t('auth.pleaseTryAgain'));
     } finally {
@@ -52,37 +47,23 @@ export default function SignInScreen() {
             <Text style={styles.title}>MOVES?</Text>
           </View>
 
-          <SegmentedControl
-            segments={[
-              { value: 'email', label: t('auth.email') },
-              { value: 'phone', label: t('auth.phone') },
-            ]}
-            value={method}
-            onChange={setMethod}
-          />
-
-          {method === 'email' ? (
-            <View style={styles.form}>
-              <TextField
-                label={t('auth.email')}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                placeholder={t('auth.emailPlaceholder')}
-              />
-              <TextField
-                label={t('auth.password')}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholder={t('auth.passwordPlaceholder')}
-              />
-              <Button label={t('auth.signIn')} onPress={handleSignIn} loading={loading} />
-            </View>
-          ) : (
-            <PhoneAuth onDone={() => {}} />
-          )}
+          <View style={styles.form}>
+            <TextField
+              label={t('auth.emailOrUsername')}
+              value={identifier}
+              onChangeText={setIdentifier}
+              autoCapitalize="none"
+              placeholder={t('auth.emailOrUsernamePlaceholder')}
+            />
+            <TextField
+              label={t('auth.password')}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder={t('auth.passwordPlaceholder')}
+            />
+            <Button label={t('auth.signIn')} onPress={handleSignIn} loading={loading} />
+          </View>
 
           <Link href="/(auth)/sign-up" style={styles.link}>
             <Text style={styles.linkText}>

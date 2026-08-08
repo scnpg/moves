@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HoverPressable } from '@/components/HoverPressable';
 import { LOCALE_LABELS, LOCALE_SHORT_LABELS, SUPPORTED_LOCALES, useLocale, type Locale } from '@/i18n/LocaleProvider';
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     top: '100%',
     right: 0,
     marginTop: spacing.xxs,
-    minWidth: 160,
+    width: 180,
     backgroundColor: color.bgCard,
     borderWidth: borderWidth.base,
     borderColor: color.border,
@@ -112,6 +112,9 @@ const styles = StyleSheet.create({
     fontFamily: font.family.mono,
     color: color.textPrimary,
     fontSize: font.size.sm,
+    // CJK labels (e.g. "繁體中文") can wrap character-by-character if the
+    // row is allowed to shrink below their natural width.
+    ...Platform.select({ web: { whiteSpace: 'nowrap' } as object, default: {} }),
   },
   menuItemTextActive: {
     fontWeight: font.weight.bold,

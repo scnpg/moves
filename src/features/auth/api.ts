@@ -43,8 +43,22 @@ export async function signUp(params: {
   return { signedIn: data.session != null };
 }
 
-export async function signIn(params: { email: string; password: string }) {
-  const { error } = await supabase.auth.signInWithPassword(params);
+/** Accepts either an email or a username in `identifier` - usernames are resolved to an email server-side before signing in. */
+export async function signIn(params: { identifier: string; password: string }) {
+  const { identifier, password } = params;
+  let email = identifier;
+
+  if (!identifier.includes('@')) {
+    const { data, error } = await supabase.rpc('get_email_for_username', { p_username: identifier });
+    if (error) throw error;
+    // Matches Supabase's own "Invalid login credentials" wording so a
+    // nonexistent username reads the same as a wrong password, rather than
+    // confirming/denying the username exists.
+    if (!data) throw new Error('Invalid login credentials');
+    email = data;
+  }
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
 }
 

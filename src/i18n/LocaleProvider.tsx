@@ -48,8 +48,8 @@ const STORAGE_KEY = 'moves:locale';
  * Only zh-Hant (Traditional) is supported, not zh-Hans (Simplified) - a
  * bare "zh" tag with no script/region signal is treated as Traditional
  * since that's this app's only Chinese variant, consistent with the
- * Taiwan-first framing used elsewhere (PhoneAuth's "Taiwan, R.O.C." country
- * label). Explicit Simplified signals (Hans script, CN/SG region) are left
+ * Taiwan-first framing used elsewhere in the app. Explicit Simplified
+ * signals (Hans script, CN/SG region) are left
  * unmatched so they fall through to the next preferred device locale.
  */
 function isTraditionalChineseTag(tag: {

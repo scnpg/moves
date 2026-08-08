@@ -55,10 +55,10 @@ function RootNavigation() {
     // anon-callable) - for shared profile links/QR codes.
     const onUsersRoute = segments[0] === 'users';
     const onCompleteProfile = segments[0] === 'complete-profile';
-    // A phone-first signup (see PhoneAuth) lands with a placeholder
-    // username from handle_new_user()'s fallback - profile loads a beat
-    // after session does, so this re-fires and self-corrects once it does,
-    // wherever they ended up in the meantime.
+    // A referral/edge-case signup can land with a placeholder username from
+    // handle_new_user()'s fallback - profile loads a beat after session
+    // does, so this re-fires and self-corrects once it does, wherever they
+    // ended up in the meantime.
     const needsUsername = !!session && isPlaceholderUsername(profile?.username);
 
     if (!session && !inAuthGroup && !onJoinRoute && !onUsersRoute) {

@@ -42,6 +42,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: borderWidth.base,
     borderBottomColor: color.border,
     backgroundColor: color.bg,
+    // Beats the Stack's page content (the next sibling in _layout.tsx) in
+    // paint order, so the LanguageToggle dropdown's overflow isn't covered.
+    zIndex: 20,
   },
   logoWrap: {
     flexShrink: 1,
