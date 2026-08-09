@@ -14,8 +14,8 @@ interface LiveMapProps {
 }
 
 // Only used if we have neither the viewer's location nor any pin to center
-// on - an empty map has to point somewhere.
-const DEFAULT_CENTER: [number, number] = [40.7128, -74.006];
+// on - an empty map has to point somewhere. Violette's Lock, Potomac, MD.
+const DEFAULT_CENTER: [number, number] = [39.0672, -77.3285];
 
 function Recenter({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();

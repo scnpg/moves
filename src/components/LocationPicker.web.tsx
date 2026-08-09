@@ -20,7 +20,8 @@ interface LocationPickerProps {
   onChange: (value: LocationValue | null) => void;
 }
 
-const DEFAULT_CENTER: [number, number] = [40.7128, -74.006];
+// Violette's Lock, Potomac, MD - used until the picker has a real value or a device fix.
+const DEFAULT_CENTER: [number, number] = [39.0672, -77.3285];
 
 function ClickToPin({ onPick }: { onPick: (lat: number, lng: number) => void }) {
   useMapEvents({
