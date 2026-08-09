@@ -18,6 +18,7 @@ import { getHostedActiveMoves, updateProfile, uploadAvatar } from '@/features/pr
 import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { Move } from '@/lib/database.types';
+import { PHONE_CONTACTS_FEATURE_ENABLED } from '@/lib/features';
 import { formatWhen } from '@/lib/format';
 import { referralSignUpUrl } from '@/lib/links';
 import { hashPhone } from '@/lib/phone';
@@ -242,14 +243,18 @@ export default function ProfileScreen() {
                 <Text style={styles.charCount}>
                   {bioInput.length}/{BIO_MAX_LENGTH}
                 </Text>
-                <TextField
-                  label={t('profile.phoneLabel')}
-                  value={phoneInput}
-                  onChangeText={setPhoneInput}
-                  keyboardType="phone-pad"
-                  placeholder={profile?.phone_hash ? t('profile.phoneReplacePlaceholder') : t('profile.phoneFindPlaceholder')}
-                />
-                <Text style={styles.helperText}>{t('profile.phoneHelp')}</Text>
+                {PHONE_CONTACTS_FEATURE_ENABLED ? (
+                  <>
+                    <TextField
+                      label={t('profile.phoneLabel')}
+                      value={phoneInput}
+                      onChangeText={setPhoneInput}
+                      keyboardType="phone-pad"
+                      placeholder={profile?.phone_hash ? t('profile.phoneReplacePlaceholder') : t('profile.phoneFindPlaceholder')}
+                    />
+                    <Text style={styles.helperText}>{t('profile.phoneHelp')}</Text>
+                  </>
+                ) : null}
                 <View style={styles.editActions}>
                   <Button label={t('profile.cancel')} variant="secondary" onPress={() => setEditing(false)} style={styles.flexButton} />
                   <Button label={t('profile.save')} onPress={handleSave} loading={saving} style={styles.flexButton} />

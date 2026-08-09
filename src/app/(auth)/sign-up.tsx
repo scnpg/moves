@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } fr
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Button } from '@/components/Button';
+import { Checkbox } from '@/components/Checkbox';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { signUp } from '@/features/auth/api';
@@ -21,6 +22,7 @@ export default function SignUpScreen() {
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
 
   const handleSignUp = async () => {
     const normalizedUsername = username.trim().toLowerCase();
@@ -31,6 +33,11 @@ export default function SignUpScreen() {
     setUsernameError(null);
 
     if (!email || !password) return;
+
+    if (!agreed) {
+      notify(t('auth.mustAgreeTitle'), t('auth.mustAgreeMessage'));
+      return;
+    }
 
     setLoading(true);
     try {
@@ -109,6 +116,10 @@ export default function SignUpScreen() {
             .
           </Text>
 
+          <Checkbox checked={agreed} onToggle={() => setAgreed((a) => !a)}>
+            {t('auth.ageConfirmAgree')} <Text style={styles.boldText}>{t('auth.ageConfirmAge')}</Text>
+          </Checkbox>
+
           <Link href="/(auth)/sign-in" style={styles.link}>
             <Text style={styles.linkText}>
               {t('auth.alreadyHaveAccount')} <Text style={styles.linkTextStrong}>{t('auth.signIn')}</Text>
@@ -146,6 +157,10 @@ const styles = StyleSheet.create({
   legalLink: {
     color: color.textSecondary,
     textDecorationLine: 'underline',
+  },
+  boldText: {
+    color: color.textPrimary,
+    fontWeight: font.weight.heavy,
   },
   link: {
     alignSelf: 'center',

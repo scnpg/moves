@@ -18,6 +18,7 @@ import {
 import { searchUsers } from '@/features/search/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { getDeviceContactPhoneHashes, getWebContactPhoneHashes, isWebContactPickerAvailable } from '@/lib/contacts';
+import { PHONE_CONTACTS_FEATURE_ENABLED } from '@/lib/features';
 import type {
   ContactSuggestion,
   FriendOfFriendSuggestion,
@@ -138,7 +139,7 @@ export default function SearchScreen() {
   };
 
   const showingSuggestions = !query.trim();
-  const showContactsSection = Platform.OS !== 'web' || isWebContactPickerAvailable();
+  const showContactsSection = PHONE_CONTACTS_FEATURE_ENABLED && (Platform.OS !== 'web' || isWebContactPickerAvailable());
   const hasAnySuggestions = fof.length > 0 || nearby.length > 0 || contacts.length > 0;
 
   return (
