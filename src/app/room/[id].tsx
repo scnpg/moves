@@ -328,9 +328,15 @@ export default function MoveRoomScreen() {
       <SubHeader title={move.title} onBack={handleBack} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.metaSection}>
-          <Text style={styles.hostLine}>
-            {t('common.hostedByName', { name: hostMember ? hostMember.profile.display_name ?? hostMember.profile.username : '…' })}
-          </Text>
+          <HoverPressable
+            onPress={() => (hostMember && hostMember.user_id !== myId ? router.push(`/users/${hostMember.user_id}`) : undefined)}
+            style={styles.hostLineWrap}
+            lightenOpacity={0.1}
+          >
+            <Text style={styles.hostLine}>
+              {t('common.hostedByName', { name: hostMember ? hostMember.profile.display_name ?? hostMember.profile.username : '…' })}
+            </Text>
+          </HoverPressable>
           <View style={styles.metaRow}>
             <Badge label={formatWhen(move.starts_at, move.expires_at, t)} tone="green" />
             <Badge label={t(`degree.badge.${move.degree_limit}`)} tone={DEGREE_TONE[move.degree_limit]} />
@@ -369,10 +375,16 @@ export default function MoveRoomScreen() {
             <Text style={styles.sectionTitle}>{t('room.requests', { count: pendingMembers.length })}</Text>
             {pendingMembers.map((pm) => (
               <View key={pm.id} style={styles.requestRow}>
-                <Avatar uri={pm.profile.avatar_url} name={pm.profile.display_name ?? pm.profile.username} size={32} closeFriend={closeFriendIds.has(pm.user_id)} />
-                <Text style={styles.requestName} numberOfLines={1}>
-                  {pm.profile.display_name ?? pm.profile.username}
-                </Text>
+                <HoverPressable
+                  onPress={() => router.push(`/users/${pm.user_id}`)}
+                  style={styles.requestIdentityWrap}
+                  lightenOpacity={0.1}
+                >
+                  <Avatar uri={pm.profile.avatar_url} name={pm.profile.display_name ?? pm.profile.username} size={32} closeFriend={closeFriendIds.has(pm.user_id)} />
+                  <Text style={styles.requestName} numberOfLines={1}>
+                    {pm.profile.display_name ?? pm.profile.username}
+                  </Text>
+                </HoverPressable>
                 <HoverPressable onPress={() => handleApprove(pm.id)} style={styles.approveButton}>
                   <Text style={styles.approveText}>{t('room.approve')}</Text>
                 </HoverPressable>
@@ -394,10 +406,16 @@ export default function MoveRoomScreen() {
             return (
               <View style={[styles.messageRow, mine && styles.messageRowMine]}>
                 {!mine ? (
-                  <Avatar uri={item.sender.avatar_url} name={item.sender.display_name ?? item.sender.username} size={28} closeFriend={closeFriendIds.has(item.sender_id)} />
+                  <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} lightenOpacity={0.15}>
+                    <Avatar uri={item.sender.avatar_url} name={item.sender.display_name ?? item.sender.username} size={28} closeFriend={closeFriendIds.has(item.sender_id)} />
+                  </HoverPressable>
                 ) : null}
                 <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                  {!mine ? <Text style={styles.senderName}>{item.sender.display_name ?? item.sender.username}</Text> : null}
+                  {!mine ? (
+                    <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} style={styles.senderNameWrap} lightenOpacity={0.1}>
+                      <Text style={styles.senderName}>{item.sender.display_name ?? item.sender.username}</Text>
+                    </HoverPressable>
+                  ) : null}
                   <Text style={styles.messageText}>{item.content}</Text>
                 </View>
               </View>
@@ -468,6 +486,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
     gap: spacing.xxs,
   },
+  hostLineWrap: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.sm,
+  },
   roomHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -487,6 +509,7 @@ const styles = StyleSheet.create({
   requestsSection: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.xs, borderBottomWidth: borderWidth.base, borderBottomColor: color.border },
   sectionTitle: { fontFamily: font.family.mono, color: color.textSecondary, fontSize: font.size.xs, fontWeight: font.weight.bold, textTransform: 'uppercase', letterSpacing: font.tracking.wide },
   requestRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  requestIdentityWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, borderRadius: radius.sm },
   requestName: { flex: 1, color: color.textPrimary, fontSize: font.size.sm, fontWeight: font.weight.medium },
   approveButton: { backgroundColor: color.accentGreen, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, borderWidth: borderWidth.thin, borderColor: color.border },
   approveText: { fontFamily: font.family.mono, color: color.textPrimary, fontSize: font.size.xs, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
@@ -499,7 +522,8 @@ const styles = StyleSheet.create({
   bubble: { borderRadius: radius.md, borderWidth: borderWidth.thin, borderColor: color.border, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   bubbleTheirs: { backgroundColor: color.bgCard },
   bubbleMine: { backgroundColor: color.brand },
-  senderName: { color: color.textMuted, fontSize: font.size.xs, fontWeight: font.weight.bold, marginBottom: 2 },
+  senderNameWrap: { alignSelf: 'flex-start', borderRadius: radius.sm, marginBottom: 2 },
+  senderName: { color: color.textMuted, fontSize: font.size.xs, fontWeight: font.weight.bold },
   messageText: { color: color.textPrimary, fontSize: font.size.sm },
 
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, padding: spacing.md, borderTopWidth: borderWidth.base, borderTopColor: color.border },
