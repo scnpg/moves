@@ -180,3 +180,13 @@ export interface UserSettings {
   notify_mutual_moves: boolean;
   updated_at: string;
 }
+
+export type ReportReason = 'spam' | 'harassment' | 'inappropriate_content' | 'fake_profile' | 'other';
+
+export interface BlockedUser {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  blocked_at: string;
+}

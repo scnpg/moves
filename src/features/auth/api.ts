@@ -66,3 +66,21 @@ export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
+
+/**
+ * Permanently deletes the caller's account: profile, Moves they host,
+ * friendships, messages, and settings all cascade server-side (see
+ * delete_my_account in supabase/migrations). Avatar files have no DB
+ * foreign key to cascade from, so they're removed first via the real
+ * Storage API - a plain SQL delete against storage.objects is rejected by
+ * Supabase's own guard trigger.
+ */
+export async function deleteAccount(userId: string) {
+  await supabase.storage.from('avatars').remove([`${userId}/avatar.jpg`]);
+  const { error } = await supabase.rpc('delete_my_account');
+  if (error) throw error;
+  // 'local' only clears the client's own stored session - the account (and
+  // any session/refresh-token rows for it) is already gone server-side, so
+  // there's nothing left for a server-side logout call to revoke.
+  await supabase.auth.signOut({ scope: 'local' });
+}

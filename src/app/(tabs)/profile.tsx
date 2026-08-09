@@ -12,18 +12,18 @@ import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
 import { ShareProfilePanel } from '@/components/ShareProfilePanel';
 import { TextField } from '@/components/TextField';
-import { signOut } from '@/features/auth/api';
+import { deleteAccount, signOut } from '@/features/auth/api';
 import { getFriendRequests, getMyFriends, getReferralCount } from '@/features/friends/api';
 import { getHostedActiveMoves, updateProfile, uploadAvatar } from '@/features/profile/api';
 import { useLocale } from '@/i18n/LocaleProvider';
-import { notify } from '@/lib/alerts';
+import { confirmAction, notify } from '@/lib/alerts';
 import type { Move } from '@/lib/database.types';
 import { formatWhen } from '@/lib/format';
 import { referralSignUpUrl } from '@/lib/links';
 import { hashPhone } from '@/lib/phone';
 import { nextMilestoneLabel } from '@/lib/referrals';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, font, spacing } from '@/theme/tokens';
+import { color, font, radius, spacing } from '@/theme/tokens';
 
 const BIO_MAX_LENGTH = 280;
 
@@ -43,6 +43,7 @@ export default function ProfileScreen() {
   const [referralCount, setReferralCount] = useState<number | null>(null);
   const [copyingReferral, setCopyingReferral] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -139,6 +140,23 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!session?.user) return;
+    const confirmed = await confirmAction(
+      t('profile.deleteAccountConfirmTitle'),
+      t('profile.deleteAccountConfirmMessage'),
+      t('profile.deleteAccount')
+    );
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await deleteAccount(session.user.id);
+    } catch (err) {
+      notify(t('profile.couldNotDeleteAccount'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
+      setDeleting(false);
+    }
+  };
+
   return (
     <Screen>
       <FlatList
@@ -189,6 +207,13 @@ export default function ProfileScreen() {
                     <Text style={styles.requestBadgeText}>{incomingRequestCount}</Text>
                   </View>
                 ) : null}
+                <Text style={styles.chevron}>›</Text>
+              </Card>
+            </HoverPressable>
+
+            <HoverPressable onPress={() => router.push('/blocked')}>
+              <Card style={styles.friendsRow}>
+                <Text style={styles.friendsLabel}>{t('profile.blockedUsers')}</Text>
                 <Text style={styles.chevron}>›</Text>
               </Card>
             </HoverPressable>
@@ -254,6 +279,18 @@ export default function ProfileScreen() {
         ListFooterComponent={
           <View style={styles.footer}>
             <Button label={t('profile.signOut')} variant="ghost" onPress={handleSignOut} style={styles.signOutButton} />
+            <HoverPressable onPress={handleDeleteAccount} disabled={deleting} style={styles.deleteAccountWrap}>
+              <Text style={styles.deleteAccountText}>{deleting ? '···' : t('profile.deleteAccount')}</Text>
+            </HoverPressable>
+            <View style={styles.legalRow}>
+              <HoverPressable onPress={() => router.push('/terms')} style={styles.legalLinkWrap}>
+                <Text style={styles.legalLinkText}>{t('auth.termsOfService')}</Text>
+              </HoverPressable>
+              <Text style={styles.legalDot}>·</Text>
+              <HoverPressable onPress={() => router.push('/privacy')} style={styles.legalLinkWrap}>
+                <Text style={styles.legalLinkText}>{t('auth.privacyPolicy')}</Text>
+              </HoverPressable>
+            </View>
           </View>
         }
       />
@@ -422,5 +459,38 @@ const styles = StyleSheet.create({
   },
   signOutButton: {
     marginTop: 0,
+  },
+  deleteAccountWrap: {
+    alignSelf: 'center',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.sm,
+  },
+  deleteAccountText: {
+    fontFamily: font.family.mono,
+    color: color.danger,
+    fontSize: font.size.xs,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  legalLinkWrap: {
+    paddingHorizontal: spacing.xxs,
+    paddingVertical: spacing.xxs,
+  },
+  legalLinkText: {
+    color: color.textMuted,
+    fontSize: font.size.xs,
+    textDecorationLine: 'underline',
+  },
+  legalDot: {
+    color: color.textMuted,
+    fontSize: font.size.xs,
   },
 });

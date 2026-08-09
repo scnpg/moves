@@ -5,7 +5,10 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-rou
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { HoverPressable } from '@/components/HoverPressable';
+import { ReportUserPanel } from '@/components/ReportUserPanel';
 import { Screen } from '@/components/Screen';
+import { blockUser, getBlockedUsers, unblockUser } from '@/features/blocking/api';
 import {
   acceptFriendRequest,
   getFriendshipStatus,
@@ -19,7 +22,7 @@ import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { MutualFriend, PublicProfile, SearchFriendshipStatus } from '@/lib/database.types';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, font, spacing } from '@/theme/tokens';
+import { color, font, radius, spacing } from '@/theme/tokens';
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,6 +37,9 @@ export default function UserProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   // Reachable while signed out - shared profile links/QR codes (see
   // ShareProfilePanel, get_public_profile()) need to work for people who
@@ -47,16 +53,18 @@ export default function UserProfileScreen() {
 
       (async () => {
         if (session?.user) {
-          const [profileData, friendship, mutualData] = await Promise.all([
+          const [profileData, friendship, mutualData, blockedUsers] = await Promise.all([
             getProfile(id),
             getFriendshipStatus(session.user.id, id),
             getMutualFriends(session.user.id, id).catch(() => []),
+            getBlockedUsers().catch(() => []),
           ]);
           if (cancelled) return;
           setProfile(profileData);
           setStatus(friendship.status);
           setIsCloseFriend(friendship.isCloseFriend);
           setMutuals(mutualData);
+          setIsBlocked(blockedUsers.some((b) => b.id === id));
           setNotFound(!profileData);
         } else {
           const profileData = await getPublicProfile(id).catch(() => null);
@@ -124,6 +132,38 @@ export default function UserProfileScreen() {
     }
   };
 
+  const handleBlock = async () => {
+    if (!session?.user || !id || !profile) return;
+    const name = profile.display_name ?? profile.username;
+    const confirmed = await confirmAction(t('userProfile.blockConfirmTitle', { name }), t('userProfile.blockConfirmMessage'), t('userProfile.block'));
+    if (!confirmed) return;
+    setBlockLoading(true);
+    try {
+      await blockUser(id);
+      setIsBlocked(true);
+      setStatus('none');
+      setIsCloseFriend(false);
+      setReportOpen(false);
+    } catch (err) {
+      notify(t('userProfile.couldNotBlock'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (!id) return;
+    setBlockLoading(true);
+    try {
+      await unblockUser(id);
+      setIsBlocked(false);
+    } catch (err) {
+      notify(t('userProfile.couldNotUnblock'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Screen>
@@ -171,6 +211,8 @@ export default function UserProfileScreen() {
           <View style={styles.actionsRow}>
             {!session?.user ? (
               <Button label={t('userProfile.signInToConnect')} onPress={() => router.push('/(auth)/sign-in')} />
+            ) : isBlocked ? (
+              <Button label={t('userProfile.unblock')} variant="secondary" onPress={handleUnblock} loading={blockLoading} />
             ) : status === 'none' ? (
               <Button label={t('userProfile.addFriend')} onPress={handleAdd} loading={actionLoading} />
             ) : status === 'pending_sent' ? (
@@ -195,6 +237,27 @@ export default function UserProfileScreen() {
               </View>
             ) : null}
           </View>
+
+          {session?.user ? (
+            <View style={styles.secondaryActionsRow}>
+              {!isBlocked ? (
+                <HoverPressable onPress={handleBlock} style={styles.secondaryAction}>
+                  <Text style={styles.secondaryActionText}>{t('userProfile.block')}</Text>
+                </HoverPressable>
+              ) : null}
+              <HoverPressable onPress={() => setReportOpen((open) => !open)} style={styles.secondaryAction}>
+                <Text style={styles.secondaryActionText}>{t('userProfile.report')}</Text>
+              </HoverPressable>
+            </View>
+          ) : null}
+
+          {reportOpen && session?.user ? (
+            <ReportUserPanel
+              userId={id}
+              name={profile.display_name ?? profile.username}
+              onDone={() => setReportOpen(false)}
+            />
+          ) : null}
         </View>
 
         {session?.user ? (
@@ -268,6 +331,24 @@ const styles = StyleSheet.create({
   },
   flexButton: {
     flex: 1,
+  },
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginTop: spacing.xs,
+  },
+  secondaryAction: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.sm,
+  },
+  secondaryActionText: {
+    fontFamily: font.family.mono,
+    color: color.textMuted,
+    fontSize: font.size.xs,
+    fontWeight: font.weight.bold,
+    letterSpacing: font.tracking.label,
   },
   sectionTitle: {
     fontFamily: font.family.mono,

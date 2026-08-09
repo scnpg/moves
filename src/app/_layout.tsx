@@ -55,13 +55,17 @@ function RootNavigation() {
     // anon-callable) - for shared profile links/QR codes.
     const onUsersRoute = segments[0] === 'users';
     const onCompleteProfile = segments[0] === 'complete-profile';
+    // Privacy Policy / Terms of Service need to work signed-out too - they're
+    // the URLs App Store Connect / Play Console link to, and a visitor
+    // reading them before signing up shouldn't get bounced to sign-in first.
+    const onLegalRoute = segments[0] === 'privacy' || segments[0] === 'terms';
     // A referral/edge-case signup can land with a placeholder username from
     // handle_new_user()'s fallback - profile loads a beat after session
     // does, so this re-fires and self-corrects once it does, wherever they
     // ended up in the meantime.
     const needsUsername = !!session && isPlaceholderUsername(profile?.username);
 
-    if (!session && !inAuthGroup && !onJoinRoute && !onUsersRoute) {
+    if (!session && !inAuthGroup && !onJoinRoute && !onUsersRoute && !onLegalRoute) {
       router.replace('/(auth)/sign-in');
     } else if (session && needsUsername && !onCompleteProfile) {
       router.replace('/complete-profile');

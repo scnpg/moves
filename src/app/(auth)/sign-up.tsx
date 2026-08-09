@@ -97,6 +97,18 @@ export default function SignUpScreen() {
             <Button label={t('auth.signUp')} onPress={handleSignUp} loading={loading} />
           </View>
 
+          <Text style={styles.legalText}>
+            {t('auth.legalPrefix')}{' '}
+            <Link href="/terms">
+              <Text style={styles.legalLink}>{t('auth.termsOfService')}</Text>
+            </Link>{' '}
+            {t('auth.legalAnd')}{' '}
+            <Link href="/privacy">
+              <Text style={styles.legalLink}>{t('auth.privacyPolicy')}</Text>
+            </Link>
+            .
+          </Text>
+
           <Link href="/(auth)/sign-in" style={styles.link}>
             <Text style={styles.linkText}>
               {t('auth.alreadyHaveAccount')} <Text style={styles.linkTextStrong}>{t('auth.signIn')}</Text>
@@ -124,6 +136,16 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: spacing.md,
+  },
+  legalText: {
+    color: color.textMuted,
+    fontSize: font.size.xs,
+    textAlign: 'center',
+    lineHeight: font.size.xs * 1.6,
+  },
+  legalLink: {
+    color: color.textSecondary,
+    textDecorationLine: 'underline',
   },
   link: {
     alignSelf: 'center',
