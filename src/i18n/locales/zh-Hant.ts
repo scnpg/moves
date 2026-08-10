@@ -234,7 +234,7 @@ const zhHant: TranslationDictionary = {
     maxMembersError: '人數上限必須是正整數。',
     couldNotCreate: '無法建立揪團',
     titleLabel: '標題',
-    titlePlaceholder: '晚上8點吃塔可餅',
+    titlePlaceholder: '在 Ray 家的聚會',
     descriptionLabel: '說明（選填）',
     descriptionPlaceholder: '選填的補充說明',
     dateLabel: '日期',
@@ -321,12 +321,15 @@ const zhHant: TranslationDictionary = {
   report: {
     title: '檢舉 {name}',
     titleForMove: '檢舉這個揪團',
+    titleForMessage: '檢舉這則訊息',
     reasonLabel: '你為什麼要檢舉這個帳號？',
     reasonLabelForMove: '你為什麼要檢舉這個揪團？',
+    reasonLabelForMessage: '你為什麼要檢舉這則訊息？',
     reasonSpam: '垃圾訊息',
     reasonHarassment: '騷擾或霸凌',
     reasonInappropriateContent: '不當內容',
     reasonFakeProfile: '假帳號',
+    reasonThreat: '威脅或安全疑慮',
     reasonOther: '其他',
     detailsPlaceholder: '補充說明（選填）',
     submit: '送出檢舉',
@@ -355,6 +358,7 @@ const zhHant: TranslationDictionary = {
     metric: '公制',
     language: '語言',
     blockedUsers: '封鎖名單',
+    moderationQueue: '審核佇列',
   },
   userRow: {
     add: '新增',
@@ -403,6 +407,25 @@ const zhHant: TranslationDictionary = {
   },
   liveMap: {
     label: '即時地圖',
+  },
+  locationGate: {
+    title: '開啟定位',
+    body: 'Moves 是以你附近正在發生的事情為核心，因此需要你的定位才能運作。',
+    deniedBody: '目前定位存取權已關閉。請在瀏覽器或裝置設定中為 Moves 開啟定位，然後再試一次。',
+    enableButton: '開啟定位',
+  },
+  moderation: {
+    title: '審核佇列',
+    empty: '目前沒有需要審核的項目。',
+    kindMove: '揪團',
+    kindProfile: '個人資料',
+    kindMessage: '訊息',
+    reportCount: '{count} 次檢舉',
+    reasonsLabel: '原因',
+    llmLabel: 'AI 初步判斷',
+    markNoThreat: '沒有威脅',
+    markThreat: '確認為威脅',
+    couldNotResolve: '無法儲存判斷結果',
   },
 };
 

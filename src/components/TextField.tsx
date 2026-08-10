@@ -5,18 +5,23 @@ import { useTheme } from '@/theme/ThemeProvider';
 
 interface TextFieldProps extends TextInputProps {
   label?: string;
+  /** Appends a colored asterisk after the label - purely visual, doesn't affect validation. */
+  required?: boolean;
   error?: string | null;
   hint?: string | null;
 }
 
-export function TextField({ label, error, hint, style, onFocus, onBlur, multiline, ...inputProps }: TextFieldProps) {
+export function TextField({ label, required, error, hint, style, onFocus, onBlur, multiline, ...inputProps }: TextFieldProps) {
   const { colors, border, font } = useTheme();
   const [focused, setFocused] = useState(false);
 
   return (
     <View style={styles.wrapper}>
       {label ? (
-        <Text style={[styles.label, { fontFamily: font.family.monoBold, color: colors.textPrimary }]}>{label.toUpperCase()}</Text>
+        <Text style={[styles.label, { fontFamily: font.family.monoBold, color: colors.textPrimary }]}>
+          {label.toUpperCase()}
+          {required ? <Text style={{ color: colors.danger }}> *</Text> : null}
+        </Text>
       ) : null}
       <View style={styles.inputRow}>
         {focused && border.focused.hasInsetBar ? (

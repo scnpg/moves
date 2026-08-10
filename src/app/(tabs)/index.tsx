@@ -40,6 +40,10 @@ const MILES_TO_METERS = 1609.34;
 const MIN_RADIUS_MILES = 1;
 const MAX_RADIUS_MILES = 100;
 const DEFAULT_RADIUS_MILES = 25;
+// Recenter button size (44) + comfortable margins above the sheet and below
+// the map's top edge - below this much visible map, there's no room to float
+// the button without it crowding the sheet handle or the map's own chrome.
+const MIN_VISIBLE_MAP_FOR_RECENTER = 120;
 
 function isLiveNow(move: EligibleMove) {
   const now = Date.now();
@@ -70,6 +74,9 @@ export default function MovesScreen() {
     new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   );
   const mapRef = useRef<LiveMapHandle>(null);
+  // Tracks the bottom sheet's live height so the recenter button can sit
+  // just above its moving top edge instead of the map area's fixed bottom.
+  const [sheetHeight, setSheetHeight] = useState(0);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -188,17 +195,20 @@ export default function MovesScreen() {
           fitRadiusMiles={tab === 'public' ? fetchRadiusMiles : null}
         />
 
-        {coords ? (
+        {coords && mapHeight - sheetHeight >= MIN_VISIBLE_MAP_FOR_RECENTER ? (
           <HoverPressable
             onPress={() => mapRef.current?.recenter()}
-            style={[styles.recenterButton, { backgroundColor: colors.bgCard, borderWidth: border.rest.width, borderColor: colors.border }]}
+            style={[
+              styles.recenterButton,
+              { bottom: sheetHeight + 12, backgroundColor: colors.bgCard, borderWidth: border.rest.width, borderColor: colors.border },
+            ]}
             lightenOpacity={0.25}
           >
             <Text style={[styles.recenterIcon, { color: colors.textPrimary }]}>◎</Text>
           </HoverPressable>
         ) : null}
 
-        <BottomSheet containerHeight={mapHeight} defaultSnap="half">
+        <BottomSheet containerHeight={mapHeight} defaultSnap="half" onHeightChange={setSheetHeight}>
           <FlatList
             data={filtered}
             keyExtractor={(item) => item.id}
@@ -290,7 +300,6 @@ const styles = StyleSheet.create({
   recenterButton: {
     position: 'absolute',
     right: 12,
-    bottom: 12,
     width: 44,
     height: 44,
     alignItems: 'center',

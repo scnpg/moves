@@ -235,7 +235,7 @@ const en = {
     maxMembersError: 'Max members must be a positive whole number.',
     couldNotCreate: 'Could not create Move',
     titleLabel: 'Title',
-    titlePlaceholder: 'Tacos at 8 PM',
+    titlePlaceholder: "Function at Ray's house",
     descriptionLabel: 'Description (optional)',
     descriptionPlaceholder: 'Optional details',
     dateLabel: 'Date',
@@ -322,12 +322,15 @@ const en = {
   report: {
     title: 'Report {name}',
     titleForMove: 'Report this Move',
+    titleForMessage: 'Report this message',
     reasonLabel: 'Why are you reporting this account?',
     reasonLabelForMove: 'Why are you reporting this Move?',
+    reasonLabelForMessage: 'Why are you reporting this message?',
     reasonSpam: 'Spam',
     reasonHarassment: 'Harassment or bullying',
     reasonInappropriateContent: 'Inappropriate content',
     reasonFakeProfile: 'Fake profile',
+    reasonThreat: 'Threat or safety concern',
     reasonOther: 'Other',
     detailsPlaceholder: 'Additional details (optional)',
     submit: 'Submit report',
@@ -356,6 +359,7 @@ const en = {
     metric: 'Metric',
     language: 'Language',
     blockedUsers: 'Blocked users',
+    moderationQueue: 'Moderation queue',
   },
   userRow: {
     add: 'ADD',
@@ -404,6 +408,25 @@ const en = {
   },
   liveMap: {
     label: 'LIVE MAP',
+  },
+  locationGate: {
+    title: 'Turn on location',
+    body: "Moves is built around what's happening near you, so it needs your location to work.",
+    deniedBody: 'Location access is off. Enable it for Moves in your browser or device settings, then try again.',
+    enableButton: 'Enable location',
+  },
+  moderation: {
+    title: 'Moderation queue',
+    empty: 'Nothing needs review right now.',
+    kindMove: 'Move',
+    kindProfile: 'Profile',
+    kindMessage: 'Message',
+    reportCount: '{count} reports',
+    reasonsLabel: 'Reasons',
+    llmLabel: 'AI triage',
+    markNoThreat: 'No threat',
+    markThreat: 'Confirm threat',
+    couldNotResolve: 'Could not save decision',
   },
 } as const;
 

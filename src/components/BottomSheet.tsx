@@ -1,7 +1,14 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -12,6 +19,8 @@ interface BottomSheetProps {
   /** Height of the area this sheet overlays (e.g. the map). Snap points are fractions of it. */
   containerHeight: number;
   defaultSnap?: SnapPoint;
+  /** Fires (UI thread -> JS thread) on every change to the sheet's current height in px - lets a sibling (e.g. a recenter button) track the shrinking visible map area above it. */
+  onHeightChange?: (height: number) => void;
 }
 
 export const BOTTOM_SHEET_PEEK_PX = 120;
@@ -24,7 +33,7 @@ const PEEK_PX = BOTTOM_SHEET_PEEK_PX;
  * linear - matches the design system's "nothing eases" motion spec, so this
  * deliberately uses withTiming, not withSpring.
  */
-export function BottomSheet({ children, containerHeight, defaultSnap = 'half' }: BottomSheetProps) {
+export function BottomSheet({ children, containerHeight, defaultSnap = 'half', onHeightChange }: BottomSheetProps) {
   const { colors, borderWidth } = useTheme();
 
   const snapPx = {
@@ -37,6 +46,16 @@ export function BottomSheet({ children, containerHeight, defaultSnap = 'half' }:
 
   const height = useSharedValue(snapPx[defaultSnap]);
   const dragStart = useSharedValue(snapPx[defaultSnap]);
+
+  useAnimatedReaction(
+    () => height.value,
+    (current, previous) => {
+      if (onHeightChange && current !== previous) {
+        runOnJS(onHeightChange)(current);
+      }
+    },
+    [onHeightChange]
+  );
 
   const pan = Gesture.Pan()
     .onStart(() => {

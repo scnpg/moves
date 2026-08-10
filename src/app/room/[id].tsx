@@ -66,6 +66,7 @@ export default function MoveRoomScreen() {
   const [messageText, setMessageText] = useState('');
   const [joining, setJoining] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
   const [, forceCountdownTick] = useState(0);
   const messagesRef = useRef<FlatList>(null);
 
@@ -521,26 +522,47 @@ export default function MoveRoomScreen() {
               renderItem={({ item }) => {
                 const mine = item.sender_id === myId;
                 return (
-                  <View style={[styles.messageRow, mine && styles.messageRowMine]}>
-                    {!mine ? (
-                      <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} lightenOpacity={0.15}>
-                        <Avatar uri={item.sender.avatar_url} name={item.sender.display_name ?? item.sender.username} size={28} closeFriend={closeFriendIds.has(item.sender_id)} />
-                      </HoverPressable>
-                    ) : null}
-                    <View
-                      style={[
-                        styles.bubble,
-                        { borderWidth: border.rest.width, borderColor: border.rest.color },
-                        mine ? { backgroundColor: colors.brand } : { backgroundColor: colors.bgCard },
-                      ]}
-                    >
+                  <View>
+                    <View style={[styles.messageRow, mine && styles.messageRowMine]}>
                       {!mine ? (
-                        <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} style={styles.senderNameWrap} lightenOpacity={0.1}>
-                          <Text style={[styles.senderName, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{item.sender.display_name ?? item.sender.username}</Text>
+                        <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} lightenOpacity={0.15}>
+                          <Avatar uri={item.sender.avatar_url} name={item.sender.display_name ?? item.sender.username} size={28} closeFriend={closeFriendIds.has(item.sender_id)} />
                         </HoverPressable>
                       ) : null}
-                      <Text style={[styles.messageText, { color: colors.textPrimary, fontFamily: font.family.bodyRegular }]}>{item.content}</Text>
+                      <View
+                        style={[
+                          styles.bubble,
+                          { borderWidth: border.rest.width, borderColor: border.rest.color },
+                          mine ? { backgroundColor: colors.brand } : { backgroundColor: colors.bgCard },
+                        ]}
+                      >
+                        {!mine ? (
+                          <View style={styles.senderRow}>
+                            <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} style={styles.senderNameWrap} lightenOpacity={0.1}>
+                              <Text style={[styles.senderName, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{item.sender.display_name ?? item.sender.username}</Text>
+                            </HoverPressable>
+                            <HoverPressable
+                              onPress={() => setReportingMessageId((id) => (id === item.id ? null : item.id))}
+                              style={styles.messageReportButton}
+                              lightenOpacity={0.15}
+                            >
+                              <Text style={[styles.messageReportIcon, { color: colors.textMuted }]}>⚑</Text>
+                            </HoverPressable>
+                          </View>
+                        ) : null}
+                        <Text style={[styles.messageText, { color: colors.textPrimary, fontFamily: font.family.bodyRegular }]}>{item.content}</Text>
+                      </View>
                     </View>
+                    {reportingMessageId === item.id ? (
+                      <View style={styles.messageReportPanelWrap}>
+                        <ReportUserPanel
+                          userId={item.sender_id}
+                          name={item.sender.display_name ?? item.sender.username}
+                          messageId={item.id}
+                          onDone={() => setReportingMessageId(null)}
+                        />
+                      </View>
+                    ) : null}
                   </View>
                 );
               }}
@@ -655,8 +677,12 @@ const styles = StyleSheet.create({
   messageRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '85%' },
   messageRowMine: { alignSelf: 'flex-end' },
   bubble: { paddingHorizontal: 12, paddingVertical: 8 },
-  senderNameWrap: { alignSelf: 'flex-start', marginBottom: 2 },
+  senderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 2 },
+  senderNameWrap: { alignSelf: 'flex-start' },
   senderName: { fontSize: 11, letterSpacing: 0.7 },
+  messageReportButton: { padding: 2, borderRadius: 4 },
+  messageReportIcon: { fontSize: 11 },
+  messageReportPanelWrap: { marginTop: 6, marginBottom: 6 },
   messageText: { fontSize: 14 },
 
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 16 },

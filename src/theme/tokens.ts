@@ -4,15 +4,15 @@
 export const font = {
   family: {
     // Danfo - the "MOVES?" wordmark only, wherever it appears as a logo.
+    // The one exception to the header/body split below.
     logo: 'Danfo',
-    // Alfa Slab One - hero countdown numbers and other big display text, never the wordmark itself.
-    heroDisplay: 'AlfaSlabOne_400Regular',
-    // JetBrains Mono - uppercase labels, buttons, meta text. Reads as clean
-    // and technical rather than retro/blocky (was Space Mono - too heavy
-    // and typewriter-ish for this app's voice).
-    monoRegular: 'JetBrainsMono_400Regular',
-    monoBold: 'JetBrainsMono_700Bold',
-    // Inter - anything a human wrote.
+    // Space Grotesk - every heading/title/label/button/meta role (was Alfa
+    // Slab One for hero display text, JetBrains Mono for uppercase
+    // labels/buttons/meta - both collapsed into this one "header" family).
+    heroDisplay: 'SpaceGrotesk_700Bold',
+    monoRegular: 'SpaceGrotesk_500Medium',
+    monoBold: 'SpaceGrotesk_700Bold',
+    // Inter - anything a human wrote (descriptions, bios, chat messages).
     bodyRegular: 'Inter_400Regular',
     bodySemibold: 'Inter_600SemiBold',
   },

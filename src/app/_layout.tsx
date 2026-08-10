@@ -6,13 +6,14 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AlfaSlabOne_400Regular } from '@expo-google-fonts/alfa-slab-one';
-import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
+import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
 import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 
 import { AppHeader } from '@/components/AppHeader';
+import { LocationRequiredScreen } from '@/components/LocationRequiredScreen';
 import { LocaleProvider } from '@/i18n/LocaleProvider';
 import { PENDING_JOIN_TOKEN_KEY } from '@/lib/links';
+import { useUserLocation } from '@/lib/useLocation';
 import { isPlaceholderUsername } from '@/lib/username';
 import { AlertProvider } from '@/providers/AlertProvider';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
@@ -21,9 +22,8 @@ import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Danfo: require('../../assets/fonts/Danfo-Regular.ttf'),
-    AlfaSlabOne_400Regular,
-    JetBrainsMono_400Regular,
-    JetBrainsMono_700Bold,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_700Bold,
     Inter_400Regular,
     Inter_600SemiBold,
   });
@@ -61,27 +61,32 @@ function RootNavigation() {
   const segments = useSegments();
   const router = useRouter();
   const { colors, scheme } = useTheme();
+  const { coords, permissionDenied, loading: locationLoading, retry: retryLocation } = useUserLocation();
+
+  const inAuthGroup = segments[0] === '(auth)';
+  // /join/:token has its own signed-out preview (get_move_by_share_token
+  // is anon-callable) - don't bounce visitors to sign-in before they see it.
+  const onJoinRoute = segments[0] === 'join';
+  // /users/:id has its own signed-out preview too (get_public_profile is
+  // anon-callable) - for shared profile links/QR codes.
+  const onUsersRoute = segments[0] === 'users';
+  const onCompleteProfile = segments[0] === 'complete-profile';
+  // Privacy Policy / Terms of Service need to work signed-out too - they're
+  // the URLs App Store Connect / Play Console link to, and a visitor
+  // reading them before signing up shouldn't get bounced to sign-in first.
+  const onLegalRoute = segments[0] === 'privacy' || segments[0] === 'terms';
+  // A referral/edge-case signup can land with a placeholder username from
+  // handle_new_user()'s fallback - profile loads a beat after session
+  // does, so this re-fires and self-corrects once it does, wherever they
+  // ended up in the meantime. A moderator confirming a reported username as
+  // the actual violation (see resolve_moderation_case() in the moderation
+  // migration) reuses the exact same "pick a username" screen/flow to make
+  // the change - profiles.username_reset_required clears itself the moment
+  // the username actually changes (see clear_username_reset_flag()).
+  const needsUsername = !!session && (isPlaceholderUsername(profile?.username) || !!profile?.username_reset_required);
 
   useEffect(() => {
     if (loading) return;
-    const inAuthGroup = segments[0] === '(auth)';
-    // /join/:token has its own signed-out preview (get_move_by_share_token
-    // is anon-callable) - don't bounce visitors to sign-in before they see it.
-    const onJoinRoute = segments[0] === 'join';
-    // /users/:id has its own signed-out preview too (get_public_profile is
-    // anon-callable) - for shared profile links/QR codes.
-    const onUsersRoute = segments[0] === 'users';
-    const onCompleteProfile = segments[0] === 'complete-profile';
-    // Privacy Policy / Terms of Service need to work signed-out too - they're
-    // the URLs App Store Connect / Play Console link to, and a visitor
-    // reading them before signing up shouldn't get bounced to sign-in first.
-    const onLegalRoute = segments[0] === 'privacy' || segments[0] === 'terms';
-    // A referral/edge-case signup can land with a placeholder username from
-    // handle_new_user()'s fallback - profile loads a beat after session
-    // does, so this re-fires and self-corrects once it does, wherever they
-    // ended up in the meantime.
-    const needsUsername = !!session && isPlaceholderUsername(profile?.username);
-
     if (!session && !inAuthGroup && !onJoinRoute && !onUsersRoute && !onLegalRoute) {
       router.replace('/(auth)/sign-in');
     } else if (session && needsUsername && !onCompleteProfile) {
@@ -93,7 +98,8 @@ function RootNavigation() {
         router.replace(token ? `/join/${token}` : '/(tabs)');
       });
     }
-  }, [session, profile?.username, loading, segments, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, needsUsername, onCompleteProfile, inAuthGroup, onJoinRoute, onUsersRoute, onLegalRoute, loading, router]);
 
   if (loading) {
     return (
@@ -108,13 +114,24 @@ function RootNavigation() {
   // redundant there.
   const onSignIn = segments.join('/') === '(auth)/sign-in';
 
+  // Moves is location-first (nearby feed, map centering, Move creation all
+  // need it) - once past sign-in/legal/preview routes, block the rest of
+  // the app behind a resolved location rather than let every screen handle
+  // a null-coords fallback individually.
+  const needsLocationGate =
+    !!session && !inAuthGroup && !onJoinRoute && !onUsersRoute && !onLegalRoute && !needsUsername;
+
   return (
     <View style={styles.flex}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {!onSignIn ? <AppHeader /> : null}
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-        <Stack.Screen name="room/create" options={{ presentation: 'modal' }} />
-      </Stack>
+      {needsLocationGate && !coords ? (
+        <LocationRequiredScreen loading={locationLoading} denied={permissionDenied} onRetry={retryLocation} />
+      ) : (
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+          <Stack.Screen name="room/create" options={{ presentation: 'modal' }} />
+        </Stack>
+      )}
     </View>
   );
 }

@@ -37,11 +37,7 @@ export function AppHeader() {
       <HoverPressable onPress={goHome} style={styles.logoWrap} lightenOpacity={0.08}>
         <Text style={[styles.logo, { fontFamily: font.family.logo, color: colors.textPrimary }]}>MOVES?</Text>
       </HoverPressable>
-      <HoverPressable
-        onPress={() => router.push('/settings')}
-        style={[styles.settingsButton, { borderWidth: border.rest.width, borderColor: border.rest.color }]}
-        lightenOpacity={0.2}
-      >
+      <HoverPressable onPress={() => router.push('/settings')} style={styles.settingsButton} lightenOpacity={0.2}>
         <Text style={[styles.settingsIcon, { color: colors.textSecondary }]}>⚙</Text>
       </HoverPressable>
     </View>
@@ -73,6 +69,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   settingsIcon: {
-    fontSize: 17,
+    fontSize: 21,
   },
 });

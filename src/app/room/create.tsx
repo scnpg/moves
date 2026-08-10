@@ -176,20 +176,14 @@ export default function CreateMoveScreen() {
     <Screen style={styles.noPadding}>
       <SubHeader title={t('createMove.newMove')} onBack={handleClose} variant="close" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.column}>
         <TextField
+          label={t('createMove.titleLabel')}
+          required
           value={title}
           onChangeText={setTitle}
           placeholder={t('createMove.titlePlaceholder')}
           style={styles.titleInput}
-          multiline
-        />
-
-        <TextField
-          label={t('createMove.descriptionLabel')}
-          value={description}
-          onChangeText={setDescription}
-          placeholder={t('createMove.descriptionPlaceholder')}
-          style={styles.gapTop}
           multiline
         />
 
@@ -220,7 +214,7 @@ export default function CreateMoveScreen() {
           </View>
         </View>
 
-        <Field label={t('createMove.locationLabel')}>
+        <Field label={t('createMove.locationLabel')} required>
           <Text style={[styles.helperText, { color: colors.textMuted, fontFamily: font.family.bodyRegular, marginTop: 0, marginBottom: 8 }]}>
             {degreeLimit === 1 ? t('createMove.locationVisibleFriends') : t('createMove.locationHiddenUntilApproved')}
           </Text>
@@ -313,6 +307,14 @@ export default function CreateMoveScreen() {
 
         {moreOpen ? (
           <View style={styles.moreContent}>
+            <TextField
+              label={t('createMove.descriptionLabel')}
+              value={description}
+              onChangeText={setDescription}
+              placeholder={t('createMove.descriptionPlaceholder')}
+              multiline
+            />
+
             <DatePicker
               label={t('createMove.dateLabel')}
               value={moveDate}
@@ -363,20 +365,26 @@ export default function CreateMoveScreen() {
         ) : null}
 
         <View style={styles.bottomSpacer} />
+        </View>
       </ScrollView>
 
       <View style={[styles.pinnedBar, { borderTopWidth: border.rest.width, borderTopColor: border.rest.color, backgroundColor: colors.bg }]}>
-        <Button label={t('createMove.startIt')} onPress={handleCreate} loading={submitting} disabled={!canStart} size="lg" />
+        <View style={styles.column}>
+          <Button label={t('createMove.startIt')} onPress={handleCreate} loading={submitting} disabled={!canStart} size="lg" />
+        </View>
       </View>
     </Screen>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   const { colors, font } = useTheme();
   return (
     <View style={styles.field}>
-      <Text style={[styles.fieldLabel, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{label.toUpperCase()}</Text>
+      <Text style={[styles.fieldLabel, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>
+        {label.toUpperCase()}
+        {required ? <Text style={{ color: colors.danger }}> *</Text> : null}
+      </Text>
       {children}
     </View>
   );
@@ -725,6 +733,20 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    // Centers the column below on a wide viewport - alignSelf has no effect
+    // on a ScrollView's own contentContainerStyle, so the actual maxWidth
+    // cap lives on the `column` wrapper View instead.
+    alignItems: 'center',
+  },
+  column: {
+    width: '100%',
+    // Caps the column (and everything that inherits its width - the "Start
+    // it" button, and every popover/dropdown that pops out of a field:
+    // time wheels, calendar, who-can-see list, blacklist search) to a
+    // comfortable reading width instead of stretching edge-to-edge on a
+    // wide desktop viewport. No-op on mobile, where the viewport is
+    // already narrower than this.
+    maxWidth: 480,
   },
   titleInput: {
     fontSize: 22,
@@ -852,9 +874,6 @@ const styles = StyleSheet.create({
   moreContent: {
     gap: 20,
   },
-  gapTop: {
-    marginTop: 12,
-  },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -922,5 +941,6 @@ const styles = StyleSheet.create({
   },
   pinnedBar: {
     padding: 16,
+    alignItems: 'center',
   },
 });

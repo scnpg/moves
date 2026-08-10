@@ -20,6 +20,30 @@ export interface Profile {
   last_location_at: string | null;
   phone_hash: string | null;
   referred_by: string | null;
+  is_moderator: boolean;
+  username_reset_required: boolean;
+}
+
+export type ModerationCaseKind = 'move' | 'profile' | 'message';
+export type ModerationVerdict = 'confirmed_threat' | 'no_threat';
+
+export interface ModerationQueueItem {
+  id: string;
+  kind: ModerationCaseKind;
+  target_id: string;
+  status: 'pending_llm' | 'possible_threat' | 'no_threat' | 'confirmed_threat';
+  report_count: number;
+  reasons: string[] | null;
+  llm_verdict: string | null;
+  llm_reasoning: string | null;
+  created_at: string;
+  move_title: string | null;
+  move_description: string | null;
+  profile_username: string | null;
+  profile_display_name: string | null;
+  message_content: string | null;
+  content_username: string | null;
+  content_display_name: string | null;
 }
 
 export interface Friendship {
@@ -182,7 +206,7 @@ export interface UserSettings {
   updated_at: string;
 }
 
-export type ReportReason = 'spam' | 'harassment' | 'inappropriate_content' | 'fake_profile' | 'other';
+export type ReportReason = 'spam' | 'harassment' | 'inappropriate_content' | 'fake_profile' | 'threat' | 'other';
 
 export interface BlockedUser {
   id: string;

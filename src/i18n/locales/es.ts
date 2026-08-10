@@ -234,7 +234,7 @@ const es: TranslationDictionary = {
     maxMembersError: 'El máximo de personas debe ser un número entero positivo.',
     couldNotCreate: 'No se pudo crear el plan',
     titleLabel: 'Título',
-    titlePlaceholder: 'Tacos a las 8 PM',
+    titlePlaceholder: 'Reunión en casa de Ray',
     descriptionLabel: 'Descripción (opcional)',
     descriptionPlaceholder: 'Detalles opcionales',
     dateLabel: 'Fecha',
@@ -321,12 +321,15 @@ const es: TranslationDictionary = {
   report: {
     title: 'Reportar a {name}',
     titleForMove: 'Reportar este plan',
+    titleForMessage: 'Reportar este mensaje',
     reasonLabel: '¿Por qué estás reportando esta cuenta?',
     reasonLabelForMove: '¿Por qué estás reportando este plan?',
+    reasonLabelForMessage: '¿Por qué estás reportando este mensaje?',
     reasonSpam: 'Spam',
     reasonHarassment: 'Acoso o intimidación',
     reasonInappropriateContent: 'Contenido inapropiado',
     reasonFakeProfile: 'Perfil falso',
+    reasonThreat: 'Amenaza o riesgo de seguridad',
     reasonOther: 'Otro',
     detailsPlaceholder: 'Detalles adicionales (opcional)',
     submit: 'Enviar reporte',
@@ -355,6 +358,7 @@ const es: TranslationDictionary = {
     metric: 'Métrico',
     language: 'Idioma',
     blockedUsers: 'Usuarios bloqueados',
+    moderationQueue: 'Cola de moderación',
   },
   userRow: {
     add: 'AGREGAR',
@@ -403,6 +407,25 @@ const es: TranslationDictionary = {
   },
   liveMap: {
     label: 'MAPA EN VIVO',
+  },
+  locationGate: {
+    title: 'Activa tu ubicación',
+    body: 'Moves se basa en lo que ocurre cerca de ti, así que necesita tu ubicación para funcionar.',
+    deniedBody: 'El acceso a tu ubicación está desactivado. Actívalo para Moves en la configuración de tu navegador o dispositivo, y vuelve a intentarlo.',
+    enableButton: 'Activar ubicación',
+  },
+  moderation: {
+    title: 'Cola de moderación',
+    empty: 'No hay nada que revisar por ahora.',
+    kindMove: 'Plan',
+    kindProfile: 'Perfil',
+    kindMessage: 'Mensaje',
+    reportCount: '{count} reportes',
+    reasonsLabel: 'Motivos',
+    llmLabel: 'Evaluación de IA',
+    markNoThreat: 'Sin amenaza',
+    markThreat: 'Confirmar amenaza',
+    couldNotResolve: 'No se pudo guardar la decisión',
   },
 };
 

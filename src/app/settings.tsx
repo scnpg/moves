@@ -18,7 +18,7 @@ const APPEARANCE_OPTIONS = ['light', 'dark', 'auto'] as const;
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { t, locale, setLocale } = useLocale();
   const { colors, font, themeMode, setThemeMode, timeFormat, setTimeFormat, unitSystem, setUnitSystem } = useTheme();
   const [deleting, setDeleting] = useState(false);
@@ -112,6 +112,15 @@ export default function SettingsScreen() {
             <Text style={[styles.chevron, { color: colors.textMuted }]}>›</Text>
           </Card>
         </HoverPressable>
+
+        {profile?.is_moderator ? (
+          <HoverPressable onPress={() => router.push('/moderation')}>
+            <Card style={styles.row} raised={false}>
+              <Text style={[styles.rowLabel, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>{t('settings.moderationQueue')}</Text>
+              <Text style={[styles.chevron, { color: colors.textMuted }]}>›</Text>
+            </Card>
+          </HoverPressable>
+        ) : null}
 
         <View style={styles.footer}>
           <Button label={t('profile.signOut')} variant="ghost" onPress={handleSignOut} />

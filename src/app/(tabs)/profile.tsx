@@ -179,8 +179,15 @@ export default function ProfileScreen() {
               <Text style={[styles.username, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>@{profile?.username}</Text>
             </View>
             <View style={styles.headerActions}>
-              <HoverPressable onPress={() => setShareOpen((open) => !open)} style={styles.shareIconButton} lightenOpacity={0.15}>
+              <HoverPressable
+                onPress={() => setShareOpen((open) => !open)}
+                style={[styles.shareIconButton, { borderWidth: border.rest.width, borderColor: border.rest.color }]}
+                lightenOpacity={0.15}
+              >
                 <Text style={styles.shareIcon}>🔗</Text>
+                <Text style={[styles.shareIconLabel, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>
+                  {t('profile.shareProfile')}
+                </Text>
               </HoverPressable>
               <Button label={t('profile.editShort')} variant="ghost" size="sm" onPress={startEditing} />
             </View>
@@ -340,13 +347,18 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   shareIconButton: {
-    width: 32,
-    height: 32,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+    height: 32,
+    paddingHorizontal: 10,
   },
   shareIcon: {
-    fontSize: 18,
+    fontSize: 16,
+  },
+  shareIconLabel: {
+    fontSize: 11,
+    letterSpacing: 0.7,
   },
   founderBadge: {
     flexDirection: 'row',

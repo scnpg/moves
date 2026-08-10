@@ -5,22 +5,24 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HoverPressable } from '@/components/HoverPressable';
 import { TextField } from '@/components/TextField';
-import { reportUser } from '@/features/blocking/api';
+import { reportMessage, reportUser } from '@/features/blocking/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import type { ReportReason } from '@/lib/database.types';
 import { useTheme } from '@/theme/ThemeProvider';
 
-const REASONS: ReportReason[] = ['spam', 'harassment', 'inappropriate_content', 'fake_profile', 'other'];
+const REASONS: ReportReason[] = ['spam', 'harassment', 'inappropriate_content', 'fake_profile', 'threat', 'other'];
 
 interface ReportUserPanelProps {
   userId: string;
   name: string;
   moveId?: string;
+  /** Reports the specific chat message instead of the user/Move - see reportMessage() in features/blocking/api.ts. */
+  messageId?: string;
   onDone: () => void;
 }
 
-export function ReportUserPanel({ userId, name, moveId, onDone }: ReportUserPanelProps) {
+export function ReportUserPanel({ userId, name, moveId, messageId, onDone }: ReportUserPanelProps) {
   const { t } = useLocale();
   const { colors, border, font } = useTheme();
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -34,7 +36,11 @@ export function ReportUserPanel({ userId, name, moveId, onDone }: ReportUserPane
     }
     setSubmitting(true);
     try {
-      await reportUser({ userId, reason, details, moveId });
+      if (messageId) {
+        await reportMessage({ messageId, reason, details });
+      } else {
+        await reportUser({ userId, reason, details, moveId });
+      }
       notify(t('report.submitted'), t('report.submittedMessage'));
       onDone();
     } catch (err) {
@@ -47,10 +53,10 @@ export function ReportUserPanel({ userId, name, moveId, onDone }: ReportUserPane
   return (
     <Card style={styles.card}>
       <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>
-        {moveId ? t('report.titleForMove') : t('report.title', { name })}
+        {messageId ? t('report.titleForMessage') : moveId ? t('report.titleForMove') : t('report.title', { name })}
       </Text>
       <Text style={[styles.label, { color: colors.textSecondary, fontFamily: font.family.monoBold }]}>
-        {moveId ? t('report.reasonLabelForMove') : t('report.reasonLabel')}
+        {messageId ? t('report.reasonLabelForMessage') : moveId ? t('report.reasonLabelForMove') : t('report.reasonLabel')}
       </Text>
       <View style={styles.chipRow}>
         {REASONS.map((r) => {
