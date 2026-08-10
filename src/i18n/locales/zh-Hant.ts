@@ -362,6 +362,13 @@ const zhHant: TranslationDictionary = {
     language: '語言',
     blockedUsers: '封鎖名單',
     moderationQueue: '審核佇列',
+    notifications: '通知',
+    notifyCloseFriends: '摯友',
+    notifyFriends: '好友',
+    notifyMutuals: '互相好友',
+    notifyPublic: '公開',
+    notifyGroupChat: '揪團群組聊天',
+    couldNotSaveNotification: '無法儲存通知設定',
   },
   userRow: {
     add: '新增',

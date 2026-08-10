@@ -362,6 +362,13 @@ const es: TranslationDictionary = {
     language: 'Idioma',
     blockedUsers: 'Usuarios bloqueados',
     moderationQueue: 'Cola de moderación',
+    notifications: 'Notificaciones',
+    notifyCloseFriends: 'Amigos cercanos',
+    notifyFriends: 'Amigos',
+    notifyMutuals: 'Mutuos',
+    notifyPublic: 'Público',
+    notifyGroupChat: 'Chat grupal de planes',
+    couldNotSaveNotification: 'No se pudo guardar la preferencia',
   },
   userRow: {
     add: 'AGREGAR',

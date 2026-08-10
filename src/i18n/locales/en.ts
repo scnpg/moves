@@ -363,6 +363,13 @@ const en = {
     language: 'Language',
     blockedUsers: 'Blocked users',
     moderationQueue: 'Moderation queue',
+    notifications: 'Notifications',
+    notifyCloseFriends: 'Close friends',
+    notifyFriends: 'Friends',
+    notifyMutuals: 'Mutuals',
+    notifyPublic: 'Public',
+    notifyGroupChat: 'Moves group chat',
+    couldNotSaveNotification: 'Could not save notification setting',
   },
   userRow: {
     add: 'ADD',

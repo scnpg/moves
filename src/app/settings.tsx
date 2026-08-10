@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -8,7 +8,9 @@ import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { SubHeader } from '@/components/SubHeader';
+import { Toggle } from '@/components/Toggle';
 import { deleteAccount, signOut } from '@/features/auth/api';
+import { getMyNotificationSettings, updateNotificationPref, type NotificationPrefs } from '@/features/settings/api';
 import { LOCALE_LABELS, SUPPORTED_LOCALES, useLocale, type Locale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import { useAuth } from '@/providers/AuthProvider';
@@ -16,12 +18,40 @@ import { type ThemeMode, type TimeFormat, type UnitSystem, useTheme } from '@/th
 
 const APPEARANCE_OPTIONS = ['light', 'dark', 'auto'] as const;
 
+const NOTIFICATION_ROWS: { key: keyof NotificationPrefs; labelSuffix: string }[] = [
+  { key: 'notify_close_friends_moves', labelSuffix: 'CloseFriends' },
+  { key: 'notify_friend_moves', labelSuffix: 'Friends' },
+  { key: 'notify_mutual_moves', labelSuffix: 'Mutuals' },
+  { key: 'notify_public_moves', labelSuffix: 'Public' },
+  { key: 'notify_group_chat', labelSuffix: 'GroupChat' },
+];
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { session, profile } = useAuth();
   const { t, locale, setLocale } = useLocale();
   const { colors, font, themeMode, setThemeMode, timeFormat, setTimeFormat, unitSystem, setUnitSystem } = useTheme();
   const [deleting, setDeleting] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    getMyNotificationSettings(session.user.id)
+      .then(setNotifPrefs)
+      .catch(() => {});
+  }, [session?.user]);
+
+  const handleToggleNotif = async (key: keyof NotificationPrefs, value: boolean) => {
+    if (!notifPrefs) return;
+    const previous = notifPrefs;
+    setNotifPrefs({ ...notifPrefs, [key]: value });
+    try {
+      await updateNotificationPref(key, value);
+    } catch (err) {
+      setNotifPrefs(previous);
+      notify(t('settings.couldNotSaveNotification'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
+    }
+  };
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -106,6 +136,27 @@ export default function SettingsScreen() {
           />
         </View>
 
+        <View style={styles.field}>
+          <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('settings.notifications')}</Text>
+          <Card style={styles.notifCard} raised={false}>
+            {NOTIFICATION_ROWS.map((row, i) => (
+              <View
+                key={row.key}
+                style={[styles.notifRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.borderSubtle }]}
+              >
+                <Text style={[styles.notifLabel, { color: colors.textPrimary, fontFamily: font.family.bodyRegular }]}>
+                  {t(`settings.notify${row.labelSuffix}` as never)}
+                </Text>
+                <Toggle
+                  checked={notifPrefs?.[row.key] ?? true}
+                  onChange={(value) => handleToggleNotif(row.key, value)}
+                  disabled={!notifPrefs}
+                />
+              </View>
+            ))}
+          </Card>
+        </View>
+
         <HoverPressable onPress={() => router.push('/blocked')}>
           <Card style={styles.row} raised={false}>
             <Text style={[styles.rowLabel, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>{t('settings.blockedUsers')}</Text>
@@ -152,6 +203,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  notifCard: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  notifRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  notifLabel: {
+    fontSize: 14,
   },
   rowLabel: {
     fontSize: 13,

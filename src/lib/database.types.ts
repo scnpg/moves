@@ -203,6 +203,9 @@ export interface UserSettings {
   push_token: string | null;
   notify_friend_moves: boolean;
   notify_mutual_moves: boolean;
+  notify_close_friends_moves: boolean;
+  notify_public_moves: boolean;
+  notify_group_chat: boolean;
   updated_at: string;
 }
 
