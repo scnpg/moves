@@ -169,7 +169,7 @@ export default function CreateMoveScreen() {
         });
       }
       router.replace(
-        `/room/created?id=${move.id}&title=${encodeURIComponent(move.title)}&startsAt=${encodeURIComponent(move.starts_at)}&expiresAt=${encodeURIComponent(move.expires_at)}&shareToken=${encodeURIComponent(move.share_token)}`
+        `/room/created?id=${move.id}&title=${encodeURIComponent(move.title)}&startsAt=${encodeURIComponent(move.starts_at)}&expiresAt=${encodeURIComponent(move.expires_at)}&shareToken=${encodeURIComponent(move.share_token)}&degreeLimit=${move.degree_limit}`
       );
     } catch (err) {
       notify(t('createMove.couldNotCreate'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));

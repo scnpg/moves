@@ -153,7 +153,11 @@ export default function MovesScreen() {
       return tab === 'friends' ? m.degree_limit !== 3 || hostIsFriend : m.degree_limit === 3 && !hostIsFriend;
     })
     .sort((a, b) => {
-      if (tab === 'public' && a.distance_m != null && b.distance_m != null) {
+      // Nearest first on both tabs now that Friends isn't radius-filtered
+      // server-side (see get_eligible_moves_for_user) - a friend's Move on
+      // the other side of the country still shows, it just sorts to the
+      // bottom instead of being hidden outright.
+      if (a.distance_m != null && b.distance_m != null) {
         return a.distance_m - b.distance_m;
       }
       return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();

@@ -10,12 +10,20 @@ import { formatCountdown } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export default function MoveCreatedScreen() {
-  const { id, title, expiresAt, shareToken } = useLocalSearchParams<{
+  const { id, title, expiresAt, shareToken, degreeLimit } = useLocalSearchParams<{
     id: string;
     title: string;
     expiresAt: string;
     shareToken: string;
+    degreeLimit: string;
   }>();
+  // join_move_via_token() only bypasses the eligibility check for Private
+  // (Link-Only) Moves (see handle_move_join_request()) - for every other
+  // tier the link just leads to "Not eligible to join" for anyone who
+  // doesn't already qualify by degree, so showing it here would be
+  // misleading. Matches the same degree_limit === 0 gate room/[id].tsx
+  // already uses for the same panel.
+  const isPrivate = degreeLimit === '0';
   const router = useRouter();
   const { t } = useLocale();
   const { colors, borderWidth, font } = useTheme();
@@ -50,15 +58,19 @@ export default function MoveCreatedScreen() {
 
         <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{title}</Text>
 
-        <View style={styles.ruleWrap}>
-          <Text style={[styles.ruleLabel, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('moveCreated.share')}</Text>
-          <View style={[styles.rule, { backgroundColor: colors.border }]} />
-        </View>
+        {isPrivate ? (
+          <>
+            <View style={styles.ruleWrap}>
+              <Text style={[styles.ruleLabel, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('moveCreated.share')}</Text>
+              <View style={[styles.rule, { backgroundColor: colors.border }]} />
+            </View>
 
-        <Text style={[styles.shareNudge, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('moveCreated.shareNudge')}</Text>
+            <Text style={[styles.shareNudge, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('moveCreated.shareNudge')}</Text>
+          </>
+        ) : null}
       </View>
 
-      {shareToken ? <ShareMovePanel shareToken={shareToken} /> : null}
+      {isPrivate && shareToken ? <ShareMovePanel shareToken={shareToken} /> : null}
 
       <View style={styles.doneWrap}>
         <Button label={t('moveCreated.done')} variant="ghost" onPress={handleDone} />
