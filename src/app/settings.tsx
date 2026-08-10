@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button } from '@/components/Button';
@@ -89,7 +89,7 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <SubHeader title={t('settings.title')} onBack={handleBack} />
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.field}>
           <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('settings.appearance')}</Text>
           <SegmentedControl
@@ -181,7 +181,7 @@ export default function SettingsScreen() {
             </Text>
           </HoverPressable>
         </View>
-      </View>
+      </ScrollView>
     </Screen>
   );
 }
@@ -190,6 +190,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 20,
+    paddingBottom: 32,
     gap: 20,
   },
   field: {

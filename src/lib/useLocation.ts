@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 
 interface Coords {
@@ -7,9 +8,24 @@ interface Coords {
 }
 
 async function fetchHighAccuracyPosition(): Promise<Coords> {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== 'granted') {
-    throw new Error('Location permission denied.');
+  // Native (iOS/Android) genuinely needs the explicit request - the OS
+  // permission dialog only appears in response to it, unlike a browser.
+  // Web deliberately skips it: expo-location's web shim
+  // (node_modules/expo-location/build/ExpoLocation.web.js) pre-checks
+  // navigator.permissions.query({name: 'geolocation'}), which Safari
+  // (desktop and iOS) doesn't reliably support - the call either throws or
+  // the property doesn't exist, and the shim only has a fallback for the
+  // latter case, so on Safari the whole permission check throws before the
+  // user is ever actually prompted, surfacing as "denied" even on a
+  // first-ever visit. getCurrentPositionAsync() below doesn't go through
+  // that path at all on web - it calls
+  // navigator.geolocation.getCurrentPosition() directly, which every
+  // browser (Safari included) already knows how to prompt for on its own.
+  if (Platform.OS !== 'web') {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      throw new Error('Location permission denied.');
+    }
   }
   // expo-location's web shim only sets the browser's enableHighAccuracy flag
   // when accuracy > Balanced - omitting this option (as the old code did)
