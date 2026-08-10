@@ -10,11 +10,12 @@ import {
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
-import { Avatar } from '@/components/Avatar';
+import { Avatar, AvatarStack } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HoverPressable } from '@/components/HoverPressable';
+import { ReportUserPanel } from '@/components/ReportUserPanel';
 import { Screen } from '@/components/Screen';
 import { ShareMovePanel } from '@/components/ShareMovePanel';
 import { SubHeader } from '@/components/SubHeader';
@@ -43,7 +44,7 @@ import { confirmAction, notify } from '@/lib/alerts';
 import type { EligibleMove, Move, MoveMember } from '@/lib/database.types';
 import { formatCountdown, formatWhen } from '@/lib/format';
 import { useAuth } from '@/providers/AuthProvider';
-import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink', 4: 'red' } as const;
 
@@ -52,6 +53,7 @@ export default function MoveRoomScreen() {
   const { session } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
+  const { colors, border, borderWidth, font } = useTheme();
   const myId = session?.user.id;
 
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,7 @@ export default function MoveRoomScreen() {
   const [closeFriendIds, setCloseFriendIds] = useState<Set<string>>(new Set());
   const [messageText, setMessageText] = useState('');
   const [joining, setJoining] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [, forceCountdownTick] = useState(0);
   const messagesRef = useRef<FlatList>(null);
 
@@ -108,20 +111,22 @@ export default function MoveRoomScreen() {
   );
 
   useEffect(() => {
-    if (!id || !isApproved) return;
+    if (!id || !isApproved || move?.chat_enabled === false) return;
     // Realtime payloads don't include the joined sender profile, so just
     // refetch the (small, ephemeral-room-sized) message list on every insert.
     const unsubscribeMessages = subscribeToMoveMessages(id, () => {
       listMessages(id).then(setMessages).catch(() => {});
     });
+    return unsubscribeMessages;
+  }, [id, isApproved, move?.chat_enabled]);
+
+  useEffect(() => {
+    if (!id || !isApproved) return;
     const unsubscribeMembers = subscribeToMoveMembers(id, () => {
       listMembers(id).then(setMembers).catch(() => {});
       if (myId) getMyMembership(id, myId).then(setMembership).catch(() => {});
     });
-    return () => {
-      unsubscribeMessages();
-      unsubscribeMembers();
-    };
+    return unsubscribeMembers;
   }, [id, isApproved, myId]);
 
   // Ticks once a second purely to force formatCountdown() to re-evaluate against Date.now().
@@ -216,12 +221,28 @@ export default function MoveRoomScreen() {
     }
   };
 
+  const handleLeaveMove = async () => {
+    if (!membership) return;
+    const confirmed = await confirmAction(
+      t('room.leaveMoveConfirmTitle'),
+      t('room.leaveMoveConfirmMessage'),
+      t('room.leaveMove')
+    );
+    if (!confirmed) return;
+    try {
+      await removeMember(membership.id);
+      router.replace('/');
+    } catch (err) {
+      notify(t('room.couldNotLeave'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
+    }
+  };
+
   if (loading) {
     return (
       <Screen>
         <SubHeader title="" onBack={handleBack} />
         <View style={styles.center}>
-          <ActivityIndicator color={color.brand} />
+          <ActivityIndicator color={colors.brand} />
         </View>
       </Screen>
     );
@@ -234,7 +255,7 @@ export default function MoveRoomScreen() {
         <Screen>
           <SubHeader title="" onBack={handleBack} />
           <View style={styles.center}>
-            <Text style={styles.emptyText}>{t('room.notAvailable')}</Text>
+            <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('room.notAvailable')}</Text>
           </View>
         </Screen>
       );
@@ -246,7 +267,7 @@ export default function MoveRoomScreen() {
     const rejected = membership?.status === 'rejected';
 
     return (
-      <Screen>
+      <Screen style={styles.noPadding}>
         <SubHeader title={previewMove.title} onBack={handleBack} />
         <View style={styles.previewContent}>
           <View style={styles.previewHeader}>
@@ -256,13 +277,15 @@ export default function MoveRoomScreen() {
               size={56}
               tint={previewMove.degree_limit}
             />
-            <Text style={styles.title}>{previewMove.title}</Text>
-            <Text style={styles.hostLine}>
+            <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{previewMove.title}</Text>
+            <Text style={[styles.hostLine, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
               {t('common.hostedByName', { name: previewMove.host_display_name ?? previewMove.host_username })}
             </Text>
           </View>
 
-          {previewMove.description ? <Text style={styles.description}>{previewMove.description}</Text> : null}
+          {previewMove.description ? (
+            <Text style={[styles.description, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>{previewMove.description}</Text>
+          ) : null}
 
           <View style={styles.metaRow}>
             <Badge label={formatWhen(previewMove.starts_at, previewMove.expires_at, t)} tone="green" />
@@ -273,7 +296,7 @@ export default function MoveRoomScreen() {
             {previewMove.requires_approval ? <Badge label={t('room.approvalRequired')} tone="yellow" /> : null}
           </View>
 
-          <Text style={styles.helperText}>
+          <Text style={[styles.helperText, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
             {previewMove.max_members
               ? t('room.peopleJoined', { count: previewMove.approved_count, max: previewMove.max_members })
               : t('room.peopleJoinedNoCap', { count: previewMove.approved_count })}
@@ -283,19 +306,33 @@ export default function MoveRoomScreen() {
 
           {pending ? (
             <>
-              <Text style={styles.waitingText}>{t('room.waitingApproval')}</Text>
-              <Button label={t('room.cancelRequest')} variant="secondary" onPress={handleCancelRequest} loading={joining} />
+              <Text style={[styles.waitingText, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{t('room.waitingApproval')}</Text>
+              <Button label={t('room.cancelRequest')} variant="secondary" onPress={handleCancelRequest} loading={joining} size="lg" />
             </>
           ) : rejected ? (
-            <Text style={styles.waitingText}>{t('room.requestDeclined')}</Text>
+            <Text style={[styles.waitingText, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{t('room.requestDeclined')}</Text>
           ) : previewMove.is_full ? (
-            <Button label={t('room.moveFull')} variant="secondary" onPress={() => {}} disabled />
+            <Button label={t('room.moveFull')} variant="secondary" onPress={() => {}} disabled size="lg" />
           ) : (
             <Button
               label={previewMove.requires_approval ? t('room.requestToJoin') : t('room.joinMove')}
               onPress={handleJoin}
               loading={joining}
+              size="lg"
             />
+          )}
+
+          {reportOpen ? (
+            <ReportUserPanel
+              userId={previewMove.host_id}
+              name={previewMove.host_display_name ?? previewMove.host_username}
+              moveId={previewMove.id}
+              onDone={() => setReportOpen(false)}
+            />
+          ) : (
+            <HoverPressable onPress={() => setReportOpen(true)} style={styles.reportLinkWrap}>
+              <Text style={[styles.reportLink, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('room.reportMove')}</Text>
+            </HoverPressable>
           )}
         </View>
       </Screen>
@@ -307,7 +344,7 @@ export default function MoveRoomScreen() {
       <Screen>
         <SubHeader title="" onBack={handleBack} />
         <View style={styles.center}>
-          <ActivityIndicator color={color.brand} />
+          <ActivityIndicator color={colors.brand} />
         </View>
       </Screen>
     );
@@ -322,57 +359,138 @@ export default function MoveRoomScreen() {
     : move.cooldown_started_at
       ? new Date(new Date(move.cooldown_started_at).getTime() + 60 * 60_000).toISOString()
       : move.expires_at;
+  const countdown = formatCountdown(countdownTarget);
 
   return (
-    <Screen>
-      <SubHeader title={move.title} onBack={handleBack} />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.metaSection}>
-          <HoverPressable
-            onPress={() => (hostMember && hostMember.user_id !== myId ? router.push(`/users/${hostMember.user_id}`) : undefined)}
-            style={styles.hostLineWrap}
-            lightenOpacity={0.1}
-          >
-            <Text style={styles.hostLine}>
-              {t('common.hostedByName', { name: hostMember ? hostMember.profile.display_name ?? hostMember.profile.username : '…' })}
-            </Text>
+    <Screen style={styles.noPadding}>
+      {/* Header block */}
+      <View style={[styles.headerBlock, { borderBottomWidth: borderWidth.emphatic, borderBottomColor: colors.border }]}>
+        <View style={[styles.backStrip, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+          <HoverPressable onPress={handleBack} lightenOpacity={0.08} style={styles.backButton}>
+            <Text style={[styles.backText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>← {t('common.back').toUpperCase()}</Text>
           </HoverPressable>
-          <View style={styles.metaRow}>
-            <Badge label={formatWhen(move.starts_at, move.expires_at, t)} tone="green" />
-            <Badge label={t(`degree.badge.${move.degree_limit}`)} tone={DEGREE_TONE[move.degree_limit]} />
-            {move.requires_approval ? <Badge label={t('room.approvalRequired')} tone="yellow" /> : null}
-          </View>
         </View>
 
-        <View style={styles.roomHeader}>
-          <View style={styles.roomHeaderRow}>
+        <View style={styles.headerMain}>
+          <View style={styles.headerLeft}>
             <Badge
-              label={isActive ? t('room.endsIn', { time: formatCountdown(countdownTarget) }) : t('room.closingIn', { time: formatCountdown(countdownTarget) })}
+              label={isActive ? t('room.endsIn', { time: countdown }) : t('room.closingIn', { time: countdown })}
               tone={isActive ? 'green' : 'pink'}
             />
-            <Text style={styles.memberCount}>
-              {move.max_members ? t('room.hereWithCap', { count: approvedMembers.length, max: move.max_members }) : t('room.here', { count: approvedMembers.length })}
+            <Text style={[styles.title, styles.headerTitle, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={2}>
+              {move.title}
             </Text>
+            <HoverPressable
+              onPress={() => (hostMember && hostMember.user_id !== myId ? router.push(`/users/${hostMember.user_id}`) : undefined)}
+              style={styles.hostLineWrap}
+              lightenOpacity={0.1}
+            >
+              <Text style={[styles.hostLine, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
+                {t('common.hostedByName', { name: hostMember ? hostMember.profile.display_name ?? hostMember.profile.username : '…' })}
+              </Text>
+            </HoverPressable>
           </View>
-          {isHost ? (
-            <View style={styles.hostActionsRow}>
-              {isActive ? (
-                <HoverPressable onPress={handleEndMove} style={styles.endLinkWrap}>
-                  <Text style={styles.endLink}>{t('room.endMove')}</Text>
-                </HoverPressable>
-              ) : null}
-              <HoverPressable onPress={handleDeleteMove} style={styles.endLinkWrap}>
-                <Text style={styles.deleteLink}>{t('room.delete')}</Text>
-              </HoverPressable>
-            </View>
-          ) : null}
+
+          <View style={styles.headerRight}>
+            <Text style={[styles.countdown, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]} key={countdown}>
+              {countdown}
+            </Text>
+            <Text style={[styles.countdownLabel, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>{t('moveCreated.left')}</Text>
+          </View>
         </View>
 
+        <View style={styles.metaRow}>
+          <Badge label={t(`degree.badge.${move.degree_limit}`)} tone={DEGREE_TONE[move.degree_limit]} />
+          {move.requires_approval ? <Badge label={t('room.approvalRequired')} tone="yellow" /> : null}
+          <Text style={[styles.memberCount, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
+            {move.max_members ? t('room.hereWithCap', { count: approvedMembers.length, max: move.max_members }) : t('room.here', { count: approvedMembers.length })}
+          </Text>
+        </View>
+
+        {isHost ? (
+          <View style={styles.hostActionsRow}>
+            {isActive ? (
+              <HoverPressable onPress={handleEndMove} style={styles.endLinkWrap}>
+                <Text style={[styles.endLink, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('room.endMove')}</Text>
+              </HoverPressable>
+            ) : null}
+            <HoverPressable onPress={handleDeleteMove} style={styles.endLinkWrap}>
+              <Text style={[styles.deleteLink, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.delete')}</Text>
+            </HoverPressable>
+          </View>
+        ) : (
+          <View style={styles.hostActionsRow}>
+            <HoverPressable onPress={handleLeaveMove} style={styles.endLinkWrap}>
+              <Text style={[styles.deleteLink, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.leaveMove')}</Text>
+            </HoverPressable>
+            <HoverPressable onPress={() => setReportOpen((o) => !o)} style={styles.endLinkWrap}>
+              <Text style={[styles.deleteLink, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('room.reportMove')}</Text>
+            </HoverPressable>
+          </View>
+        )}
+      </View>
+
+      {reportOpen && !isHost && hostMember ? (
+        <View style={styles.reportPanelWrap}>
+          <ReportUserPanel
+            userId={move.host_id}
+            name={hostMember.profile.display_name ?? hostMember.profile.username}
+            moveId={move.id}
+            onDone={() => setReportOpen(false)}
+          />
+        </View>
+      ) : null}
+
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {move.degree_limit === 0 ? <ShareMovePanel shareToken={move.share_token} /> : null}
 
+        {/* GOING block */}
+        {approvedMembers.length > 0 ? (
+          <View style={[styles.goingBlock, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+            <View style={styles.goingHeaderRow}>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.whosHere')}</Text>
+              <Text style={[styles.goingCount, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>{approvedMembers.length}</Text>
+            </View>
+            <View style={styles.avatarStackWrap}>
+              <AvatarStack
+                size={32}
+                avatars={approvedMembers.slice(0, 6).map((m) => ({ src: m.profile.avatar_url ?? undefined, alt: m.profile.display_name ?? m.profile.username }))}
+                overflow={Math.max(0, approvedMembers.length - 6)}
+              />
+            </View>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={approvedMembers}
+              keyExtractor={(m) => m.id}
+              contentContainerStyle={styles.attendeeRow}
+              renderItem={({ item: m }) => (
+                <HoverPressable
+                  onPress={() => (m.user_id !== myId ? router.push(`/users/${m.user_id}`) : undefined)}
+                  style={styles.attendeeTile}
+                  lightenOpacity={0.15}
+                >
+                  <View style={styles.attendeeAvatarWrap}>
+                    <Avatar uri={m.profile.avatar_url} name={m.profile.display_name ?? m.profile.username} size={48} closeFriend={closeFriendIds.has(m.user_id)} />
+                    {isHost && m.user_id !== move.host_id ? (
+                      <HoverPressable onPress={() => handleKick(m.id)} style={[styles.kickBadge, { backgroundColor: colors.danger, borderColor: colors.border, borderWidth: border.rest.width }]}>
+                        <Text style={[styles.kickText, { color: colors.textInverse }]}>×</Text>
+                      </HoverPressable>
+                    ) : null}
+                  </View>
+                  <Text style={[styles.attendeeName, { color: colors.textMuted, fontFamily: font.family.monoRegular }]} numberOfLines={1}>
+                    {(m.profile.display_name ?? m.profile.username).split(' ')[0]}
+                  </Text>
+                </HoverPressable>
+              )}
+            />
+          </View>
+        ) : null}
+
+        {/* Approval requests (host only, inline) */}
         {isHost && pendingMembers.length > 0 ? (
-          <View style={styles.requestsSection}>
-            <Text style={styles.sectionTitle}>{t('room.requests', { count: pendingMembers.length })}</Text>
+          <View style={[styles.requestsSection, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.requests', { count: pendingMembers.length })}</Text>
             {pendingMembers.map((pm) => (
               <View key={pm.id} style={styles.requestRow}>
                 <HoverPressable
@@ -380,163 +498,173 @@ export default function MoveRoomScreen() {
                   style={styles.requestIdentityWrap}
                   lightenOpacity={0.1}
                 >
-                  <Avatar uri={pm.profile.avatar_url} name={pm.profile.display_name ?? pm.profile.username} size={32} closeFriend={closeFriendIds.has(pm.user_id)} />
-                  <Text style={styles.requestName} numberOfLines={1}>
+                  <Avatar uri={pm.profile.avatar_url} name={pm.profile.display_name ?? pm.profile.username} size={44} closeFriend={closeFriendIds.has(pm.user_id)} />
+                  <Text style={[styles.requestName, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={1}>
                     {pm.profile.display_name ?? pm.profile.username}
                   </Text>
                 </HoverPressable>
-                <HoverPressable onPress={() => handleApprove(pm.id)} style={styles.approveButton}>
-                  <Text style={styles.approveText}>{t('room.approve')}</Text>
-                </HoverPressable>
-                <HoverPressable onPress={() => handleReject(pm.id)} style={styles.rejectButton}>
-                  <Text style={styles.rejectText}>{t('room.decline')}</Text>
-                </HoverPressable>
+                <Button label={t('room.decline')} variant="secondary" size="sm" onPress={() => handleReject(pm.id)} />
+                <Button label={t('room.approve')} size="sm" onPress={() => handleApprove(pm.id)} />
               </View>
             ))}
           </View>
         ) : null}
 
-        <FlatList
-          ref={messagesRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.messagesContent}
-          renderItem={({ item }) => {
-            const mine = item.sender_id === myId;
-            return (
-              <View style={[styles.messageRow, mine && styles.messageRowMine]}>
-                {!mine ? (
-                  <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} lightenOpacity={0.15}>
-                    <Avatar uri={item.sender.avatar_url} name={item.sender.display_name ?? item.sender.username} size={28} closeFriend={closeFriendIds.has(item.sender_id)} />
-                  </HoverPressable>
-                ) : null}
-                <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                  {!mine ? (
-                    <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} style={styles.senderNameWrap} lightenOpacity={0.1}>
-                      <Text style={styles.senderName}>{item.sender.display_name ?? item.sender.username}</Text>
-                    </HoverPressable>
-                  ) : null}
-                  <Text style={styles.messageText}>{item.content}</Text>
-                </View>
-              </View>
-            );
-          }}
-          ListEmptyComponent={<Text style={styles.emptyText}>{t('room.noMessagesYet')}</Text>}
-        />
+        {/* Chat */}
+        {move.chat_enabled ? (
+          <>
+            <FlatList
+              ref={messagesRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.messagesContent}
+              renderItem={({ item }) => {
+                const mine = item.sender_id === myId;
+                return (
+                  <View style={[styles.messageRow, mine && styles.messageRowMine]}>
+                    {!mine ? (
+                      <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} lightenOpacity={0.15}>
+                        <Avatar uri={item.sender.avatar_url} name={item.sender.display_name ?? item.sender.username} size={28} closeFriend={closeFriendIds.has(item.sender_id)} />
+                      </HoverPressable>
+                    ) : null}
+                    <View
+                      style={[
+                        styles.bubble,
+                        { borderWidth: border.rest.width, borderColor: border.rest.color },
+                        mine ? { backgroundColor: colors.brand } : { backgroundColor: colors.bgCard },
+                      ]}
+                    >
+                      {!mine ? (
+                        <HoverPressable onPress={() => router.push(`/users/${item.sender_id}`)} style={styles.senderNameWrap} lightenOpacity={0.1}>
+                          <Text style={[styles.senderName, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{item.sender.display_name ?? item.sender.username}</Text>
+                        </HoverPressable>
+                      ) : null}
+                      <Text style={[styles.messageText, { color: colors.textPrimary, fontFamily: font.family.bodyRegular }]}>{item.content}</Text>
+                    </View>
+                  </View>
+                );
+              }}
+              ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('room.noMessagesYet')}</Text>}
+            />
 
-        {isActive ? (
-          <View style={styles.composer}>
-            <View style={styles.composerInput}>
-              <TextField value={messageText} onChangeText={setMessageText} placeholder={t('room.messagePlaceholder')} onSubmitEditing={handleSend} />
-            </View>
-            <HoverPressable onPress={handleSend} style={styles.sendButton}>
-              <Text style={styles.sendText}>{t('room.send')}</Text>
-            </HoverPressable>
-          </View>
+            {isActive ? (
+              <View style={[styles.composer, { borderTopWidth: border.rest.width, borderTopColor: border.rest.color, backgroundColor: colors.bg }]}>
+                <View style={styles.composerInput}>
+                  <TextField value={messageText} onChangeText={setMessageText} placeholder={t('room.messagePlaceholder')} onSubmitEditing={handleSend} />
+                </View>
+                <Button label={t('room.send')} onPress={handleSend} size="md" />
+              </View>
+            ) : (
+              <View style={styles.closedBanner}>
+                <Text style={[styles.closedText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('room.moveEnded')}</Text>
+              </View>
+            )}
+          </>
         ) : (
-          <View style={styles.closedBanner}>
-            <Text style={styles.closedText}>{t('room.moveEnded')}</Text>
+          <View style={styles.center}>
+            <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('room.chatDisabled')}</Text>
           </View>
         )}
-
-        {approvedMembers.length > 0 ? (
-          <Card style={styles.memberListCard}>
-            <Text style={styles.sectionTitle}>{t('room.whosHere')}</Text>
-            <View style={styles.memberAvatars}>
-              {approvedMembers.map((m) => (
-                <HoverPressable
-                  key={m.id}
-                  onPress={() => (m.user_id !== myId ? router.push(`/users/${m.user_id}`) : undefined)}
-                  style={styles.memberAvatarWrap}
-                  lightenOpacity={0.2}
-                >
-                  <Avatar uri={m.profile.avatar_url} name={m.profile.display_name ?? m.profile.username} size={36} closeFriend={closeFriendIds.has(m.user_id)} />
-                  {isHost && m.user_id !== move.host_id ? (
-                    <HoverPressable onPress={() => handleKick(m.id)} style={styles.kickBadge}>
-                      <Text style={styles.kickText}>×</Text>
-                    </HoverPressable>
-                  ) : null}
-                </HoverPressable>
-              ))}
-            </View>
-          </Card>
-        ) : null}
       </KeyboardAvoidingView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  noPadding: { padding: 0 },
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: color.textMuted, fontSize: font.size.sm, textAlign: 'center', paddingVertical: spacing.lg },
+  emptyText: { fontSize: 14, textAlign: 'center', paddingVertical: 24 },
 
-  previewContent: { flex: 1, padding: spacing.lg, gap: spacing.md },
-  previewHeader: { alignItems: 'center', gap: spacing.xxs, paddingVertical: spacing.md },
-  title: { color: color.textPrimary, fontSize: font.size.xl, fontWeight: font.weight.heavy, textAlign: 'center', marginTop: spacing.sm },
-  hostLine: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.sm },
-  description: { color: color.textSecondary, fontSize: font.size.md },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  helperText: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs },
-  waitingText: { color: color.textPrimary, fontSize: font.size.sm, fontWeight: font.weight.bold },
+  previewContent: { flex: 1, padding: 16, gap: 16 },
+  previewHeader: { alignItems: 'center', gap: 4, paddingVertical: 16 },
+  title: { fontSize: 22, lineHeight: 26 },
+  headerTitle: { marginBottom: 2 },
+  hostLine: { fontSize: 11, letterSpacing: 0.9 },
+  description: { fontSize: 16 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
+  helperText: { fontSize: 11 },
+  waitingText: { fontSize: 15, textAlign: 'center' },
+  reportLinkWrap: { alignSelf: 'center', paddingHorizontal: 8, paddingVertical: 4 },
+  reportLink: { fontSize: 11, letterSpacing: 0.9 },
+  reportPanelWrap: { paddingHorizontal: 16, paddingTop: 12 },
 
-  metaSection: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-    gap: spacing.xxs,
+  headerBlock: {
+    flexShrink: 0,
+  },
+  backStrip: {
+    height: 44,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+  },
+  backText: {
+    fontSize: 11,
+    letterSpacing: 0.9,
+  },
+  headerMain: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    paddingBottom: 10,
+  },
+  headerLeft: {
+    flex: 1,
+    gap: 10,
+  },
+  headerRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+    gap: 2,
+  },
+  countdown: {
+    fontSize: 36,
+    lineHeight: 36,
+  },
+  countdownLabel: {
+    fontSize: 10,
+    letterSpacing: 0.9,
   },
   hostLineWrap: {
     alignSelf: 'flex-start',
-    borderRadius: radius.sm,
   },
-  roomHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: borderWidth.base,
-    borderBottomColor: color.border,
-  },
-  roomHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  memberCount: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs },
-  hostActionsRow: { flexDirection: 'row', alignItems: 'center' },
-  endLinkWrap: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs, borderRadius: radius.sm },
-  endLink: { fontFamily: font.family.mono, color: color.danger, fontSize: font.size.sm, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
-  deleteLink: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.sm, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
+  memberCount: { fontSize: 11, letterSpacing: 0.7 },
+  hostActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingBottom: 12 },
+  endLinkWrap: { paddingHorizontal: 8, paddingVertical: 4 },
+  endLink: { fontSize: 12, letterSpacing: 0.7 },
+  deleteLink: { fontSize: 12, letterSpacing: 0.7 },
 
-  requestsSection: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.xs, borderBottomWidth: borderWidth.base, borderBottomColor: color.border },
-  sectionTitle: { fontFamily: font.family.mono, color: color.textSecondary, fontSize: font.size.xs, fontWeight: font.weight.bold, textTransform: 'uppercase', letterSpacing: font.tracking.wide },
-  requestRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  requestIdentityWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, borderRadius: radius.sm },
-  requestName: { flex: 1, color: color.textPrimary, fontSize: font.size.sm, fontWeight: font.weight.medium },
-  approveButton: { backgroundColor: color.accentGreen, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, borderWidth: borderWidth.thin, borderColor: color.border },
-  approveText: { fontFamily: font.family.mono, color: color.textPrimary, fontSize: font.size.xs, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
-  rejectButton: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, borderWidth: borderWidth.thin, borderColor: color.border },
-  rejectText: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
+  goingBlock: { padding: 16, gap: 12 },
+  goingHeaderRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
+  goingCount: { fontSize: 24, lineHeight: 24 },
+  avatarStackWrap: {},
+  attendeeRow: { gap: 12 },
+  attendeeTile: { alignItems: 'center', gap: 6, width: 56 },
+  attendeeAvatarWrap: { position: 'relative' },
+  attendeeName: { fontSize: 10, letterSpacing: 0.7, maxWidth: 56 },
 
-  messagesContent: { padding: spacing.lg, gap: spacing.sm, flexGrow: 1 },
-  messageRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, maxWidth: '85%' },
+  requestsSection: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
+  sectionTitle: { fontSize: 10, letterSpacing: 0.9 },
+  requestRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  requestIdentityWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  requestName: { flex: 1, fontSize: 15 },
+
+  messagesContent: { padding: 16, gap: 12, flexGrow: 1 },
+  messageRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '85%' },
   messageRowMine: { alignSelf: 'flex-end' },
-  bubble: { borderRadius: radius.md, borderWidth: borderWidth.thin, borderColor: color.border, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-  bubbleTheirs: { backgroundColor: color.bgCard },
-  bubbleMine: { backgroundColor: color.brand },
-  senderNameWrap: { alignSelf: 'flex-start', borderRadius: radius.sm, marginBottom: 2 },
-  senderName: { color: color.textMuted, fontSize: font.size.xs, fontWeight: font.weight.bold },
-  messageText: { color: color.textPrimary, fontSize: font.size.sm },
+  bubble: { paddingHorizontal: 12, paddingVertical: 8 },
+  senderNameWrap: { alignSelf: 'flex-start', marginBottom: 2 },
+  senderName: { fontSize: 11, letterSpacing: 0.7 },
+  messageText: { fontSize: 14 },
 
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, padding: spacing.md, borderTopWidth: borderWidth.base, borderTopColor: color.border },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 16 },
   composerInput: { flex: 1 },
-  sendButton: { backgroundColor: color.accentBlue, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.sm, borderWidth: borderWidth.base, borderColor: color.border },
-  sendText: { fontFamily: font.family.mono, color: color.textPrimary, fontWeight: font.weight.bold, letterSpacing: font.tracking.label },
 
-  closedBanner: { padding: spacing.md, alignItems: 'center' },
-  closedText: { color: color.textMuted, fontSize: font.size.sm },
+  closedBanner: { padding: 16, alignItems: 'center' },
+  closedText: { fontSize: 14 },
 
-  memberListCard: { margin: spacing.md, marginTop: 0, gap: spacing.sm },
-  memberAvatars: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  memberAvatarWrap: { position: 'relative' },
   kickBadge: {
     position: 'absolute',
     top: -4,
@@ -544,11 +672,8 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: color.danger,
-    borderWidth: borderWidth.thin,
-    borderColor: color.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  kickText: { color: color.textInverse, fontSize: 12, fontWeight: font.weight.bold, lineHeight: 14 },
+  kickText: { fontSize: 12, fontWeight: '700', lineHeight: 14 },
 });

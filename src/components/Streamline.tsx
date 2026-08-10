@@ -1,6 +1,6 @@
 import { Platform, StyleSheet, View } from 'react-native';
 
-import { color } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 /**
  * Faint radiating-line backdrop, nodding to the Mexico '68 Olympics optical
@@ -9,7 +9,8 @@ import { color } from '@/theme/tokens';
  * reads as texture rather than pattern - reduce, don't rave. Web-only: a
  * decorative no-op elsewhere.
  */
-export function SunburstBackdrop({ color: lineColor = color.border }: { color?: string }) {
+export function SunburstBackdrop({ color: lineColor }: { color?: string }) {
+  const { colors } = useTheme();
   if (Platform.OS !== 'web') return null;
 
   return (
@@ -26,7 +27,7 @@ export function SunburstBackdrop({ color: lineColor = color.border }: { color?: 
             marginTop: -450,
             borderRadius: 450,
             opacity: 0.05,
-            backgroundImage: `repeating-conic-gradient(${lineColor} 0deg 1deg, transparent 1deg 12deg)`,
+            backgroundImage: `repeating-conic-gradient(${lineColor ?? colors.border} 0deg 1deg, transparent 1deg 12deg)`,
           } as object
         }
       />

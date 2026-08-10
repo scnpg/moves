@@ -10,11 +10,12 @@ import { signUp } from '@/features/auth/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { USERNAME_PATTERN } from '@/lib/username';
-import { color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export default function SignUpScreen() {
   const { t } = useLocale();
   const router = useRouter();
+  const { colors, font } = useTheme();
   const { ref: referredBy } = useLocalSearchParams<{ ref?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,7 +70,9 @@ export default function SignUpScreen() {
         style={styles.flex}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>{t('auth.createYourAccount')}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>
+            {t('auth.createYourAccount')}
+          </Text>
 
           <View style={styles.form}>
             <TextField
@@ -101,28 +104,34 @@ export default function SignUpScreen() {
               secureTextEntry
               placeholder={t('auth.passwordMinPlaceholder')}
             />
-            <Button label={t('auth.signUp')} onPress={handleSignUp} loading={loading} />
+            <Button label={t('auth.signUp')} onPress={handleSignUp} loading={loading} size="lg" />
           </View>
 
-          <Text style={styles.legalText}>
+          <Text style={[styles.legalText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>
             {t('auth.legalPrefix')}{' '}
             <Link href="/terms">
-              <Text style={styles.legalLink}>{t('auth.termsOfService')}</Text>
+              <Text style={[styles.legalLink, { color: colors.textSecondary }]}>{t('auth.termsOfService')}</Text>
             </Link>{' '}
             {t('auth.legalAnd')}{' '}
             <Link href="/privacy">
-              <Text style={styles.legalLink}>{t('auth.privacyPolicy')}</Text>
+              <Text style={[styles.legalLink, { color: colors.textSecondary }]}>{t('auth.privacyPolicy')}</Text>
             </Link>
             .
           </Text>
 
           <Checkbox checked={agreed} onToggle={() => setAgreed((a) => !a)}>
-            {t('auth.ageConfirmAgree')} <Text style={styles.boldText}>{t('auth.ageConfirmAge')}</Text>
+            {t('auth.ageConfirmAgree')}{' '}
+            <Text style={[styles.boldText, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>
+              {t('auth.ageConfirmAge')}
+            </Text>
           </Checkbox>
 
           <Link href="/(auth)/sign-in" style={styles.link}>
-            <Text style={styles.linkText}>
-              {t('auth.alreadyHaveAccount')} <Text style={styles.linkTextStrong}>{t('auth.signIn')}</Text>
+            <Text style={[styles.linkText, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>
+              {t('auth.alreadyHaveAccount')}{' '}
+              <Text style={[styles.linkTextStrong, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>
+                {t('auth.signIn')}
+              </Text>
             </Text>
           </Link>
         </ScrollView>
@@ -136,43 +145,34 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: spacing.lg,
-    gap: spacing.lg,
+    padding: 24,
+    gap: 24,
   },
   title: {
-    fontSize: font.size.xl,
-    fontWeight: font.weight.heavy,
-    color: color.textPrimary,
+    fontSize: 22,
+    lineHeight: 26,
     textAlign: 'center',
   },
   form: {
-    gap: spacing.md,
+    gap: 16,
   },
   legalText: {
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 12,
     textAlign: 'center',
-    lineHeight: font.size.xs * 1.6,
+    lineHeight: 18,
   },
   legalLink: {
-    color: color.textSecondary,
     textDecorationLine: 'underline',
   },
-  boldText: {
-    color: color.textPrimary,
-    fontWeight: font.weight.heavy,
-  },
+  boldText: {},
   link: {
     alignSelf: 'center',
-    marginTop: spacing.sm,
+    marginTop: 8,
   },
   linkText: {
-    color: color.textSecondary,
-    fontSize: font.size.sm,
+    fontSize: 14,
   },
   linkTextStrong: {
-    color: color.textPrimary,
-    fontWeight: font.weight.heavy,
     textDecorationLine: 'underline',
   },
 });

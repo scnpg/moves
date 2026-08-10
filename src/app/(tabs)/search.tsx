@@ -27,13 +27,14 @@ import type {
 } from '@/lib/database.types';
 import { useUserLocation } from '@/lib/useLocation';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export default function SearchScreen() {
   const { session } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
   const { coords } = useUserLocation();
+  const { colors, border, font } = useTheme();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchUserResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -145,7 +146,7 @@ export default function SearchScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('search.title')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{t('search.title')}</Text>
       </View>
       <View style={styles.searchBox}>
         <TextField
@@ -160,7 +161,7 @@ export default function SearchScreen() {
         <ScrollView contentContainerStyle={styles.listContent}>
           {fof.length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('search.friendsOfFriends')}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('search.friendsOfFriends')}</Text>
               {fof.map((item) => (
                 <UserRow
                   key={item.id}
@@ -177,7 +178,7 @@ export default function SearchScreen() {
 
           {nearby.length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('search.peopleNearby')}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('search.peopleNearby')}</Text>
               {nearby.map((item) => (
                 <UserRow
                   key={item.id}
@@ -194,7 +195,7 @@ export default function SearchScreen() {
 
           {showContactsSection ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('search.fromContacts')}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('search.fromContacts')}</Text>
               {contacts.map((item) => (
                 <UserRow
                   key={item.id}
@@ -207,20 +208,20 @@ export default function SearchScreen() {
                 />
               ))}
               {!contactsSynced ? (
-                <HoverPressable onPress={handleSyncContacts} style={styles.syncButton} disabled={contactsSyncing}>
-                  <Text style={styles.syncButtonText}>
+                <HoverPressable onPress={handleSyncContacts} style={[styles.syncButton, { borderWidth: 2, borderColor: colors.border }]} disabled={contactsSyncing}>
+                  <Text style={[styles.syncButtonText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>
                     {contactsSyncing ? t('search.syncing') : t('search.findFriendsFromContacts')}
                   </Text>
                 </HoverPressable>
               ) : contacts.length === 0 ? (
-                <Text style={styles.emptyText}>{t('search.noContactsYet')}</Text>
+                <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('search.noContactsYet')}</Text>
               ) : null}
             </View>
           ) : null}
 
           {!hasAnySuggestions && !showContactsSection ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>{t('search.noSuggestions')}</Text>
+              <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('search.noSuggestions')}</Text>
             </View>
           ) : null}
         </ScrollView>
@@ -239,12 +240,12 @@ export default function SearchScreen() {
                 onAccept={() => handleAccept(item)}
                 onToggleClose={() => handleToggleClose(item)}
               />
-              <View style={styles.separator} />
+              <View style={[styles.separator, { backgroundColor: border.soft.color }]} />
             </View>
           ))}
           {query.trim() && !loading && results.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>{t('search.noUsersFound', { query: query.trim() })}</Text>
+              <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('search.noUsersFound', { query: query.trim() })}</Text>
             </View>
           ) : null}
         </View>
@@ -255,60 +256,47 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
   headerTitle: {
-    fontSize: font.size.xl,
-    fontWeight: font.weight.heavy,
-    color: color.textPrimary,
+    fontSize: 22,
+    lineHeight: 26,
   },
   searchBox: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   listContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: 24,
+    paddingBottom: 32,
   },
   section: {
-    marginBottom: spacing.lg,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.wide,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
+    fontSize: 11,
+    letterSpacing: 0.9,
+    marginBottom: 8,
   },
   separator: {
     height: 1,
-    backgroundColor: color.borderSubtle,
   },
   syncButton: {
-    borderWidth: 2,
-    borderColor: color.border,
-    borderRadius: 4,
-    paddingVertical: spacing.sm,
+    paddingVertical: 12,
     alignItems: 'center',
-    marginTop: spacing.xs,
+    marginTop: 8,
   },
   syncButtonText: {
-    fontFamily: font.family.mono,
-    color: color.textPrimary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
   empty: {
-    paddingTop: spacing.xxl,
+    paddingTop: 48,
     alignItems: 'center',
   },
   emptyText: {
-    color: color.textMuted,
-    fontSize: font.size.sm,
+    fontSize: 14,
     textAlign: 'center',
   },
 });

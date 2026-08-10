@@ -7,6 +7,7 @@ supabase/.temp
 
 # Node / Expo
 node_modules/
+npm-cache/
 .expo/
 .expo-shared/
 dist/

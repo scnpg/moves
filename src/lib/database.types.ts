@@ -47,6 +47,7 @@ export interface Move {
   max_members: number | null;
   created_at: string;
   share_token: string;
+  chat_enabled: boolean;
 }
 
 export interface MoveMember {

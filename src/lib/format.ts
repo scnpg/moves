@@ -1,6 +1,11 @@
 import type { TranslationKey } from '@/i18n/LocaleProvider';
+import type { UnitSystem } from '@/theme/ThemeProvider';
 
 type T = (key: TranslationKey, params?: Record<string, string | number>) => string;
+
+const METERS_TO_FEET = 3.28084;
+const METERS_TO_MILES = 0.000621371;
+const MILES_TO_KM = 1.60934;
 
 export function formatWhen(startsAtIso: string, expiresAtIso: string, t: T): string {
   const starts = new Date(startsAtIso);
@@ -23,10 +28,21 @@ export function formatWhen(startsAtIso: string, expiresAtIso: string, t: T): str
   return `${starts.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${time}`;
 }
 
-export function formatDistance(meters: number | null | undefined, t: T): string | null {
+export function formatDistance(meters: number | null | undefined, t: T, unit: UnitSystem = 'imperial'): string | null {
   if (meters == null) return null;
+  if (unit === 'imperial') {
+    const feet = meters * METERS_TO_FEET;
+    if (feet < 1000) return t('common.distanceFeet', { value: Math.round(feet) });
+    return t('common.distanceMiles', { value: (meters * METERS_TO_MILES).toFixed(1) });
+  }
   if (meters < 1000) return t('common.distanceMeters', { value: Math.round(meters) });
   return t('common.distanceKm', { value: (meters / 1000).toFixed(1) });
+}
+
+/** Formats a mile-denominated radius value (the search-radius slider's internal unit) for display in the user's chosen system. */
+export function formatRadius(miles: number, unit: UnitSystem, t: T): string {
+  if (unit === 'imperial') return t('moves.radiusMiles', { count: miles });
+  return t('moves.radiusKm', { count: Math.round(miles * MILES_TO_KM) });
 }
 
 /** Short "2h 14m" style remaining-time, for card meta rows. */

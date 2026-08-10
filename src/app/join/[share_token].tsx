@@ -15,7 +15,7 @@ import { formatWhen } from '@/lib/format';
 import { PENDING_JOIN_TOKEN_KEY } from '@/lib/links';
 import type { MoveByShareToken } from '@/lib/database.types';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 /**
  * Reachable while signed out (see the join/ exemption in app/_layout.tsx) -
@@ -29,6 +29,7 @@ export default function JoinMoveScreen() {
   const { session, loading: authLoading } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
+  const { colors, font } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<MoveByShareToken | null>(null);
@@ -89,7 +90,7 @@ export default function JoinMoveScreen() {
       <Screen>
         <SubHeader title="" onBack={handleBack} />
         <View style={styles.center}>
-          <ActivityIndicator color={color.brand} />
+          <ActivityIndicator color={colors.brand} />
         </View>
       </Screen>
     );
@@ -100,7 +101,7 @@ export default function JoinMoveScreen() {
       <Screen>
         <SubHeader title="" onBack={handleBack} />
         <View style={styles.center}>
-          <Text style={styles.emptyText}>{t('join.linkInvalid')}</Text>
+          <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('join.linkInvalid')}</Text>
         </View>
       </Screen>
     );
@@ -112,27 +113,31 @@ export default function JoinMoveScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <Avatar uri={preview.host_avatar_url} name={preview.host_display_name ?? preview.host_username} size={56} />
-          <Text style={styles.title}>{preview.title}</Text>
-          <Text style={styles.hostLine}>{t('common.hostedByName', { name: preview.host_display_name ?? preview.host_username })}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{preview.title}</Text>
+          <Text style={[styles.hostLine, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
+            {t('common.hostedByName', { name: preview.host_display_name ?? preview.host_username })}
+          </Text>
         </View>
 
-        {preview.description ? <Text style={styles.description}>{preview.description}</Text> : null}
+        {preview.description ? (
+          <Text style={[styles.description, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>{preview.description}</Text>
+        ) : null}
 
         <View style={styles.metaRow}>
           <Badge label={formatWhen(preview.starts_at, preview.expires_at, t)} tone="green" />
           <Badge label={t('degree.badge.0')} tone="violet" />
         </View>
 
-        <Text style={styles.helperText}>
+        <Text style={[styles.helperText, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
           {preview.max_members
             ? t('room.peopleJoined', { count: preview.approved_count, max: preview.max_members })
             : t('room.peopleJoinedNoCap', { count: preview.approved_count })}
         </Text>
 
         {preview.is_full ? (
-          <Button label={t('room.moveFull')} variant="secondary" onPress={() => {}} disabled />
+          <Button label={t('room.moveFull')} variant="secondary" onPress={() => {}} disabled size="lg" />
         ) : (
-          <Button label={t('join.signInToJoin')} onPress={handleSignInToJoin} />
+          <Button label={t('join.signInToJoin')} onPress={handleSignInToJoin} size="lg" />
         )}
       </View>
     </Screen>
@@ -141,12 +146,12 @@ export default function JoinMoveScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: color.textMuted, fontSize: font.size.sm, textAlign: 'center', paddingVertical: spacing.lg },
-  content: { flex: 1, padding: spacing.lg, gap: spacing.md },
-  header: { alignItems: 'center', gap: spacing.xxs, paddingVertical: spacing.md },
-  title: { color: color.textPrimary, fontSize: font.size.xl, fontWeight: font.weight.heavy, textAlign: 'center', marginTop: spacing.sm },
-  hostLine: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.sm },
-  description: { color: color.textSecondary, fontSize: font.size.md },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  helperText: { fontFamily: font.family.mono, color: color.textMuted, fontSize: font.size.xs },
+  emptyText: { fontSize: 14, textAlign: 'center', paddingVertical: 24 },
+  content: { flex: 1, padding: 16, gap: 16 },
+  header: { alignItems: 'center', gap: 4, paddingVertical: 16 },
+  title: { fontSize: 22, lineHeight: 26, textAlign: 'center', marginTop: 12 },
+  hostLine: { fontSize: 11, letterSpacing: 0.9 },
+  description: { fontSize: 16 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  helperText: { fontSize: 11 },
 });

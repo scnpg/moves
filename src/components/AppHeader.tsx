@@ -3,9 +3,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoverPressable } from '@/components/HoverPressable';
-import { LanguageToggle } from '@/components/LanguageToggle';
 import { useAuth } from '@/providers/AuthProvider';
-import { borderWidth, color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 /**
  * Persistent brand bar shown above every screen. Tapping the wordmark
@@ -17,17 +16,34 @@ export function AppHeader() {
   const { session } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, border, font } = useTheme();
 
   const goHome = () => {
     router.replace(session ? '/(tabs)' : '/(auth)/sign-in');
   };
 
   return (
-    <View style={[styles.bar, { paddingTop: insets.top + spacing.xs }]}>
+    <View
+      style={[
+        styles.bar,
+        {
+          paddingTop: insets.top + 8,
+          borderBottomWidth: border.rest.width,
+          borderBottomColor: border.rest.color,
+          backgroundColor: colors.bgElevated,
+        },
+      ]}
+    >
       <HoverPressable onPress={goHome} style={styles.logoWrap} lightenOpacity={0.08}>
-        <Text style={styles.logo}>MOVES?</Text>
+        <Text style={[styles.logo, { fontFamily: font.family.logo, color: colors.textPrimary }]}>MOVES?</Text>
       </HoverPressable>
-      <LanguageToggle />
+      <HoverPressable
+        onPress={() => router.push('/settings')}
+        style={[styles.settingsButton, { borderWidth: border.rest.width, borderColor: border.rest.color }]}
+        lightenOpacity={0.2}
+      >
+        <Text style={[styles.settingsIcon, { color: colors.textSecondary }]}>⚙</Text>
+      </HoverPressable>
     </View>
   );
 }
@@ -37,11 +53,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xs,
-    borderBottomWidth: borderWidth.base,
-    borderBottomColor: color.border,
-    backgroundColor: color.bg,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
     // Beats the Stack's page content (the next sibling in _layout.tsx) in
     // paint order, so the LanguageToggle dropdown's overflow isn't covered.
     zIndex: 20,
@@ -50,8 +63,16 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   logo: {
-    fontFamily: font.family.logo,
-    fontSize: font.size.lg,
-    color: color.textPrimary,
+    fontSize: 22,
+    lineHeight: 24,
+  },
+  settingsButton: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsIcon: {
+    fontSize: 17,
   },
 });

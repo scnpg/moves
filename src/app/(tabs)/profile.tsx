@@ -1,60 +1,80 @@
-﻿import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 
 import { Avatar } from '@/components/Avatar';
-import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
 import { ShareProfilePanel } from '@/components/ShareProfilePanel';
 import { TextField } from '@/components/TextField';
-import { deleteAccount, signOut } from '@/features/auth/api';
 import { getFriendRequests, getMyFriends, getReferralCount } from '@/features/friends/api';
-import { getHostedActiveMoves, updateProfile, uploadAvatar } from '@/features/profile/api';
+import { updateProfile, uploadAvatar } from '@/features/profile/api';
+import { getHostedMoveCount, getJoinedMoveCount } from '@/features/moves/api';
 import { useLocale } from '@/i18n/LocaleProvider';
-import { confirmAction, notify } from '@/lib/alerts';
-import type { Move } from '@/lib/database.types';
+import { notify } from '@/lib/alerts';
 import { PHONE_CONTACTS_FEATURE_ENABLED } from '@/lib/features';
-import { formatWhen } from '@/lib/format';
 import { referralSignUpUrl } from '@/lib/links';
 import { hashPhone } from '@/lib/phone';
-import { nextMilestoneLabel } from '@/lib/referrals';
+import { isPrivateUnlocked, nextMilestoneLabel } from '@/lib/referrals';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 const BIO_MAX_LENGTH = 280;
+
+function FounderBadge() {
+  const { colors, border, font } = useTheme();
+  const { t } = useLocale();
+  return (
+    <View style={[styles.founderBadge, { backgroundColor: colors.border, borderWidth: border.rest.width, borderColor: colors.border }]}>
+      <Text style={[styles.founderStar, { color: colors.brand }]}>★</Text>
+      <Text style={[styles.founderText, { color: colors.textInverse, fontFamily: font.family.monoBold }]}>{t('profile.founder')}</Text>
+    </View>
+  );
+}
+
+function StatCell({ value, label, bordered }: { value: number; label: string; bordered?: boolean }) {
+  const { colors, border, font } = useTheme();
+  return (
+    <View style={[styles.statCell, bordered && { borderLeftWidth: border.soft.width, borderLeftColor: border.soft.color }]}>
+      <Text style={[styles.statValue, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{label}</Text>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const { session, profile, refreshProfile } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
+  const { colors, border, font } = useTheme();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [bioInput, setBioInput] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [activeMoves, setActiveMoves] = useState<Move[]>([]);
   const [friendCount, setFriendCount] = useState<number | null>(null);
   const [incomingRequestCount, setIncomingRequestCount] = useState(0);
   const [referralCount, setReferralCount] = useState<number | null>(null);
+  const [hostedCount, setHostedCount] = useState<number | null>(null);
+  const [joinedCount, setJoinedCount] = useState<number | null>(null);
   const [copyingReferral, setCopyingReferral] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       if (!session?.user) return;
-      getHostedActiveMoves(session.user.id).then(setActiveMoves).catch(() => {});
       getMyFriends().then((friends) => setFriendCount(friends.length)).catch(() => {});
       getFriendRequests()
         .then((requests) => setIncomingRequestCount(requests.filter((r) => r.direction === 'incoming').length))
         .catch(() => {});
       getReferralCount(session.user.id).then(setReferralCount).catch(() => {});
+      getHostedMoveCount(session.user.id).then(setHostedCount).catch(() => {});
+      getJoinedMoveCount(session.user.id).then(setJoinedCount).catch(() => {});
     }, [session?.user])
   );
 
@@ -133,249 +153,237 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (err) {
-      notify(t('profile.signOutFailed'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!session?.user) return;
-    const confirmed = await confirmAction(
-      t('profile.deleteAccountConfirmTitle'),
-      t('profile.deleteAccountConfirmMessage'),
-      t('profile.deleteAccount')
-    );
-    if (!confirmed) return;
-    setDeleting(true);
-    try {
-      await deleteAccount(session.user.id);
-    } catch (err) {
-      notify(t('profile.couldNotDeleteAccount'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
-      setDeleting(false);
-    }
-  };
+  const unlocked = isPrivateUnlocked(referralCount ?? 0);
 
   return (
     <Screen>
-      <FlatList
-        data={activeMoves}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-          <View style={styles.headerSection}>
-            <View style={styles.headerRow}>
-              <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-              <HoverPressable
-                onPress={() => setShareOpen((open) => !open)}
-                style={styles.shareIconButton}
-                lightenOpacity={0.2}
-              >
+      <ScrollView contentContainerStyle={styles.listContent}>
+        <View style={styles.headerSection}>
+          {/* Identity block */}
+          <View style={styles.identityRow}>
+            <HoverPressable onPress={handlePickAvatar} style={styles.avatarWrap} disabled={uploadingAvatar}>
+              <Avatar uri={profile?.avatar_url} name={profile?.display_name ?? profile?.username} size={64} />
+              {uploadingAvatar ? (
+                <View style={styles.avatarLoading}>
+                  <ActivityIndicator size="small" color={colors.textInverse} />
+                </View>
+              ) : null}
+            </HoverPressable>
+            <View style={styles.identityText}>
+              <View style={styles.nameRow}>
+                <Text style={[styles.displayName, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={1}>
+                  {profile?.display_name ?? profile?.username}
+                </Text>
+                {unlocked ? <FounderBadge /> : null}
+              </View>
+              <Text style={[styles.username, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>@{profile?.username}</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <HoverPressable onPress={() => setShareOpen((open) => !open)} style={styles.shareIconButton} lightenOpacity={0.15}>
                 <Text style={styles.shareIcon}>🔗</Text>
               </HoverPressable>
+              <Button label={t('profile.editShort')} variant="ghost" size="sm" onPress={startEditing} />
             </View>
+          </View>
 
-            {shareOpen && session?.user ? <ShareProfilePanel userId={session.user.id} /> : null}
+          {shareOpen && session?.user ? <ShareProfilePanel userId={session.user.id} /> : null}
 
-            <Card style={styles.profileCard}>
-              <HoverPressable onPress={handlePickAvatar} style={styles.avatarWrap} disabled={uploadingAvatar}>
-                <Avatar uri={profile?.avatar_url} name={profile?.display_name ?? profile?.username} size={72} />
-                <View style={styles.avatarOverlay}>
-                  {uploadingAvatar ? (
-                    <ActivityIndicator size="small" color={color.textInverse} />
-                  ) : (
-                    <Text style={styles.avatarOverlayText}>{t('profile.editShort')}</Text>
-                  )}
+          {profile?.bio ? (
+            <Text style={[styles.bio, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>{profile.bio}</Text>
+          ) : null}
+
+          {/* Stat strip */}
+          <View style={[styles.statStrip, { borderWidth: border.rest.width, borderColor: border.rest.color }]}>
+            <StatCell value={hostedCount ?? 0} label={t('profile.movesHosted')} />
+            <StatCell value={joinedCount ?? 0} label={t('profile.movesJoined')} bordered />
+            <StatCell value={friendCount ?? 0} label={t('profile.friendsStat')} bordered />
+          </View>
+
+          <HoverPressable onPress={() => router.push('/friends')}>
+            <Card style={styles.friendsRow} raised={false}>
+              <Text style={[styles.friendsLabel, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>
+                {t('profile.friends')}{friendCount != null ? ` · ${friendCount}` : ''}
+              </Text>
+              {incomingRequestCount > 0 ? (
+                <View style={[styles.requestBadge, { backgroundColor: colors.accentPink }]}>
+                  <Text style={[styles.requestBadgeText, { color: colors.textInverse, fontFamily: font.family.monoBold }]}>{incomingRequestCount}</Text>
                 </View>
-              </HoverPressable>
-              <View style={styles.profileText}>
-                <Text style={styles.displayName}>{profile?.display_name ?? profile?.username}</Text>
-                <Text style={styles.username}>@{profile?.username}</Text>
+              ) : null}
+              <Text style={[styles.chevron, { color: colors.textMuted }]}>›</Text>
+            </Card>
+          </HoverPressable>
+
+          {/* Invite block */}
+          <View style={[styles.inviteCard, { borderWidth: border.rest.width, borderColor: border.rest.color }]}>
+            {unlocked ? (
+              <View style={styles.inviteUnlocked}>
+                <View style={styles.inviteUnlockedRow}>
+                  <FounderBadge />
+                  <Text style={[styles.inviteUnlockedLabel, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>
+                    {t('profile.badgeUnlocked')}
+                  </Text>
+                </View>
+                <Text style={[styles.inviteDescription, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>
+                  {t('profile.badgeUnlockedDescription')}
+                </Text>
+                <Button label={t('profile.inviteMoreFriends')} variant="secondary" onPress={handleCopyReferralLink} loading={copyingReferral} />
+              </View>
+            ) : (
+              <View style={styles.inviteProgress}>
+                <Text style={[styles.friendsLabel, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>
+                  {t('profile.inviteFriends')}{referralCount != null ? ` · ${referralCount}` : ''}
+                </Text>
+                <Text style={[styles.helperText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>
+                  {nextMilestoneLabel(referralCount ?? 0, t) ?? t('profile.allTiersUnlocked')}
+                </Text>
+                <Button label={t('profile.copyInviteLink')} onPress={handleCopyReferralLink} loading={copyingReferral} size="lg" />
+              </View>
+            )}
+          </View>
+
+          {editing ? (
+            <Card style={styles.editCard}>
+              <TextField label={t('auth.displayName')} value={displayName} onChangeText={setDisplayName} />
+              <TextField
+                label={t('profile.bioLabel')}
+                value={bioInput}
+                onChangeText={setBioInput}
+                placeholder={t('profile.bioPlaceholder')}
+                multiline
+                maxLength={BIO_MAX_LENGTH}
+              />
+              <Text style={[styles.charCount, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
+                {bioInput.length}/{BIO_MAX_LENGTH}
+              </Text>
+              {PHONE_CONTACTS_FEATURE_ENABLED ? (
+                <>
+                  <TextField
+                    label={t('profile.phoneLabel')}
+                    value={phoneInput}
+                    onChangeText={setPhoneInput}
+                    keyboardType="phone-pad"
+                    placeholder={profile?.phone_hash ? t('profile.phoneReplacePlaceholder') : t('profile.phoneFindPlaceholder')}
+                  />
+                  <Text style={[styles.helperText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('profile.phoneHelp')}</Text>
+                </>
+              ) : null}
+              <View style={styles.editActions}>
+                <Button label={t('profile.cancel')} variant="secondary" onPress={() => setEditing(false)} style={styles.flexButton} />
+                <Button label={t('profile.save')} onPress={handleSave} loading={saving} style={styles.flexButton} />
               </View>
             </Card>
+          ) : null}
+        </View>
 
-            {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
-
-            <HoverPressable onPress={() => router.push('/friends')}>
-              <Card style={styles.friendsRow}>
-                <Text style={styles.friendsLabel}>
-                  {t('profile.friends')}{friendCount != null ? ` · ${friendCount}` : ''}
-                </Text>
-                {incomingRequestCount > 0 ? (
-                  <View style={styles.requestBadge}>
-                    <Text style={styles.requestBadgeText}>{incomingRequestCount}</Text>
-                  </View>
-                ) : null}
-                <Text style={styles.chevron}>›</Text>
-              </Card>
+        <View style={styles.footer}>
+          <View style={styles.legalRow}>
+            <HoverPressable onPress={() => router.push('/terms')} style={styles.legalLinkWrap}>
+              <Text style={[styles.legalLinkText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('auth.termsOfService')}</Text>
             </HoverPressable>
-
-            <HoverPressable onPress={() => router.push('/blocked')}>
-              <Card style={styles.friendsRow}>
-                <Text style={styles.friendsLabel}>{t('profile.blockedUsers')}</Text>
-                <Text style={styles.chevron}>›</Text>
-              </Card>
+            <Text style={[styles.legalDot, { color: colors.textMuted }]}>·</Text>
+            <HoverPressable onPress={() => router.push('/privacy')} style={styles.legalLinkWrap}>
+              <Text style={[styles.legalLinkText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('auth.privacyPolicy')}</Text>
             </HoverPressable>
-
-            <Card style={styles.referralCard}>
-              <Text style={styles.friendsLabel}>
-                {t('profile.inviteFriends')}{referralCount != null ? ` · ${referralCount}` : ''}
-              </Text>
-              <Text style={styles.helperText}>
-                {nextMilestoneLabel(referralCount ?? 0, t) ?? t('profile.allTiersUnlocked')}
-              </Text>
-              <Button label={t('profile.copyInviteLink')} variant="secondary" onPress={handleCopyReferralLink} loading={copyingReferral} />
-            </Card>
-
-            {editing ? (
-              <Card style={styles.editCard}>
-                <TextField label={t('auth.displayName')} value={displayName} onChangeText={setDisplayName} />
-                <TextField
-                  label={t('profile.bioLabel')}
-                  value={bioInput}
-                  onChangeText={setBioInput}
-                  placeholder={t('profile.bioPlaceholder')}
-                  multiline
-                  maxLength={BIO_MAX_LENGTH}
-                />
-                <Text style={styles.charCount}>
-                  {bioInput.length}/{BIO_MAX_LENGTH}
-                </Text>
-                {PHONE_CONTACTS_FEATURE_ENABLED ? (
-                  <>
-                    <TextField
-                      label={t('profile.phoneLabel')}
-                      value={phoneInput}
-                      onChangeText={setPhoneInput}
-                      keyboardType="phone-pad"
-                      placeholder={profile?.phone_hash ? t('profile.phoneReplacePlaceholder') : t('profile.phoneFindPlaceholder')}
-                    />
-                    <Text style={styles.helperText}>{t('profile.phoneHelp')}</Text>
-                  </>
-                ) : null}
-                <View style={styles.editActions}>
-                  <Button label={t('profile.cancel')} variant="secondary" onPress={() => setEditing(false)} style={styles.flexButton} />
-                  <Button label={t('profile.save')} onPress={handleSave} loading={saving} style={styles.flexButton} />
-                </View>
-              </Card>
-            ) : (
-              <Button label={t('profile.edit')} variant="secondary" onPress={startEditing} />
-            )}
-
-            <Text style={styles.sectionTitle}>{t('profile.yourActiveMoves')}</Text>
           </View>
-        }
-        renderItem={({ item }) => (
-          <Card style={styles.moveCard}>
-            <Text style={styles.moveTitle} onPress={() => router.push(`/room/${item.id}`)}>
-              {item.title}
-            </Text>
-            <View style={styles.moveMetaRow}>
-              <Badge label={formatWhen(item.starts_at, item.expires_at, t)} tone="green" />
-            </View>
-          </Card>
-        )}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>{t('profile.notHostingAnyMoves')}</Text>
-        }
-        ListFooterComponent={
-          <View style={styles.footer}>
-            <Button label={t('profile.signOut')} variant="ghost" onPress={handleSignOut} style={styles.signOutButton} />
-            <HoverPressable onPress={handleDeleteAccount} disabled={deleting} style={styles.deleteAccountWrap}>
-              <Text style={styles.deleteAccountText}>{deleting ? '···' : t('profile.deleteAccount')}</Text>
-            </HoverPressable>
-            <View style={styles.legalRow}>
-              <HoverPressable onPress={() => router.push('/terms')} style={styles.legalLinkWrap}>
-                <Text style={styles.legalLinkText}>{t('auth.termsOfService')}</Text>
-              </HoverPressable>
-              <Text style={styles.legalDot}>·</Text>
-              <HoverPressable onPress={() => router.push('/privacy')} style={styles.legalLinkWrap}>
-                <Text style={styles.legalLinkText}>{t('auth.privacyPolicy')}</Text>
-              </HoverPressable>
-            </View>
-          </View>
-        }
-      />
+        </View>
+      </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   listContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
   },
   headerSection: {
-    gap: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+    gap: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  headerRow: {
+  identityRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerTitle: {
-    fontSize: font.size.xl,
-    fontWeight: font.weight.heavy,
-    color: color.textPrimary,
-  },
-  shareIconButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 18,
-  },
-  shareIcon: {
-    fontSize: font.size.lg,
-  },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
+    alignItems: 'flex-start',
+    gap: 14,
   },
   avatarWrap: {
     position: 'relative',
   },
-  avatarOverlay: {
+  avatarLoading: {
     position: 'absolute',
-    bottom: -6,
-    left: 0,
-    right: 0,
+    inset: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: color.accentBlue,
-    paddingVertical: 2,
-    borderRadius: 3,
-  },
-  avatarOverlayText: {
-    fontFamily: font.family.mono,
-    color: color.textPrimary,
-    fontSize: 9,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
-  },
-  profileText: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  } as object,
+  identityText: {
     flex: 1,
+    gap: 3,
+    paddingTop: 2,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
   },
   displayName: {
-    color: color.textPrimary,
-    fontSize: font.size.lg,
-    fontWeight: font.weight.heavy,
+    fontSize: 22,
+    lineHeight: 26,
   },
   username: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.sm,
+    fontSize: 11,
+    letterSpacing: 0.9,
+  },
+  headerActions: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  shareIconButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareIcon: {
+    fontSize: 18,
+  },
+  founderBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 18,
+    paddingHorizontal: 7,
+  },
+  founderStar: {
+    fontSize: 8,
+  },
+  founderText: {
+    fontSize: 9,
+    letterSpacing: 1,
   },
   bio: {
-    color: color.textSecondary,
-    fontSize: font.size.sm,
-    lineHeight: font.size.sm * 1.4,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  statStrip: {
+    flexDirection: 'row',
+  },
+  statCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 16,
+  },
+  statValue: {
+    fontSize: 28,
+    lineHeight: 28,
+  },
+  statLabel: {
+    fontSize: 9,
+    letterSpacing: 0.8,
+    textAlign: 'center',
   },
   friendsRow: {
     flexDirection: 'row',
@@ -383,119 +391,101 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   friendsLabel: {
-    fontFamily: font.family.mono,
-    color: color.textPrimary,
-    fontSize: font.size.sm,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 13,
+    letterSpacing: 0.7,
   },
   chevron: {
-    color: color.textMuted,
-    fontSize: font.size.lg,
+    fontSize: 18,
   },
   requestBadge: {
     minWidth: 20,
     height: 20,
     paddingHorizontal: 6,
     borderRadius: 10,
-    backgroundColor: color.accentPink,
     alignItems: 'center',
     justifyContent: 'center',
   },
   requestBadgeText: {
-    fontFamily: font.family.mono,
-    color: color.textPrimary,
     fontSize: 11,
-    fontWeight: font.weight.bold,
   },
-  referralCard: {
-    gap: spacing.xs,
+  inviteCard: {
+    padding: 16,
+  },
+  inviteProgress: {
+    gap: 12,
+  },
+  inviteUnlocked: {
+    gap: 12,
+  },
+  inviteUnlockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  inviteUnlockedLabel: {
+    fontSize: 10,
+    letterSpacing: 0.9,
+  },
+  inviteDescription: {
+    fontSize: 13,
+    lineHeight: 19,
   },
   editCard: {
-    gap: spacing.sm,
+    gap: 12,
+  },
+  field: {
+    gap: 10,
   },
   helperText: {
-    color: color.textMuted,
-    fontSize: font.size.xs,
-    marginTop: -spacing.xs,
+    fontSize: 12,
   },
   charCount: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 11,
     textAlign: 'right',
-    marginTop: -spacing.xs,
   },
   editActions: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 12,
   },
   flexButton: {
     flex: 1,
   },
   sectionTitle: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.wide,
-    textTransform: 'uppercase',
-    marginTop: spacing.sm,
-  },
-  moveCard: {
-    gap: spacing.xs,
-  },
-  moveTitle: {
-    color: color.textPrimary,
-    fontSize: font.size.md,
-    fontWeight: font.weight.bold,
-  },
-  moveMetaRow: {
-    flexDirection: 'row',
-  },
-  emptyText: {
-    color: color.textMuted,
-    fontSize: font.size.sm,
-    paddingVertical: spacing.md,
+    fontSize: 10,
+    letterSpacing: 0.9,
   },
   footer: {
-    gap: spacing.md,
-    marginTop: spacing.lg,
+    gap: 16,
+    marginTop: 24,
   },
   signOutButton: {
     marginTop: 0,
   },
   deleteAccountWrap: {
     alignSelf: 'center',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
-    borderRadius: radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   deleteAccountText: {
-    fontFamily: font.family.mono,
-    color: color.danger,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
   legalRow: {
     flexDirection: 'row',
     alignSelf: 'center',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
+    gap: 8,
+    marginTop: 12,
   },
   legalLinkWrap: {
-    paddingHorizontal: spacing.xxs,
-    paddingVertical: spacing.xxs,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   legalLinkText: {
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 12,
     textDecorationLine: 'underline',
   },
   legalDot: {
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 12,
   },
 });

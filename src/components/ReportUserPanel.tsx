@@ -9,7 +9,7 @@ import { reportUser } from '@/features/blocking/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import type { ReportReason } from '@/lib/database.types';
-import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 const REASONS: ReportReason[] = ['spam', 'harassment', 'inappropriate_content', 'fake_profile', 'other'];
 
@@ -22,6 +22,7 @@ interface ReportUserPanelProps {
 
 export function ReportUserPanel({ userId, name, moveId, onDone }: ReportUserPanelProps) {
   const { t } = useLocale();
+  const { colors, border, font } = useTheme();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -45,14 +46,31 @@ export function ReportUserPanel({ userId, name, moveId, onDone }: ReportUserPane
 
   return (
     <Card style={styles.card}>
-      <Text style={styles.title}>{t('report.title', { name })}</Text>
-      <Text style={styles.label}>{t('report.reasonLabel')}</Text>
+      <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>
+        {moveId ? t('report.titleForMove') : t('report.title', { name })}
+      </Text>
+      <Text style={[styles.label, { color: colors.textSecondary, fontFamily: font.family.monoBold }]}>
+        {moveId ? t('report.reasonLabelForMove') : t('report.reasonLabel')}
+      </Text>
       <View style={styles.chipRow}>
         {REASONS.map((r) => {
           const active = reason === r;
           return (
-            <HoverPressable key={r} onPress={() => setReason(r)} style={[styles.chip, active && styles.chipActive]}>
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(`report.reason${toKey(r)}` as never)}</Text>
+            <HoverPressable
+              key={r}
+              onPress={() => setReason(r)}
+              style={[
+                styles.chip,
+                {
+                  borderWidth: border.soft.width,
+                  borderColor: active ? colors.border : border.soft.color,
+                  backgroundColor: active ? colors.brandMuted : 'transparent',
+                },
+              ]}
+            >
+              <Text style={[styles.chipText, { color: active ? colors.textPrimary : colors.textSecondary, fontFamily: font.family.monoBold }]}>
+                {t(`report.reason${toKey(r)}` as never)}
+              </Text>
             </HoverPressable>
           );
         })}
@@ -66,7 +84,7 @@ export function ReportUserPanel({ userId, name, moveId, onDone }: ReportUserPane
       />
       <View style={styles.actions}>
         <Button label={t('report.cancel')} variant="secondary" onPress={onDone} style={styles.flexButton} />
-        <Button label={t('report.submit')} variant="danger" onPress={handleSubmit} loading={submitting} style={styles.flexButton} />
+        <Button label={t('report.submit')} variant="destructive" onPress={handleSubmit} loading={submitting} style={styles.flexButton} />
       </View>
     </Card>
   );
@@ -81,49 +99,32 @@ function toKey(reason: ReportReason): string {
 
 const styles = StyleSheet.create({
   card: {
-    gap: spacing.sm,
+    gap: 12,
   },
   title: {
-    color: color.textPrimary,
-    fontSize: font.size.md,
-    fontWeight: font.weight.heavy,
+    fontSize: 16,
   },
   label: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: 8,
   },
   chip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.thin,
-    borderColor: color.borderSubtle,
-  },
-  chipActive: {
-    backgroundColor: color.brandMuted,
-    borderColor: color.border,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   chipText: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-  },
-  chipTextActive: {
-    color: color.textPrimary,
+    fontSize: 11,
+    letterSpacing: 0.7,
   },
   actions: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
+    gap: 12,
+    marginTop: 8,
   },
   flexButton: {
     flex: 1,

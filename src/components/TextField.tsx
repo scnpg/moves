@@ -1,52 +1,93 @@
+import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
-import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface TextFieldProps extends TextInputProps {
   label?: string;
   error?: string | null;
+  hint?: string | null;
 }
 
-export function TextField({ label, error, style, ...inputProps }: TextFieldProps) {
+export function TextField({ label, error, hint, style, onFocus, onBlur, multiline, ...inputProps }: TextFieldProps) {
+  const { colors, border, font } = useTheme();
+  const [focused, setFocused] = useState(false);
+
   return (
     <View style={styles.wrapper}>
-      {label ? <Text style={styles.label}>{label.toUpperCase()}</Text> : null}
-      <TextInput
-        placeholderTextColor={color.textMuted}
-        style={[styles.input, error ? styles.inputError : null, style]}
-        {...inputProps}
-      />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {label ? (
+        <Text style={[styles.label, { fontFamily: font.family.monoBold, color: colors.textPrimary }]}>{label.toUpperCase()}</Text>
+      ) : null}
+      <View style={styles.inputRow}>
+        {focused && border.focused.hasInsetBar ? (
+          <View style={[styles.insetBar, { backgroundColor: colors.border }]} pointerEvents="none" />
+        ) : null}
+        <TextInput
+          placeholderTextColor={colors.textMuted}
+          multiline={multiline}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
+          style={[
+            styles.input,
+            multiline && styles.inputMultiline,
+            {
+              backgroundColor: colors.well,
+              borderWidth: focused ? border.focused.width : border.rest.width,
+              borderColor: error ? colors.danger : focused ? border.focused.color : border.rest.color,
+              color: colors.textPrimary,
+              paddingLeft: focused && border.focused.hasInsetBar ? 11 : 12,
+            },
+            style,
+          ]}
+          {...inputProps}
+        />
+      </View>
+      {hint && !error ? <Text style={[styles.hint, { color: colors.textMuted }]}>{hint}</Text> : null}
+      {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: spacing.xxs,
+    gap: 6,
   },
   label: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 11,
+    letterSpacing: 0.9,
+  },
+  inputRow: {
+    position: 'relative',
+  },
+  insetBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    zIndex: 1,
   },
   input: {
-    backgroundColor: color.bgCard,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    color: color.textPrimary,
-    fontSize: font.size.md,
+    minHeight: 48,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    lineHeight: 24,
   },
-  inputError: {
-    borderColor: color.danger,
+  inputMultiline: {
+    minHeight: 88,
+    textAlignVertical: 'top',
+  },
+  hint: {
+    fontSize: 14,
   },
   error: {
-    color: color.danger,
-    fontSize: font.size.xs,
+    fontSize: 12,
   },
 });

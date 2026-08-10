@@ -10,10 +10,11 @@ import { getBlockedUsers, unblockUser } from '@/features/blocking/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import type { BlockedUser } from '@/lib/database.types';
-import { color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export default function BlockedUsersScreen() {
   const { t } = useLocale();
+  const { colors, font } = useTheme();
   const [users, setUsers] = useState<BlockedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
@@ -55,13 +56,13 @@ export default function BlockedUsersScreen() {
         options={{
           headerShown: true,
           title: t('blocked.title'),
-          headerStyle: { backgroundColor: color.bg },
-          headerTintColor: color.textPrimary,
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.textPrimary,
         }}
       />
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={color.brand} />
+          <ActivityIndicator color={colors.brand} />
         </View>
       ) : (
         <FlatList
@@ -72,8 +73,8 @@ export default function BlockedUsersScreen() {
             <Card style={styles.row} raised={false}>
               <Avatar uri={item.avatar_url} name={item.display_name ?? item.username} size={40} />
               <View style={styles.info}>
-                <Text style={styles.name}>{item.display_name ?? item.username}</Text>
-                <Text style={styles.username}>@{item.username}</Text>
+                <Text style={[styles.name, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{item.display_name ?? item.username}</Text>
+                <Text style={[styles.username, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>@{item.username}</Text>
               </View>
               <Button
                 label={t('userProfile.unblock')}
@@ -83,10 +84,10 @@ export default function BlockedUsersScreen() {
               />
             </Card>
           )}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>{t('blocked.empty')}</Text>
+              <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('blocked.empty')}</Text>
             </View>
           }
         />
@@ -102,35 +103,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   listContent: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 12,
   },
   info: {
     flex: 1,
   },
   name: {
-    color: color.textPrimary,
-    fontSize: font.size.md,
-    fontWeight: font.weight.bold,
+    fontSize: 15,
   },
   username: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 11,
+    letterSpacing: 0.7,
   },
   empty: {
-    paddingTop: spacing.xxl,
-    paddingHorizontal: spacing.lg,
+    paddingTop: 48,
+    paddingHorizontal: 24,
     alignItems: 'center',
   },
   emptyText: {
-    color: color.textMuted,
-    fontSize: font.size.sm,
+    fontSize: 14,
     textAlign: 'center',
   },
 });

@@ -9,11 +9,12 @@ import { LegalDocument, LegalParagraph, LegalSection } from '@/components/LegalD
 // changes.
 export default function PrivacyScreen() {
   return (
-    <LegalDocument title="Privacy Policy" updated="August 9, 2026">
+    <LegalDocument title="Privacy Policy" updated="August 10, 2026">
       <LegalParagraph>
         This policy explains what Moves collects, why, and how to delete it. Moves is a small,
         independently-run app - there is no ad network, no analytics SDK, and nothing here is sold
-        to anyone.
+        to anyone. By using Moves, you agree to the collection and use of information as described
+        in this policy.
       </LegalParagraph>
 
       <LegalSection heading="Account information">
@@ -61,26 +62,34 @@ export default function PrivacyScreen() {
         </LegalParagraph>
       </LegalSection>
 
+      <LegalSection heading="Security">
+        <LegalParagraph>
+          We take reasonable measures to protect your information, but no method of transmission
+          or storage is 100% secure, and we can't guarantee absolute security.
+        </LegalParagraph>
+      </LegalSection>
+
       <LegalSection heading="Deleting your data">
         <LegalParagraph>
-          You can permanently delete your account at any time from Profile → Delete account. This
+          You can permanently delete your account at any time from Settings → Delete account. This
           immediately and permanently removes your profile, Moves you host, friendships, messages,
           and profile photo. This cannot be undone. You can also block another user (Profile of that
           user → Block) at any time, which is reversible.
         </LegalParagraph>
       </LegalSection>
 
-      <LegalSection heading="Children">
+      <LegalSection heading="Age requirement">
         <LegalParagraph>
-          Moves is not directed at children under 13, and we don't knowingly collect information
-          from anyone under that age. If you believe a child has created an account, contact us
-          below and we'll remove it.
+          Moves is only for people 18 and older. It is not directed at, and we don't knowingly
+          collect information from, anyone under 18. If you believe someone under 18 has created an
+          account, contact us below and we'll remove it.
         </LegalParagraph>
       </LegalSection>
 
       <LegalSection heading="Changes to this policy">
         <LegalParagraph>
-          If this policy changes, the "Last updated" date above will change with it.
+          If this policy changes, the "Last updated" date above will change with it. Continuing to
+          use Moves after a change means you accept the updated policy.
         </LegalParagraph>
       </LegalSection>
 

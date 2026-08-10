@@ -10,7 +10,7 @@ import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { USERNAME_PATTERN } from '@/lib/username';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 /**
  * Landing spot for accounts created with no username - currently only
@@ -23,6 +23,7 @@ export default function CompleteProfileScreen() {
   const { session, profile, refreshProfile } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
+  const { colors, font } = useTheme();
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [usernameError, setUsernameError] = useState<string | null>(null);
@@ -55,8 +56,10 @@ export default function CompleteProfileScreen() {
     <Screen>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>{t('completeProfile.oneMoreThing')}</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>
+            {t('completeProfile.oneMoreThing')}
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>
             {t('completeProfile.pickUsername', { name: profile?.display_name ?? t('completeProfile.welcome') })}
           </Text>
 
@@ -70,7 +73,7 @@ export default function CompleteProfileScreen() {
               error={usernameError}
             />
             <TextField label={t('auth.displayName')} value={displayName} onChangeText={setDisplayName} placeholder={t('auth.displayNamePlaceholder')} />
-            <Button label={t('completeProfile.continueButton')} onPress={handleSave} loading={saving} />
+            <Button label={t('completeProfile.continueButton')} onPress={handleSave} loading={saving} size="lg" />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -83,21 +86,19 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: spacing.lg,
-    gap: spacing.lg,
+    padding: 24,
+    gap: 24,
   },
   title: {
-    fontSize: font.size.xl,
-    fontWeight: font.weight.heavy,
-    color: color.textPrimary,
+    fontSize: 22,
+    lineHeight: 26,
     textAlign: 'center',
   },
   subtitle: {
-    color: color.textSecondary,
-    fontSize: font.size.sm,
+    fontSize: 14,
     textAlign: 'center',
   },
   form: {
-    gap: spacing.md,
+    gap: 16,
   },
 });

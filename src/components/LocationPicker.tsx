@@ -6,7 +6,7 @@ import { TextField } from '@/components/TextField';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { getCurrentLocation } from '@/lib/useLocation';
-import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export interface LocationValue {
   lat: number;
@@ -25,6 +25,7 @@ interface LocationPickerProps {
  */
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const { t } = useLocale();
+  const { colors, border, font } = useTheme();
   const [address, setAddress] = useState('');
   const [searching, setSearching] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -79,19 +80,25 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             autoCapitalize="none"
           />
         </View>
-        {searching ? <ActivityIndicator size="small" color={color.textMuted} /> : null}
+        {searching ? <ActivityIndicator size="small" color={colors.textMuted} /> : null}
       </View>
       <View style={styles.actionsRow}>
-        <Text style={styles.hint}>
+        <Text style={[styles.hint, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>
           {value ? t('locationPicker.pinnedAt', { lat: value.lat.toFixed(3), lng: value.lng.toFixed(3) }) : t('locationPicker.noLocationSet')}
         </Text>
         <View style={styles.actionButtons}>
-          <HoverPressable onPress={handleUseMyLocation} style={styles.smallButton} disabled={locating}>
-            <Text style={styles.smallButtonText}>{locating ? t('locationPicker.locating') : t('locationPicker.useMyLocation')}</Text>
+          <HoverPressable
+            onPress={handleUseMyLocation}
+            style={[styles.smallButton, { borderWidth: border.rest.width, borderColor: border.rest.color }]}
+            disabled={locating}
+          >
+            <Text style={[styles.smallButtonText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>
+              {locating ? t('locationPicker.locating') : t('locationPicker.useMyLocation')}
+            </Text>
           </HoverPressable>
           {value ? (
-            <HoverPressable onPress={() => onChange(null)} style={styles.smallButton}>
-              <Text style={styles.smallButtonText}>{t('locationPicker.clear')}</Text>
+            <HoverPressable onPress={() => onChange(null)} style={[styles.smallButton, { borderWidth: border.rest.width, borderColor: border.rest.color }]}>
+              <Text style={[styles.smallButtonText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>{t('locationPicker.clear')}</Text>
             </HoverPressable>
           ) : null}
         </View>
@@ -102,12 +109,12 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: spacing.sm,
+    gap: 12,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
@@ -117,29 +124,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: 8,
   },
   hint: {
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 12,
     flexShrink: 1,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: 8,
   },
   smallButton: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.thin,
-    borderColor: color.border,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   smallButtonText: {
-    fontFamily: font.family.mono,
-    color: color.textPrimary,
     fontSize: 10,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    letterSpacing: 0.8,
   },
 });

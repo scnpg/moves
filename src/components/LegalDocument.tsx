@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 
 import { Screen } from '@/components/Screen';
-import { color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface LegalDocumentProps {
   title: string;
@@ -13,18 +13,19 @@ interface LegalDocumentProps {
 
 /** Shared chrome for /privacy and /terms - plain, English-only legal text (see those files for why). */
 export function LegalDocument({ title, updated, children }: LegalDocumentProps) {
+  const { colors, font } = useTheme();
   return (
     <Screen>
       <Stack.Screen
         options={{
           headerShown: true,
           title,
-          headerStyle: { backgroundColor: color.bg },
-          headerTintColor: color.textPrimary,
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.textPrimary,
         }}
       />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.updated}>Last updated: {updated}</Text>
+        <Text style={[styles.updated, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>Last updated: {updated}</Text>
         {children}
       </ScrollView>
     </Screen>
@@ -32,41 +33,39 @@ export function LegalDocument({ title, updated, children }: LegalDocumentProps) 
 }
 
 export function LegalSection({ heading, children }: { heading: string; children: ReactNode }) {
+  const { colors, font } = useTheme();
   return (
     <View style={styles.section}>
-      <Text style={styles.heading}>{heading}</Text>
+      <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{heading}</Text>
       {children}
     </View>
   );
 }
 
 export function LegalParagraph({ children }: { children: ReactNode }) {
-  return <Text style={styles.paragraph}>{children}</Text>;
+  const { colors, font } = useTheme();
+  return <Text style={[styles.paragraph, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    gap: spacing.lg,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    gap: 24,
     maxWidth: 640,
   },
   updated: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 11,
+    letterSpacing: 0.7,
   },
   section: {
-    gap: spacing.xs,
+    gap: 8,
   },
   heading: {
-    color: color.textPrimary,
-    fontSize: font.size.md,
-    fontWeight: font.weight.heavy,
+    fontSize: 16,
   },
   paragraph: {
-    color: color.textSecondary,
-    fontSize: font.size.sm,
-    lineHeight: font.size.sm * 1.5,
+    fontSize: 14,
+    lineHeight: 21,
   },
 });

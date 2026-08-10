@@ -8,7 +8,7 @@ import { TextField } from '@/components/TextField';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { getCurrentLocation, useUserLocation } from '@/lib/useLocation';
-import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export interface LocationValue {
   lat: number;
@@ -60,6 +60,7 @@ function Recenter({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }
  */
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const { t } = useLocale();
+  const { colors, border, font, scheme } = useTheme();
   const { coords } = useUserLocation();
   const [address, setAddress] = useState('');
   const [searching, setSearching] = useState(false);
@@ -123,11 +124,12 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             autoCapitalize="none"
           />
         </View>
-        {searching ? <ActivityIndicator size="small" color={color.textMuted} /> : null}
+        {searching ? <ActivityIndicator size="small" color={colors.textMuted} /> : null}
       </View>
 
-      <View style={styles.mapWrap}>
+      <View style={[styles.mapWrap, { borderWidth: border.rest.width, borderColor: border.rest.color }]}>
         <MapContainer
+          key={scheme}
           center={center}
           zoom={17}
           style={{ height: '100%', width: '100%', touchAction: 'none' } as object}
@@ -135,7 +137,11 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            url={
+              scheme === 'dark'
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+            }
           />
           <Recenter lat={center[0]} lng={center[1]} zoom={17} />
           <ClickToPin onPick={(lat, lng) => onChange({ lat, lng })} />
@@ -143,21 +149,25 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             <CircleMarker
               center={[value.lat, value.lng]}
               radius={9}
-              pathOptions={{ color: '#111111', weight: 2, fillColor: color.accentBlue, fillOpacity: 0.85 }}
+              pathOptions={{ color: colors.border, weight: 2, fillColor: colors.accentBlue, fillOpacity: 0.85 }}
             />
           ) : null}
         </MapContainer>
       </View>
 
       <View style={styles.actionsRow}>
-        <Text style={styles.hint}>{value ? t('locationPicker.tapToMove') : t('locationPicker.tapToPin')}</Text>
+        <Text style={[styles.hint, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>
+          {value ? t('locationPicker.tapToMove') : t('locationPicker.tapToPin')}
+        </Text>
         <View style={styles.actionButtons}>
-          <HoverPressable onPress={handleUseMyLocation} style={styles.smallButton} disabled={locating}>
-            <Text style={styles.smallButtonText}>{locating ? t('locationPicker.locating') : t('locationPicker.useMyLocation')}</Text>
+          <HoverPressable onPress={handleUseMyLocation} style={[styles.smallButton, { borderWidth: border.rest.width, borderColor: border.rest.color }]} disabled={locating}>
+            <Text style={[styles.smallButtonText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>
+              {locating ? t('locationPicker.locating') : t('locationPicker.useMyLocation')}
+            </Text>
           </HoverPressable>
           {value ? (
-            <HoverPressable onPress={() => onChange(null)} style={styles.smallButton}>
-              <Text style={styles.smallButtonText}>{t('locationPicker.clear')}</Text>
+            <HoverPressable onPress={() => onChange(null)} style={[styles.smallButton, { borderWidth: border.rest.width, borderColor: border.rest.color }]}>
+              <Text style={[styles.smallButtonText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>{t('locationPicker.clear')}</Text>
             </HoverPressable>
           ) : null}
         </View>
@@ -168,21 +178,18 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: spacing.sm,
+    gap: 12,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: spacing.xs,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
   },
   mapWrap: {
     height: 200,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    borderRadius: radius.md,
     overflow: 'hidden',
   },
   actionsRow: {
@@ -190,29 +197,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: 8,
   },
   hint: {
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 12,
     flexShrink: 1,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: 8,
   },
   smallButton: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.thin,
-    borderColor: color.border,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   smallButtonText: {
-    fontFamily: font.family.mono,
-    color: color.textPrimary,
     fontSize: 10,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    letterSpacing: 0.8,
   },
 });

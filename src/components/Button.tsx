@@ -1,46 +1,97 @@
 import { ActivityIndicator, StyleSheet, Text, type ViewStyle } from 'react-native';
 
 import { HoverPressable } from '@/components/HoverPressable';
-import { borderWidth, color, font, radius, shadow, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'destructive' | 'ghost';
+/** @deprecated use variant="destructive" */
+type LegacyVariant = 'danger';
+type Size = 'lg' | 'md' | 'sm';
 
 interface ButtonProps {
   label: string;
   onPress: () => void;
-  variant?: Variant;
+  variant?: Variant | LegacyVariant;
+  size?: Size;
   disabled?: boolean;
   loading?: boolean;
   style?: ViewStyle;
 }
 
+const HEIGHTS: Record<Size, number> = { lg: 52, md: 40, sm: 32 };
+const H_PADDING: Record<Size, number> = { lg: 24, md: 20, sm: 14 };
+
 export function Button({
   label,
   onPress,
   variant = 'primary',
+  size = 'md',
   disabled,
   loading,
   style,
 }: ButtonProps) {
+  const theme = useTheme();
+  const { colors, borderWidth, shadow, font } = theme;
   const isDisabled = disabled || loading;
+  const resolvedVariant: Variant = variant === 'danger' ? 'destructive' : variant;
+
+  const isFilled = resolvedVariant === 'primary' || resolvedVariant === 'destructive';
+  const fillColor = resolvedVariant === 'primary' ? colors.brand : colors.danger;
+  const fillTextColor = resolvedVariant === 'primary' ? colors.onAccent : colors.textInverse;
+
+  const variantStyle: ViewStyle = isDisabled
+    ? { backgroundColor: colors.bg, borderWidth: borderWidth.structural, borderColor: colors.borderSubtle }
+    : isFilled
+      ? { backgroundColor: fillColor, borderWidth: borderWidth.emphatic, borderColor: colors.border }
+      : resolvedVariant === 'secondary'
+        ? { backgroundColor: colors.bgElevated, borderWidth: borderWidth.structural, borderColor: colors.border }
+        : { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0 };
+
+  const textColor = isDisabled
+    ? colors.textMuted
+    : resolvedVariant === 'secondary'
+      ? colors.textPrimary
+      : resolvedVariant === 'ghost'
+        ? colors.textPrimary
+        : fillTextColor;
 
   return (
     <HoverPressable
       onPress={onPress}
       disabled={isDisabled}
-      lightenOpacity={variant === 'ghost' ? 0.08 : 0.18}
-      style={({ pressed }) => [
-        styles.base,
-        variantStyles[variant],
-        variant !== 'ghost' && !isDisabled ? (pressed ? styles.pressed : shadow.small) : undefined,
-        isDisabled && styles.disabled,
-        style,
-      ]}
+      lightenOpacity={resolvedVariant === 'ghost' ? 0 : 0.12}
+      style={({ pressed }) => {
+        const showShadow = isFilled && !isDisabled && !pressed;
+        const translate = pressed && !isDisabled ? (resolvedVariant === 'ghost' ? 1 : 3) : 0;
+        return [
+          styles.base,
+          {
+            height: HEIGHTS[size],
+            paddingHorizontal: resolvedVariant === 'ghost' ? 0 : H_PADDING[size],
+            width: size === 'lg' && resolvedVariant !== 'ghost' ? '100%' : undefined,
+          },
+          variantStyle,
+          showShadow ? shadow.hard : null,
+          translate ? { transform: [{ translateX: translate }, { translateY: translate }] } : null,
+          style,
+        ];
+      }}
     >
       {loading ? (
-        <ActivityIndicator color={color.textPrimary} />
+        <ActivityIndicator color={textColor} />
       ) : (
-        <Text style={[styles.label, textVariantStyles[variant]]}>{label.toUpperCase()}</Text>
+        <Text
+          style={[
+            styles.label,
+            {
+              color: textColor,
+              fontFamily: font.family.monoBold,
+              textDecorationLine: resolvedVariant === 'ghost' && !isDisabled ? 'underline' : 'none',
+            },
+          ]}
+        >
+          {label.toUpperCase()}
+        </Text>
       )}
     </HoverPressable>
   );
@@ -48,40 +99,13 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  disabled: {
-    opacity: 0.4,
-  },
-  pressed: {
-    transform: [{ translateX: 2 }, { translateY: 2 }],
+    gap: 6,
   },
   label: {
-    fontFamily: font.family.mono,
-    fontSize: font.size.sm,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 13,
+    letterSpacing: 1,
   },
-});
-
-const variantStyles: Record<Variant, ViewStyle> = StyleSheet.create({
-  primary: { backgroundColor: color.brand },
-  secondary: { backgroundColor: color.bgCard },
-  danger: { backgroundColor: color.danger },
-  ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
-});
-
-const textVariantStyles = StyleSheet.create({
-  primary: { color: color.textPrimary },
-  secondary: { color: color.textPrimary },
-  danger: { color: color.textPrimary },
-  ghost: { color: color.textSecondary },
 });

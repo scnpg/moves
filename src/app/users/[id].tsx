@@ -22,13 +22,14 @@ import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { MutualFriend, PublicProfile, SearchFriendshipStatus } from '@/lib/database.types';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
+  const { colors, font } = useTheme();
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [mutuals, setMutuals] = useState<MutualFriend[]>([]);
@@ -167,9 +168,9 @@ export default function UserProfileScreen() {
   if (loading) {
     return (
       <Screen>
-        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
+        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: colors.bg } }} />
         <View style={styles.loading}>
-          <ActivityIndicator color={color.brand} />
+          <ActivityIndicator color={colors.brand} />
         </View>
       </Screen>
     );
@@ -178,9 +179,9 @@ export default function UserProfileScreen() {
   if (notFound || !profile) {
     return (
       <Screen>
-        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: color.bg } }} />
+        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: colors.bg } }} />
         <View style={styles.loading}>
-          <Text style={styles.emptyText}>{t('userProfile.notAvailable')}</Text>
+          <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('userProfile.notAvailable')}</Text>
         </View>
       </Screen>
     );
@@ -192,8 +193,8 @@ export default function UserProfileScreen() {
         options={{
           headerShown: true,
           title: '',
-          headerStyle: { backgroundColor: color.bg },
-          headerTintColor: color.textPrimary,
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.textPrimary,
         }}
       />
       <View style={styles.content}>
@@ -204,9 +205,9 @@ export default function UserProfileScreen() {
             size={88}
             closeFriend={isCloseFriend}
           />
-          <Text style={styles.displayName}>{profile.display_name ?? profile.username}</Text>
-          <Text style={styles.username}>@{profile.username}</Text>
-          {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+          <Text style={[styles.displayName, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{profile.display_name ?? profile.username}</Text>
+          <Text style={[styles.username, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>@{profile.username}</Text>
+          {profile.bio ? <Text style={[styles.bio, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>{profile.bio}</Text> : null}
 
           <View style={styles.actionsRow}>
             {!session?.user ? (
@@ -242,11 +243,11 @@ export default function UserProfileScreen() {
             <View style={styles.secondaryActionsRow}>
               {!isBlocked ? (
                 <HoverPressable onPress={handleBlock} style={styles.secondaryAction}>
-                  <Text style={styles.secondaryActionText}>{t('userProfile.block')}</Text>
+                  <Text style={[styles.secondaryActionText, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('userProfile.block')}</Text>
                 </HoverPressable>
               ) : null}
               <HoverPressable onPress={() => setReportOpen((open) => !open)} style={styles.secondaryAction}>
-                <Text style={styles.secondaryActionText}>{t('userProfile.report')}</Text>
+                <Text style={[styles.secondaryActionText, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('userProfile.report')}</Text>
               </HoverPressable>
             </View>
           ) : null}
@@ -262,7 +263,7 @@ export default function UserProfileScreen() {
 
         {session?.user ? (
           <>
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>
               {mutuals.length > 0
                 ? t(mutuals.length === 1 ? 'userProfile.mutualFriendsCount' : 'userProfile.mutualFriendsCountPlural', { count: mutuals.length })
                 : t('userProfile.mutualFriends')}
@@ -274,11 +275,11 @@ export default function UserProfileScreen() {
               renderItem={({ item }) => (
                 <Card style={styles.mutualCard} raised={false}>
                   <Avatar uri={item.avatar_url} name={item.display_name ?? item.username} size={36} />
-                  <Text style={styles.mutualName}>{item.display_name ?? item.username}</Text>
+                  <Text style={[styles.mutualName, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{item.display_name ?? item.username}</Text>
                 </Card>
               )}
-              ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
-              ListEmptyComponent={<Text style={styles.emptyText}>{t('userProfile.noMutualFriends')}</Text>}
+              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+              ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('userProfile.noMutualFriends')}</Text>}
             />
           </>
         ) : null}
@@ -295,39 +296,35 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
+    paddingHorizontal: 24,
+    gap: 16,
   },
   profileHeader: {
     alignItems: 'center',
-    gap: spacing.xxs,
-    paddingVertical: spacing.md,
+    gap: 4,
+    paddingVertical: 16,
   },
   displayName: {
-    color: color.textPrimary,
-    fontSize: font.size.lg,
-    fontWeight: font.weight.heavy,
-    marginTop: spacing.sm,
+    fontSize: 20,
+    marginTop: 12,
   },
   username: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.sm,
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
   bio: {
-    color: color.textSecondary,
-    fontSize: font.size.sm,
-    lineHeight: font.size.sm * 1.4,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-    marginTop: spacing.xs,
+    marginTop: 8,
   },
   actionsRow: {
-    marginTop: spacing.md,
+    marginTop: 16,
     alignSelf: 'stretch',
   },
   acceptedActionsRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 12,
   },
   flexButton: {
     flex: 1,
@@ -335,42 +332,32 @@ const styles = StyleSheet.create({
   secondaryActionsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing.md,
-    marginTop: spacing.xs,
+    gap: 16,
+    marginTop: 8,
   },
   secondaryAction: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
-    borderRadius: radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   secondaryActionText: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
   sectionTitle: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
   mutualCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    gap: 12,
+    paddingVertical: 12,
   },
   mutualName: {
-    color: color.textPrimary,
-    fontSize: font.size.sm,
-    fontWeight: font.weight.medium,
+    fontSize: 14,
   },
   emptyText: {
-    color: color.textMuted,
-    fontSize: font.size.sm,
-    paddingVertical: spacing.md,
+    fontSize: 14,
+    paddingVertical: 16,
   },
 });

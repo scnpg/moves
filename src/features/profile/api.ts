@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
-import type { Move, Profile, PublicProfile } from '@/lib/database.types';
+import type { Profile, PublicProfile } from '@/lib/database.types';
 
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
@@ -51,16 +51,4 @@ export async function uploadAvatar(userId: string, uri: string, mimeType: string
 
   const { data } = supabase.storage.from('avatars').getPublicUrl(path);
   return `${data.publicUrl}?t=${Date.now()}`;
-}
-
-/** Moves the given user is hosting that are still active. Only readable for your own id via RLS. */
-export async function getHostedActiveMoves(userId: string): Promise<Move[]> {
-  const { data, error } = await supabase
-    .from('moves')
-    .select('*')
-    .eq('host_id', userId)
-    .eq('status', 'active')
-    .order('starts_at', { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as Move[];
 }

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { HoverPressable } from '@/components/HoverPressable';
-import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface CheckboxProps {
   checked: boolean;
@@ -11,12 +11,23 @@ interface CheckboxProps {
 }
 
 export function Checkbox({ checked, onToggle, children }: CheckboxProps) {
+  const { colors, border, font } = useTheme();
+
   return (
     <HoverPressable onPress={onToggle} style={styles.row} lightenOpacity={0.08}>
-      <View style={[styles.box, checked && styles.boxChecked]}>
-        {checked ? <Text style={styles.check}>✓</Text> : null}
+      <View
+        style={[
+          styles.box,
+          {
+            borderWidth: border.rest.width,
+            borderColor: border.rest.color,
+            backgroundColor: checked ? colors.brand : colors.well,
+          },
+        ]}
+      >
+        {checked ? <Text style={[styles.check, { color: colors.onAccent }]}>✓</Text> : null}
       </View>
-      <Text style={styles.label}>{children}</Text>
+      <Text style={[styles.label, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>{children}</Text>
     </HoverPressable>
   );
 }
@@ -25,32 +36,23 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.xs,
+    gap: 8,
   },
   box: {
     width: 20,
     height: 20,
     marginTop: 1,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    borderRadius: radius.sm,
-    backgroundColor: color.bgCard,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  boxChecked: {
-    backgroundColor: color.brand,
-  },
   check: {
-    color: color.textPrimary,
     fontSize: 13,
-    fontWeight: font.weight.heavy,
+    fontWeight: '800',
   },
   label: {
     flex: 1,
-    color: color.textMuted,
-    fontSize: font.size.xs,
-    lineHeight: font.size.xs * 1.6,
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

@@ -3,7 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HoverPressable } from '@/components/HoverPressable';
 import { LOCALE_LABELS, LOCALE_SHORT_LABELS, SUPPORTED_LOCALES, useLocale, type Locale } from '@/i18n/LocaleProvider';
-import { borderWidth, color, font, radius, shadow, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 /**
  * Compact button showing the current language; tapping it opens a small
@@ -16,6 +16,7 @@ import { borderWidth, color, font, radius, shadow, spacing } from '@/theme/token
 export function LanguageToggle() {
   const { locale, setLocale } = useLocale();
   const [open, setOpen] = useState(false);
+  const { colors, border, shadow, font } = useTheme();
 
   const handleSelect = (next: Locale) => {
     setLocale(next);
@@ -24,25 +25,43 @@ export function LanguageToggle() {
 
   return (
     <View>
-      <HoverPressable onPress={() => setOpen((o) => !o)} style={styles.button} lightenOpacity={0.2}>
-        <Text style={styles.buttonText}>{LOCALE_SHORT_LABELS[locale]}</Text>
-        <Text style={styles.caret}>{open ? '▴' : '▾'}</Text>
+      <HoverPressable
+        onPress={() => setOpen((o) => !o)}
+        style={[styles.button, { borderWidth: border.rest.width, borderColor: border.rest.color }]}
+        lightenOpacity={0.2}
+      >
+        <Text style={[styles.buttonText, { color: colors.textSecondary, fontFamily: font.family.monoBold }]}>
+          {LOCALE_SHORT_LABELS[locale]}
+        </Text>
+        <Text style={[styles.caret, { color: colors.textMuted }]}>{open ? '▴' : '▾'}</Text>
       </HoverPressable>
 
       {open ? (
         <>
           <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
-          <View style={styles.menu}>
+          <View
+            style={[
+              styles.menu,
+              { backgroundColor: colors.bgCard, borderWidth: border.rest.width, borderColor: border.rest.color, ...shadow.small },
+            ]}
+          >
             {SUPPORTED_LOCALES.map((loc) => {
               const active = loc === locale;
               return (
                 <HoverPressable
                   key={loc}
                   onPress={() => handleSelect(loc)}
-                  style={[styles.menuItem, active && styles.menuItemActive]}
+                  style={[styles.menuItem, active && { backgroundColor: colors.brandMuted }]}
                 >
-                  <Text style={[styles.menuItemText, active && styles.menuItemTextActive]}>{LOCALE_LABELS[loc]}</Text>
-                  {active ? <Text style={styles.check}>✓</Text> : null}
+                  <Text
+                    style={[
+                      styles.menuItemText,
+                      { color: colors.textPrimary, fontFamily: active ? font.family.bodySemibold : font.family.bodyRegular },
+                    ]}
+                  >
+                    {LOCALE_LABELS[loc]}
+                  </Text>
+                  {active ? <Text style={[styles.check, { color: colors.brand }]}>✓</Text> : null}
                 </HoverPressable>
               );
             })}
@@ -59,21 +78,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     minWidth: 30,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.thin,
-    borderColor: color.borderSubtle,
   },
   buttonText: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
   caret: {
-    color: color.textMuted,
     fontSize: 9,
   },
   backdrop: {
@@ -88,39 +100,25 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '100%',
     right: 0,
-    marginTop: spacing.xxs,
+    marginTop: 4,
     width: 180,
-    backgroundColor: color.bgCard,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    borderRadius: radius.sm,
     overflow: 'hidden',
     zIndex: 11,
-    ...shadow.small,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  menuItemActive: {
-    backgroundColor: color.brandMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   menuItemText: {
-    fontFamily: font.family.mono,
-    color: color.textPrimary,
-    fontSize: font.size.sm,
+    fontSize: 14,
     // CJK labels (e.g. "繁體中文") can wrap character-by-character if the
     // row is allowed to shrink below their natural width.
     ...Platform.select({ web: { whiteSpace: 'nowrap' } as object, default: {} }),
   },
-  menuItemTextActive: {
-    fontWeight: font.weight.bold,
-  },
   check: {
-    color: color.brand,
-    fontWeight: font.weight.bold,
+    fontWeight: '700',
   },
 });

@@ -1,43 +1,49 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 type Tone = 'neutral' | 'green' | 'blue' | 'pink' | 'yellow' | 'orange' | 'violet' | 'teal' | 'ink' | 'red';
 
 export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
+  const { colors, border, font } = useTheme();
+
+  const toneColors: Record<Tone, { bg: string; text: string }> = {
+    neutral: { bg: colors.bgElevated, text: colors.textPrimary },
+    green: { bg: colors.accentGreenFlat, text: colors.onAccent },
+    blue: { bg: colors.accentBlue, text: colors.textInverse },
+    pink: { bg: colors.accentPink, text: colors.textInverse },
+    yellow: { bg: colors.accentYellow, text: colors.textPrimary },
+    orange: { bg: colors.accentOrange, text: colors.textPrimary },
+    violet: { bg: colors.accentViolet, text: colors.textInverse },
+    teal: { bg: colors.accentTeal, text: colors.textPrimary },
+    ink: { bg: colors.border, text: colors.textInverse },
+    red: { bg: colors.accentRed, text: colors.textInverse },
+  };
+  const { bg, text } = toneColors[tone];
+
   return (
-    <View style={[styles.base, toneStyles[tone].bg]}>
-      <Text style={[styles.label, toneStyles[tone].text]}>{label.toUpperCase()}</Text>
+    <View
+      style={[
+        styles.base,
+        { backgroundColor: bg, borderWidth: border.rest.width, borderColor: colors.border },
+      ]}
+    >
+      <Text style={[styles.label, { color: text, fontFamily: font.family.monoBold }]}>{label.toUpperCase()}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.thin,
-    borderColor: color.border,
+    height: 22,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
     alignSelf: 'flex-start',
   },
   label: {
-    fontFamily: font.family.mono,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
 });
-
-const toneStyles = {
-  neutral: StyleSheet.create({ bg: { backgroundColor: color.bgElevated }, text: { color: color.textPrimary } }),
-  green: StyleSheet.create({ bg: { backgroundColor: color.accentGreen }, text: { color: color.textPrimary } }),
-  blue: StyleSheet.create({ bg: { backgroundColor: color.accentBlue }, text: { color: color.textPrimary } }),
-  pink: StyleSheet.create({ bg: { backgroundColor: color.accentPink }, text: { color: color.textPrimary } }),
-  yellow: StyleSheet.create({ bg: { backgroundColor: color.accentYellow }, text: { color: color.textPrimary } }),
-  orange: StyleSheet.create({ bg: { backgroundColor: color.accentOrange }, text: { color: color.textPrimary } }),
-  violet: StyleSheet.create({ bg: { backgroundColor: color.accentViolet }, text: { color: color.textInverse } }),
-  teal: StyleSheet.create({ bg: { backgroundColor: color.accentTeal }, text: { color: color.textPrimary } }),
-  ink: StyleSheet.create({ bg: { backgroundColor: color.border }, text: { color: color.textInverse } }),
-  red: StyleSheet.create({ bg: { backgroundColor: color.accentRed }, text: { color: color.textInverse } }),
-};

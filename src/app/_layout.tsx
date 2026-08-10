@@ -1,10 +1,14 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AlfaSlabOne_400Regular } from '@expo-google-fonts/alfa-slab-one';
+import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
+import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 
 import { AppHeader } from '@/components/AppHeader';
 import { LocaleProvider } from '@/i18n/LocaleProvider';
@@ -12,31 +16,43 @@ import { PENDING_JOIN_TOKEN_KEY } from '@/lib/links';
 import { isPlaceholderUsername } from '@/lib/username';
 import { AlertProvider } from '@/providers/AlertProvider';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
-import { color } from '@/theme/tokens';
+import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Danfo: require('../../assets/fonts/Danfo-Regular.ttf'),
+    AlfaSlabOne_400Regular,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_700Bold,
+    Inter_400Regular,
+    Inter_600SemiBold,
   });
 
   if (!fontsLoaded && !fontError) {
+    // ThemeProvider isn't mounted yet at this point, so useTheme() isn't
+    // available - hardcode the light-mode brand green rather than block
+    // font loading on the theme system.
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color={color.brand} size="large" />
+        <ActivityIndicator color="#35DE83" size="large" />
       </View>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <LocaleProvider>
-        <AlertProvider>
-          <AuthProvider>
-            <RootNavigation />
-          </AuthProvider>
-        </AlertProvider>
-      </LocaleProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.flex}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <LocaleProvider>
+            <AlertProvider>
+              <AuthProvider>
+                <RootNavigation />
+              </AuthProvider>
+            </AlertProvider>
+          </LocaleProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -44,6 +60,7 @@ function RootNavigation() {
   const { session, profile, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const { colors, scheme } = useTheme();
 
   useEffect(() => {
     if (loading) return;
@@ -80,8 +97,8 @@ function RootNavigation() {
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={color.brand} size="large" />
+      <View style={[styles.loading, { backgroundColor: colors.bg }]}>
+        <ActivityIndicator color={colors.brand} size="large" />
       </View>
     );
   }
@@ -93,9 +110,9 @@ function RootNavigation() {
 
   return (
     <View style={styles.flex}>
-      <StatusBar style="dark" />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {!onSignIn ? <AppHeader /> : null}
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Screen name="room/create" options={{ presentation: 'modal' }} />
       </Stack>
     </View>
@@ -110,6 +127,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: color.bg,
   },
 });

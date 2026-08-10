@@ -33,6 +33,54 @@ export async function getEligibleMoves(params: {
   return (data ?? []) as EligibleMove[];
 }
 
+/**
+ * Active Moves the caller is currently hosting or an approved member of -
+ * the "Moves" tab, as opposed to the "Feed" tab's full discovery list.
+ * get_eligible_moves_for_user() already computes `location_visible` as
+ * exactly `mm.status = 'approved' OR host_id = caller`, so filtering on it
+ * client-side avoids a second RPC.
+ */
+export async function getMyOptedInMoves(userId: string): Promise<EligibleMove[]> {
+  const eligible = await getEligibleMoves({ userId });
+  return eligible.filter((m) => m.location_visible);
+}
+
+/** All-time count of Moves this user has hosted (any status), for the profile stat strip. */
+export async function getHostedMoveCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('moves')
+    .select('id', { count: 'exact', head: true })
+    .eq('host_id', userId);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/** All-time count of Moves this user has joined (approved membership, any status), for the profile stat strip. */
+export async function getJoinedMoveCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('move_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('status', 'approved');
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * Per-move blacklist, set at creation time (Create Move -> More options ->
+ * Blacklisted users). Distinct from the app-wide blocked_users list -
+ * one-directional, host-only, scoped to this Move. Enforced server-side in
+ * handle_move_join_request() and get_eligible_moves_for_user(), not just
+ * here - this is a convenience insert, not the security boundary.
+ */
+export async function addMoveExclusions(moveId: string, userIds: string[]) {
+  if (userIds.length === 0) return;
+  const { error } = await supabase
+    .from('move_excluded_users')
+    .insert(userIds.map((userId) => ({ move_id: moveId, user_id: userId })));
+  if (error) throw error;
+}
+
 export interface CreateMoveInput {
   hostId: string;
   title: string;
@@ -44,6 +92,7 @@ export interface CreateMoveInput {
   maxMembers: number | null;
   lat: number | null;
   lng: number | null;
+  chatEnabled: boolean;
 }
 
 export async function createMove(input: CreateMoveInput): Promise<Move> {
@@ -62,6 +111,7 @@ export async function createMove(input: CreateMoveInput): Promise<Move> {
         input.lat != null && input.lng != null
           ? `SRID=4326;POINT(${input.lng} ${input.lat})`
           : null,
+      chat_enabled: input.chatEnabled,
     })
     .select('*')
     .single();

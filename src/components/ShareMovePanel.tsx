@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 
 import { Button } from '@/components/Button';
@@ -7,7 +7,7 @@ import { Card } from '@/components/Card';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
 import { joinMoveUrl } from '@/lib/links';
-import { borderWidth, color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface ShareMovePanelProps {
   shareToken: string;
@@ -20,6 +20,7 @@ interface ShareMovePanelProps {
  */
 export function ShareMovePanel({ shareToken }: ShareMovePanelProps) {
   const { t } = useLocale();
+  const { colors, border, font } = useTheme();
   const [copying, setCopying] = useState(false);
   const url = joinMoveUrl(shareToken);
 
@@ -35,9 +36,12 @@ export function ShareMovePanel({ shareToken }: ShareMovePanelProps) {
 
   return (
     <Card style={styles.card}>
-      <Text style={styles.label}>{t('shareMove.label')}</Text>
-      <Text style={styles.helperText}>{t('shareMove.helperLink')}</Text>
-      <Text style={styles.url} numberOfLines={1}>
+      <Text style={[styles.label, { color: colors.textSecondary, fontFamily: font.family.monoBold }]}>{t('shareMove.label')}</Text>
+      <Text style={[styles.helperText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('shareMove.helperLink')}</Text>
+      <Text
+        style={[styles.url, { color: colors.textPrimary, fontFamily: font.family.monoRegular, borderWidth: border.soft.width, borderColor: border.soft.color }]}
+        numberOfLines={1}
+      >
         {url}
       </Text>
       <Button label={t('common.copyLink')} variant="secondary" onPress={handleCopy} loading={copying} />
@@ -47,29 +51,20 @@ export function ShareMovePanel({ shareToken }: ShareMovePanelProps) {
 
 const styles = StyleSheet.create({
   card: {
-    margin: spacing.md,
+    margin: 16,
     marginTop: 0,
-    gap: spacing.xs,
+    gap: 8,
   },
   label: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.wide,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
   helperText: {
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 12,
   },
   url: {
-    fontFamily: font.family.mono,
-    color: color.textPrimary,
-    fontSize: font.size.sm,
-    borderWidth: borderWidth.thin,
-    borderColor: color.borderSubtle,
-    borderRadius: 4,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
+    fontSize: 13,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
 });

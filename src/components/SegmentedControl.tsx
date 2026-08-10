@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface Segment<T extends string> {
   value: T;
@@ -20,8 +20,10 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
 }: SegmentedControlProps<T>) {
+  const { colors, border, font } = useTheme();
+
   return (
-    <View style={styles.track}>
+    <View style={[styles.track, { backgroundColor: colors.bgCard, borderWidth: border.rest.width, borderColor: border.rest.color }]}>
       {segments.map((segment, index) => {
         const active = segment.value === value;
         return (
@@ -30,12 +32,19 @@ export function SegmentedControl<T extends string>({
             onPress={() => !segment.disabled && onChange(segment.value)}
             style={[
               styles.segment,
-              index > 0 && styles.segmentDivider,
-              active && styles.segmentActive,
-              segment.disabled && styles.segmentDisabled,
+              index > 0 && { borderLeftWidth: border.soft.width, borderLeftColor: border.soft.color },
+              { backgroundColor: active ? colors.border : segment.disabled ? colors.bgElevated : 'transparent' },
             ]}
           >
-            <Text style={[styles.label, active && styles.labelActive, segment.disabled && styles.labelDisabled]}>
+            <Text
+              style={[
+                styles.label,
+                {
+                  fontFamily: font.family.monoBold,
+                  color: active ? colors.textInverse : segment.disabled ? colors.textMuted : colors.textSecondary,
+                },
+              ]}
+            >
               {segment.disabled ? '🔒 ' : ''}
               {segment.label.toUpperCase()}
             </Text>
@@ -49,38 +58,16 @@ export function SegmentedControl<T extends string>({
 const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
-    backgroundColor: color.bgCard,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    overflow: 'hidden',
+    height: 44,
   },
   segment: {
     flex: 1,
-    paddingVertical: spacing.xs,
     alignItems: 'center',
-  },
-  segmentDivider: {
-    borderLeftWidth: borderWidth.base,
-    borderLeftColor: color.border,
-  },
-  segmentActive: {
-    backgroundColor: color.border,
-  },
-  segmentDisabled: {
-    backgroundColor: color.bgElevated,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   label: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
-  },
-  labelActive: {
-    color: color.textInverse,
-  },
-  labelDisabled: {
-    color: color.textMuted,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
 });

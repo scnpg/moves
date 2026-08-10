@@ -11,11 +11,12 @@ import { TextField } from '@/components/TextField';
 import { signIn } from '@/features/auth/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
-import { color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export default function SignInScreen() {
   const { t } = useLocale();
   const insets = useSafeAreaInsets();
+  const { colors, font } = useTheme();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,7 @@ export default function SignInScreen() {
 
   return (
     <Screen>
-      <View style={[styles.langCorner, { top: insets.top + spacing.xs }]}>
+      <View style={[styles.langCorner, { top: insets.top + 8 }]}>
         <LanguageToggle />
       </View>
       <KeyboardAvoidingView
@@ -44,7 +45,10 @@ export default function SignInScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.logoWrap}>
             <SunburstBackdrop />
-            <Text style={styles.title}>MOVES?</Text>
+            <Text style={[styles.title, { fontFamily: font.family.logo, color: colors.textPrimary }]}>MOVES?</Text>
+            <Text style={[styles.tagline, { color: colors.textPrimary, fontFamily: font.family.bodyRegular }]}>
+              {t('auth.tagline')}
+            </Text>
           </View>
 
           <View style={styles.form}>
@@ -62,12 +66,15 @@ export default function SignInScreen() {
               secureTextEntry
               placeholder={t('auth.passwordPlaceholder')}
             />
-            <Button label={t('auth.signIn')} onPress={handleSignIn} loading={loading} />
+            <Button label={t('auth.signIn')} onPress={handleSignIn} loading={loading} size="lg" />
           </View>
 
           <Link href="/(auth)/sign-up" style={styles.link}>
-            <Text style={styles.linkText}>
-              {t('auth.newHere')} <Text style={styles.linkTextStrong}>{t('auth.createAccount')}</Text>
+            <Text style={[styles.linkText, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>
+              {t('auth.newHere')}{' '}
+              <Text style={[styles.linkTextStrong, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>
+                {t('auth.createAccount')}
+              </Text>
             </Text>
           </Link>
         </ScrollView>
@@ -80,38 +87,40 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   langCorner: {
     position: 'absolute',
-    right: spacing.lg,
+    right: 24,
     zIndex: 1,
   },
   content: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: spacing.lg,
-    gap: spacing.lg,
+    padding: 24,
+    gap: 24,
   },
   logoWrap: {
     alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
   },
   title: {
-    fontFamily: font.family.logo,
-    fontSize: font.size.hero + 12,
-    color: color.textPrimary,
+    fontSize: 40,
+    lineHeight: 40,
+    textAlign: 'center',
+  },
+  tagline: {
+    fontSize: 16,
     textAlign: 'center',
   },
   form: {
-    gap: spacing.md,
+    gap: 16,
   },
   link: {
     alignSelf: 'center',
-    marginTop: spacing.sm,
+    marginTop: 8,
   },
   linkText: {
-    color: color.textSecondary,
-    fontSize: font.size.sm,
+    fontSize: 14,
   },
   linkTextStrong: {
-    color: color.textPrimary,
-    fontWeight: font.weight.heavy,
     textDecorationLine: 'underline',
   },
 });

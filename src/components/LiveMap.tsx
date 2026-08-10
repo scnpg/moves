@@ -1,13 +1,18 @@
+import { forwardRef, useImperativeHandle, type ForwardedRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { LiveMapHandle } from '@/components/LiveMap.types';
 import { useLocale } from '@/i18n/LocaleProvider';
 import type { EligibleMove } from '@/lib/database.types';
-import { borderWidth, color, degreeColor, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface LiveMapProps {
   moves: EligibleMove[];
   center: { lat: number; lng: number } | null;
   onSelectMove: (moveId: string) => void;
+  /** Web-only (LiveMap.web.tsx draws a real geographic coverage bubble) - accepted here just to keep props identical across platforms; this decorative fallback has no real coordinates to draw one against. */
+  radiusMiles?: number | null;
+  fitRadiusMiles?: number | null;
 }
 
 function isLiveNow(move: EligibleMove) {
@@ -28,16 +33,22 @@ function pinPosition(id: string) {
  * build gets a genuine interactive map - see LiveMap.web.tsx, which Metro
  * picks automatically on that platform.
  */
-export function LiveMap({ moves, onSelectMove }: LiveMapProps) {
+function LiveMapImpl({ moves, onSelectMove }: LiveMapProps, ref: ForwardedRef<LiveMapHandle>) {
   const { t } = useLocale();
+  const { colors, border, signal, font, map } = useTheme();
   const pins = moves.slice(0, 8);
 
+  // Decorative, non-geographic panel (see file doc below) - there's no real
+  // pan/zoom state to reset, so recenter() is a harmless no-op. Exists so
+  // callers can hold one LiveMapHandle type across both platforms.
+  useImperativeHandle(ref, () => ({ recenter: () => {} }), []);
+
   return (
-    <View style={styles.panel}>
-      <Text style={styles.label}>{t('liveMap.label')}</Text>
+    <View style={[styles.panel, { backgroundColor: map.bg }]}>
+      <Text style={[styles.label, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('liveMap.label')}</Text>
       {pins.map((move) => {
         const pos = pinPosition(move.id);
-        const dotColor = degreeColor[move.degree_limit];
+        const dotColor = signal.degree[move.degree_limit];
         return (
           <Pressable
             key={move.id}
@@ -45,7 +56,7 @@ export function LiveMap({ moves, onSelectMove }: LiveMapProps) {
             style={[styles.pinWrap, pos as object]}
           >
             {isLiveNow(move) ? <View style={[styles.pinRing, { borderColor: dotColor }]} /> : null}
-            <View style={[styles.pinDot, { backgroundColor: dotColor }]} />
+            <View style={[styles.pinDot, { backgroundColor: dotColor, borderColor: colors.border, borderWidth: border.rest.width }]} />
           </Pressable>
         );
       })}
@@ -53,25 +64,18 @@ export function LiveMap({ moves, onSelectMove }: LiveMapProps) {
   );
 }
 
+export const LiveMap = forwardRef(LiveMapImpl);
+
 const styles = StyleSheet.create({
   panel: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    height: 160,
-    backgroundColor: color.bgElevated,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    borderRadius: radius.md,
+    flex: 1,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
   label: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.wide,
+    fontSize: 11,
+    letterSpacing: 0.9,
   },
   pinWrap: {
     position: 'absolute',
@@ -81,16 +85,13 @@ const styles = StyleSheet.create({
   pinDot: {
     width: 12,
     height: 12,
-    borderRadius: 6,
-    borderWidth: borderWidth.thin,
-    borderColor: color.border,
   },
   pinRing: {
     position: 'absolute',
     width: 30,
     height: 30,
     borderRadius: 15,
-    borderWidth: borderWidth.thin,
+    borderWidth: 1,
     opacity: 0.5,
   },
 });

@@ -4,7 +4,7 @@ import { Avatar } from '@/components/Avatar';
 import { HoverPressable } from '@/components/HoverPressable';
 import { useLocale } from '@/i18n/LocaleProvider';
 import type { SearchFriendshipStatus } from '@/lib/database.types';
-import { borderWidth, color, font, radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface UserRowProps {
   avatarUrl?: string | null;
@@ -36,31 +36,32 @@ export function UserRow({
   onUnfriend,
 }: UserRowProps) {
   const { t } = useLocale();
+  const { colors, border, font } = useTheme();
 
   return (
     <Pressable onPress={onPress} style={styles.row}>
       <Avatar uri={avatarUrl} name={name} size={44} closeFriend={isCloseFriend} />
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={[styles.name, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={1}>
           {name}
         </Text>
-        <Text style={styles.username} numberOfLines={1}>
+        <Text style={[styles.username, { color: colors.textMuted, fontFamily: font.family.monoRegular }]} numberOfLines={1}>
           @{username}
         </Text>
       </View>
       {friendshipStatus === 'none' && onAdd ? (
-        <HoverPressable onPress={onAdd} style={styles.actionPrimary}>
-          <Text style={styles.actionPrimaryText}>{t('userRow.add')}</Text>
+        <HoverPressable onPress={onAdd} style={[styles.actionPrimary, { backgroundColor: colors.brand, borderWidth: border.rest.width, borderColor: colors.border }]}>
+          <Text style={[styles.actionPrimaryText, { color: colors.onAccent, fontFamily: font.family.monoBold }]}>{t('userRow.add')}</Text>
         </HoverPressable>
       ) : null}
       {friendshipStatus === 'pending_sent' ? (
         <View style={styles.acceptedActions}>
-          <View style={styles.actionMuted}>
-            <Text style={styles.actionMutedText}>{t('userRow.requested')}</Text>
+          <View style={[styles.actionMuted, { borderWidth: border.soft.width, borderColor: border.soft.color }]}>
+            <Text style={[styles.actionMutedText, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('userRow.requested')}</Text>
           </View>
           {onCancel ? (
-            <HoverPressable onPress={onCancel} style={styles.unfriendButton}>
-              <Text style={styles.unfriendText}>{t('userRow.cancel')}</Text>
+            <HoverPressable onPress={onCancel} style={[styles.unfriendButton, { borderWidth: border.rest.width, borderColor: colors.border }]}>
+              <Text style={[styles.unfriendText, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('userRow.cancel')}</Text>
             </HoverPressable>
           ) : null}
         </View>
@@ -68,13 +69,13 @@ export function UserRow({
       {friendshipStatus === 'pending_received' ? (
         <View style={styles.acceptedActions}>
           {onAccept ? (
-            <HoverPressable onPress={onAccept} style={styles.actionPrimary}>
-              <Text style={styles.actionPrimaryText}>{t('userRow.accept')}</Text>
+            <HoverPressable onPress={onAccept} style={[styles.actionPrimary, { backgroundColor: colors.brand, borderWidth: border.rest.width, borderColor: colors.border }]}>
+              <Text style={[styles.actionPrimaryText, { color: colors.onAccent, fontFamily: font.family.monoBold }]}>{t('userRow.accept')}</Text>
             </HoverPressable>
           ) : null}
           {onDecline ? (
-            <HoverPressable onPress={onDecline} style={styles.unfriendButton}>
-              <Text style={styles.unfriendText}>{t('userRow.decline')}</Text>
+            <HoverPressable onPress={onDecline} style={[styles.unfriendButton, { borderWidth: border.rest.width, borderColor: colors.border }]}>
+              <Text style={[styles.unfriendText, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('userRow.decline')}</Text>
             </HoverPressable>
           ) : null}
         </View>
@@ -83,12 +84,12 @@ export function UserRow({
         <View style={styles.acceptedActions}>
           {onToggleClose ? (
             <HoverPressable onPress={onToggleClose} style={styles.starButton} lightenOpacity={0.25}>
-              <Text style={[styles.star, isCloseFriend && styles.starActive]}>★</Text>
+              <Text style={[styles.star, { color: isCloseFriend ? colors.closeFriend : colors.borderSubtle }]}>★</Text>
             </HoverPressable>
           ) : null}
           {onUnfriend ? (
-            <HoverPressable onPress={onUnfriend} style={styles.unfriendButton}>
-              <Text style={styles.unfriendText}>{t('userRow.unfriend')}</Text>
+            <HoverPressable onPress={onUnfriend} style={[styles.unfriendButton, { borderWidth: border.rest.width, borderColor: colors.border }]}>
+              <Text style={[styles.unfriendText, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('userRow.unfriend')}</Text>
             </HoverPressable>
           ) : null}
         </View>
@@ -101,79 +102,52 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    gap: 12,
+    paddingVertical: 10,
   },
   info: {
     flex: 1,
   },
   name: {
-    color: color.textPrimary,
-    fontSize: font.size.md,
-    fontWeight: font.weight.bold,
+    fontSize: 15,
   },
   username: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.xs,
+    fontSize: 11,
+    letterSpacing: 0.7,
   },
   actionPrimary: {
-    backgroundColor: color.brand,
-    borderWidth: borderWidth.thin,
-    borderColor: color.border,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   actionPrimaryText: {
-    fontFamily: font.family.mono,
-    color: color.textPrimary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 10,
+    letterSpacing: 0.8,
   },
   actionMuted: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.thin,
-    borderColor: color.borderSubtle,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   actionMutedText: {
-    fontFamily: font.family.mono,
-    color: color.textMuted,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    fontSize: 10,
+    letterSpacing: 0.8,
   },
   acceptedActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 8,
   },
   starButton: {
-    padding: spacing.xxs,
-    borderRadius: radius.sm,
+    padding: 4,
   },
   star: {
-    fontSize: font.size.lg,
-    color: color.borderSubtle,
-  },
-  starActive: {
-    color: color.closeFriend,
+    fontSize: 18,
   },
   unfriendButton: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
-    borderRadius: radius.sm,
-    borderWidth: borderWidth.thin,
-    borderColor: color.border,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   unfriendText: {
-    fontFamily: font.family.mono,
-    color: color.danger,
     fontSize: 10,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.label,
+    letterSpacing: 0.8,
   },
 });

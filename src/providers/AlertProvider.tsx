@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { useLocale } from '@/i18n/LocaleProvider';
-import { borderWidth, color, font, radius, shadow, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface ToastItem {
   id: string;
@@ -34,6 +34,7 @@ export function showConfirm(title: string, message: string, confirmLabel: string
 
 export function AlertProvider({ children }: { children: ReactNode }) {
   const { t } = useLocale();
+  const { colors, border, shadow, font } = useTheme();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
 
@@ -70,18 +71,24 @@ export function AlertProvider({ children }: { children: ReactNode }) {
 
       <View pointerEvents="box-none" style={styles.toastLayer}>
         {toasts.map((toast) => (
-          <Pressable key={toast.id} onPress={() => dismissToast(toast.id)} style={styles.toast}>
-            <Text style={styles.toastTitle}>{toast.title}</Text>
-            {toast.message ? <Text style={styles.toastMessage}>{toast.message}</Text> : null}
+          <Pressable
+            key={toast.id}
+            onPress={() => dismissToast(toast.id)}
+            style={[styles.toast, { backgroundColor: colors.bgCard, borderWidth: border.rest.width, borderColor: colors.border, ...shadow.hard }]}
+          >
+            <Text style={[styles.toastTitle, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{toast.title}</Text>
+            {toast.message ? (
+              <Text style={[styles.toastMessage, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>{toast.message}</Text>
+            ) : null}
           </Pressable>
         ))}
       </View>
 
       {confirmRequest ? (
-        <View style={styles.overlay}>
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>{confirmRequest.title}</Text>
-            <Text style={styles.confirmMessage}>{confirmRequest.message}</Text>
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <View style={[styles.confirmCard, { backgroundColor: colors.bgCard, borderWidth: border.rest.width, borderColor: colors.border, ...shadow.hard }]}>
+            <Text style={[styles.confirmTitle, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{confirmRequest.title}</Text>
+            <Text style={[styles.confirmMessage, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>{confirmRequest.message}</Text>
             <View style={styles.confirmActions}>
               <Button
                 label={t('common.cancel')}
@@ -91,7 +98,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
               />
               <Button
                 label={confirmRequest.confirmLabel}
-                variant="danger"
+                variant="destructive"
                 onPress={() => resolveConfirm(true)}
                 style={styles.flexButton}
               />
@@ -110,29 +117,21 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
+    paddingTop: 32,
+    paddingHorizontal: 16,
+    gap: 12,
     zIndex: 1000,
   },
   toast: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: color.bgCard,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    ...shadow.card,
+    padding: 16,
   },
   toastTitle: {
-    color: color.textPrimary,
-    fontSize: font.size.md,
-    fontWeight: font.weight.heavy,
+    fontSize: 15,
   },
   toastMessage: {
-    color: color.textSecondary,
-    fontSize: font.size.sm,
+    fontSize: 13,
     marginTop: 2,
   },
   overlay: {
@@ -141,36 +140,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: color.overlay,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg,
+    padding: 16,
     zIndex: 1001,
   },
   confirmCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: color.bgCard,
-    borderWidth: borderWidth.base,
-    borderColor: color.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    ...shadow.card,
+    padding: 16,
+    gap: 12,
   },
   confirmTitle: {
-    color: color.textPrimary,
-    fontSize: font.size.lg,
-    fontWeight: font.weight.heavy,
+    fontSize: 18,
   },
   confirmMessage: {
-    color: color.textSecondary,
-    fontSize: font.size.sm,
+    fontSize: 14,
   },
   confirmActions: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    gap: 12,
+    marginTop: 8,
   },
   flexButton: {
     flex: 1,

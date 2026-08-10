@@ -17,7 +17,7 @@ import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { FriendListItem, FriendRequest } from '@/lib/database.types';
 import { useAuth } from '@/providers/AuthProvider';
-import { color, font, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 type Tab = 'friends' | 'requests';
 
@@ -25,6 +25,7 @@ export default function FriendsScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const { t } = useLocale();
+  const { colors, border, font } = useTheme();
   const [tab, setTab] = useState<Tab>('friends');
   const [friends, setFriends] = useState<FriendListItem[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -118,8 +119,8 @@ export default function FriendsScreen() {
         options={{
           headerShown: true,
           title: t('friendsScreen.title'),
-          headerStyle: { backgroundColor: color.bg },
-          headerTintColor: color.textPrimary,
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.textPrimary,
         }}
       />
       <View style={styles.tabsRow}>
@@ -135,7 +136,7 @@ export default function FriendsScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={color.brand} />
+          <ActivityIndicator color={colors.brand} />
         </View>
       ) : tab === 'friends' ? (
         <FlatList
@@ -154,10 +155,10 @@ export default function FriendsScreen() {
               onUnfriend={() => handleUnfriend(item)}
             />
           )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: border.soft.color }]} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>{t('friendsScreen.noFriendsYet')}</Text>
+              <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('friendsScreen.noFriendsYet')}</Text>
             </View>
           }
         />
@@ -169,11 +170,11 @@ export default function FriendsScreen() {
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={
             <View style={styles.requestsWrap}>
-              <Text style={styles.sectionTitle}>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>
                 {incoming.length > 0 ? `${t('friendsScreen.received')} (${incoming.length})` : t('friendsScreen.received')}
               </Text>
               {incoming.length === 0 ? (
-                <Text style={styles.emptySectionText}>{t('friendsScreen.noIncoming')}</Text>
+                <Text style={[styles.emptySectionText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('friendsScreen.noIncoming')}</Text>
               ) : (
                 incoming.map((r) => (
                   <UserRow
@@ -189,11 +190,11 @@ export default function FriendsScreen() {
                 ))
               )}
 
-              <Text style={[styles.sectionTitle, styles.sentTitle]}>
+              <Text style={[styles.sectionTitle, styles.sentTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>
                 {outgoing.length > 0 ? `${t('friendsScreen.sent')} (${outgoing.length})` : t('friendsScreen.sent')}
               </Text>
               {outgoing.length === 0 ? (
-                <Text style={styles.emptySectionText}>{t('friendsScreen.noOutgoing')}</Text>
+                <Text style={[styles.emptySectionText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('friendsScreen.noOutgoing')}</Text>
               ) : (
                 outgoing.map((r) => (
                   <UserRow
@@ -222,44 +223,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabsRow: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
   listContent: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
   requestsWrap: {
-    gap: spacing.xs,
+    gap: 8,
   },
   sectionTitle: {
-    fontFamily: font.family.mono,
-    color: color.textSecondary,
-    fontSize: font.size.xs,
-    fontWeight: font.weight.bold,
-    letterSpacing: font.tracking.wide,
-    marginTop: spacing.sm,
+    fontSize: 11,
+    letterSpacing: 0.9,
+    marginTop: 12,
   },
   sentTitle: {
-    marginTop: spacing.lg,
+    marginTop: 24,
   },
   emptySectionText: {
-    color: color.textMuted,
-    fontSize: font.size.sm,
-    paddingVertical: spacing.xs,
+    fontSize: 14,
+    paddingVertical: 8,
   },
   separator: {
     height: 1,
-    backgroundColor: color.borderSubtle,
   },
   empty: {
-    paddingTop: spacing.xxl,
-    paddingHorizontal: spacing.lg,
+    paddingTop: 48,
+    paddingHorizontal: 24,
     alignItems: 'center',
   },
   emptyText: {
-    color: color.textMuted,
-    fontSize: font.size.sm,
+    fontSize: 14,
     textAlign: 'center',
   },
 });
