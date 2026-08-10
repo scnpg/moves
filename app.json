@@ -9,13 +9,13 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.moves.app",
+      "bundleIdentifier": "com.movesquestion.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Moves uses your location to show nearby public Moves and to set the location of Moves you host."
       }
     },
     "android": {
-      "package": "com.moves.app",
+      "package": "com.movesquestion.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
