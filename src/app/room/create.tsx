@@ -19,7 +19,7 @@ import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { DegreeLimit, FriendListItem, FriendOfFriendSuggestion, SearchUserResult } from '@/lib/database.types';
 import { isCloseFriendsUnlocked, isPrivateUnlocked, nextMilestoneLabel } from '@/lib/referrals';
-import { combineDateAndTime, timeAfter, timeString } from '@/lib/time';
+import { combineDateAndTime, timeString } from '@/lib/time';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -41,6 +41,9 @@ const HOURS_24 = Array.from({ length: 24 }, (_, i) => i);
 const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
+/** Start/end date+time are now paired fields in the main section - only one popover open at a time. */
+type OpenField = 'startDate' | 'startTime' | 'endDate' | 'endTime' | null;
+
 export default function CreateMoveScreen() {
   const { session } = useAuth();
   const { t } = useLocale();
@@ -52,10 +55,9 @@ export default function CreateMoveScreen() {
   const [degreeLimit, setDegreeLimit] = useState<DegreeLimit>(3);
   const [startTime, setStartTime] = useState(() => timeString(new Date()));
   const [endTime, setEndTime] = useState(() => timeString(new Date(Date.now() + 2 * 60 * 60_000)));
-  const [moveDate, setMoveDate] = useState(() => new Date());
-  const [startOpen, setStartOpen] = useState(false);
-  const [endOpen, setEndOpen] = useState(false);
-  const [dateOpen, setDateOpen] = useState(false);
+  const [startDate, setStartDate] = useState(() => new Date());
+  const [endDate, setEndDate] = useState(() => new Date());
+  const [openField, setOpenField] = useState<OpenField>(null);
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [maxMembers, setMaxMembers] = useState('');
@@ -136,8 +138,12 @@ export default function CreateMoveScreen() {
       return;
     }
 
-    const startsAt = combineDateAndTime(moveDate, startTime);
-    const expiresAt = timeAfter(endTime, startsAt, startsAt);
+    const startsAt = combineDateAndTime(startDate, startTime);
+    const expiresAt = combineDateAndTime(endDate, endTime);
+    if (expiresAt.getTime() <= startsAt.getTime()) {
+      notify(t('createMove.invalidEndTime'), t('createMove.invalidEndTimeMessage'));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -189,15 +195,33 @@ export default function CreateMoveScreen() {
 
         <View style={styles.timeRow}>
           <View style={styles.timeCol}>
+            <DatePicker
+              label={t('createMove.startDateLabel')}
+              value={startDate}
+              onChange={setStartDate}
+              open={openField === 'startDate'}
+              onToggle={() => setOpenField((f) => (f === 'startDate' ? null : 'startDate'))}
+            />
+          </View>
+          <View style={styles.timeCol}>
             <TimeDropdown
               label={t('createMove.starts')}
               value={startTime}
               onChange={setStartTime}
-              open={startOpen}
-              onToggle={() => {
-                setStartOpen((o) => !o);
-                setEndOpen(false);
-              }}
+              open={openField === 'startTime'}
+              onToggle={() => setOpenField((f) => (f === 'startTime' ? null : 'startTime'))}
+            />
+          </View>
+        </View>
+
+        <View style={styles.timeRow}>
+          <View style={styles.timeCol}>
+            <DatePicker
+              label={t('createMove.endDateLabel')}
+              value={endDate}
+              onChange={setEndDate}
+              open={openField === 'endDate'}
+              onToggle={() => setOpenField((f) => (f === 'endDate' ? null : 'endDate'))}
             />
           </View>
           <View style={styles.timeCol}>
@@ -205,11 +229,8 @@ export default function CreateMoveScreen() {
               label={t('createMove.endTime')}
               value={endTime}
               onChange={setEndTime}
-              open={endOpen}
-              onToggle={() => {
-                setEndOpen((o) => !o);
-                setStartOpen(false);
-              }}
+              open={openField === 'endTime'}
+              onToggle={() => setOpenField((f) => (f === 'endTime' ? null : 'endTime'))}
             />
           </View>
         </View>
@@ -313,14 +334,6 @@ export default function CreateMoveScreen() {
               onChangeText={setDescription}
               placeholder={t('createMove.descriptionPlaceholder')}
               multiline
-            />
-
-            <DatePicker
-              label={t('createMove.dateLabel')}
-              value={moveDate}
-              onChange={setMoveDate}
-              open={dateOpen}
-              onToggle={() => setDateOpen((o) => !o)}
             />
 
             <TextField

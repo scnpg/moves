@@ -32,14 +32,3 @@ export function combineDateAndTime(date: Date, hhmm: string): Date {
   combined.setHours(h, m, 0, 0);
   return combined;
 }
-
-/** Combines "HH:MM" with `baseDate`'s date, rolling forward a day at a time until it's after `after` - handles an end time that crosses midnight past the start time. */
-export function timeAfter(hhmm: string, baseDate: Date, after: Date): Date {
-  const [h, m] = hhmm.split(':').map(Number);
-  const candidate = new Date(baseDate);
-  candidate.setHours(h, m, 0, 0);
-  while (candidate.getTime() <= after.getTime()) {
-    candidate.setDate(candidate.getDate() + 1);
-  }
-  return candidate;
-}
