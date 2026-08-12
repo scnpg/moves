@@ -13,6 +13,8 @@ interface SliderProps {
   /** Fires once when the drag ends - the right moment to trigger a network refetch. */
   onSlidingComplete?: (value: number) => void;
   formatValue?: (value: number) => string;
+  /** Values to call out on the track with a tick + label, e.g. [2, 50]. Ones matching min/max are skipped (already shown as end labels). */
+  milestones?: number[];
 }
 
 const TRACK_HEIGHT = 6;
@@ -25,14 +27,23 @@ const THUMB_SIZE = 24;
  * track - position is read directly from the gesture's local x, no
  * onLayout measurement involved (unreliable for this RN/RNW combination
  * elsewhere in the app - see (tabs)/index.tsx's mapHeight comment).
+ *
+ * Position <-> value mapping is logarithmic rather than linear (requires
+ * min > 0): equal drag distance near the low end of the track moves the
+ * value far less than the same drag distance near the high end, so most of
+ * the track's precision is spent on small values.
  */
-export function Slider({ min, max, value, onChange, onSlidingComplete, formatValue }: SliderProps) {
+export function Slider({ min, max, value, onChange, onSlidingComplete, formatValue, milestones }: SliderProps) {
   const { colors, borderWidth, font } = useTheme();
   const trackWidth = useSharedValue(0);
-  const fraction = useSharedValue((value - min) / (max - min));
+  const logRange = Math.log(max / min);
 
+  const toFraction = (v: number) => Math.min(1, Math.max(0, Math.log(Math.max(v, min) / min) / logRange));
+  const fraction = useSharedValue(toFraction(value));
+
+  const roundValue = (v: number) => (v < 10 ? Math.round(v * 2) / 2 : Math.round(v));
+  const valueFromFraction = (f: number) => Math.min(max, Math.max(min, roundValue(min * Math.exp(f * logRange))));
   const clampFraction = (x: number, width: number) => Math.min(1, Math.max(0, width > 0 ? x / width : 0));
-  const valueFromFraction = (f: number) => Math.round(min + f * (max - min));
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
@@ -51,6 +62,8 @@ export function Slider({ min, max, value, onChange, onSlidingComplete, formatVal
     transform: [{ translateX: -THUMB_SIZE / 2 }],
   }));
 
+  const tickMarks = (milestones ?? []).filter((m) => m > min && m < max);
+
   return (
     <View>
       <Text style={[styles.value, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>
@@ -67,11 +80,30 @@ export function Slider({ min, max, value, onChange, onSlidingComplete, formatVal
           <View style={[styles.track, { backgroundColor: colors.bgElevated, borderWidth: borderWidth.hairline, borderColor: colors.border }]}>
             <Animated.View style={[styles.fill, fillStyle, { backgroundColor: colors.brand }]} />
           </View>
+          {tickMarks.map((m) => (
+            <View key={m} pointerEvents="none" style={[styles.tick, { left: `${toFraction(m) * 100}%`, backgroundColor: colors.border }]} />
+          ))}
           <Animated.View
             style={[styles.thumb, thumbStyle, { backgroundColor: colors.bgCard, borderWidth: borderWidth.emphatic, borderColor: colors.border }]}
           />
         </View>
       </GestureDetector>
+
+      {tickMarks.length > 0 ? (
+        <View style={styles.milestoneRow}>
+          {tickMarks.map((m) => (
+            <Text
+              key={m}
+              style={[
+                styles.milestoneLabel,
+                { left: `${toFraction(m) * 100}%`, color: colors.textMuted, fontFamily: font.family.monoRegular },
+              ]}
+            >
+              {formatValue ? formatValue(m) : m}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       <View style={styles.endsRow}>
         <Text style={[styles.endLabel, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
@@ -106,6 +138,21 @@ const styles = StyleSheet.create({
     width: THUMB_SIZE,
     height: THUMB_SIZE,
     top: 4,
+  },
+  tick: {
+    position: 'absolute',
+    width: 2,
+    height: TRACK_HEIGHT + 6,
+    top: -3,
+  },
+  milestoneRow: {
+    height: 14,
+    marginTop: 4,
+  },
+  milestoneLabel: {
+    position: 'absolute',
+    fontSize: 10,
+    transform: [{ translateX: -12 }],
   },
   endsRow: {
     flexDirection: 'row',

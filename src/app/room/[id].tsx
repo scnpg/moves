@@ -7,8 +7,11 @@ import {
   StyleSheet,
   Text,
   View,
+  type TextInput,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { Extrapolation, interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Avatar, AvatarStack } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -47,6 +50,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink', 4: 'red' } as const;
+const MINI_BAR_HEIGHT = 52;
 
 export default function MoveRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -69,6 +73,43 @@ export default function MoveRoomScreen() {
   const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
   const [, forceCountdownTick] = useState(0);
   const messagesRef = useRef<FlatList>(null);
+  const composerInputRef = useRef<TextInput>(null);
+
+  // Collapsible header: title/countdown + "who's here" shrink to a compact
+  // mini-bar so the chat gets more vertical room. Driven by discrete
+  // triggers (tap/scroll/drag), not a scroll-position-following animation -
+  // collapseProgress just eases between the two states.
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const collapseProgress = useSharedValue(0);
+  const expandedHeaderHeight = useSharedValue(0);
+
+  useEffect(() => {
+    collapseProgress.value = withTiming(headerCollapsed ? 1 : 0, { duration: 220 });
+  }, [headerCollapsed, collapseProgress]);
+
+  const collapseChat = useCallback(() => setHeaderCollapsed(true), []);
+  const expandChat = useCallback(() => setHeaderCollapsed(false), []);
+  const focusComposer = useCallback(() => composerInputRef.current?.focus(), []);
+
+  const composerPan = Gesture.Pan()
+    .activeOffsetY(-14)
+    .failOffsetY(20)
+    .failOffsetX([-20, 20])
+    .onStart(() => {
+      runOnJS(collapseChat)();
+      runOnJS(focusComposer)();
+    });
+
+  const headerContainerStyle = useAnimatedStyle(() => {
+    if (expandedHeaderHeight.value <= 0) return {};
+    return { height: interpolate(collapseProgress.value, [0, 1], [expandedHeaderHeight.value, MINI_BAR_HEIGHT], Extrapolation.CLAMP) };
+  });
+  const fullHeaderStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(collapseProgress.value, [0, 0.6], [1, 0], Extrapolation.CLAMP),
+  }));
+  const miniBarStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(collapseProgress.value, [0.4, 1], [0, 1], Extrapolation.CLAMP),
+  }));
 
   const isHost = !!(move && myId && move.host_id === myId);
   const isApproved = isHost || membership?.status === 'approved';
@@ -364,7 +405,34 @@ export default function MoveRoomScreen() {
 
   return (
     <Screen style={styles.noPadding}>
-      {/* Header block */}
+      {/* Collapsible header: title/countdown + who's-here, shrinks to a mini-bar */}
+      <Animated.View style={[styles.collapsibleHeader, headerContainerStyle]}>
+        <View pointerEvents={headerCollapsed ? 'auto' : 'none'} style={styles.miniBarAbs}>
+          <Animated.View style={[styles.miniBar, { backgroundColor: colors.bgElevated, borderBottomWidth: borderWidth.emphatic, borderBottomColor: colors.border }, miniBarStyle]}>
+            <HoverPressable onPress={expandChat} style={styles.miniBarPressable} lightenOpacity={0.08}>
+              <AvatarStack
+                size={22}
+                avatars={approvedMembers.slice(0, 4).map((m) => ({ src: m.profile.avatar_url ?? undefined, alt: m.profile.display_name ?? m.profile.username }))}
+                overflow={Math.max(0, approvedMembers.length - 4)}
+              />
+              <Text style={[styles.miniBarTitle, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={1}>
+                {move.title}
+              </Text>
+              <Badge
+                label={isActive ? t('room.endsIn', { time: countdown }) : t('room.closingIn', { time: countdown })}
+                tone={isActive ? 'green' : 'pink'}
+              />
+            </HoverPressable>
+          </Animated.View>
+        </View>
+
+        <Animated.View
+          pointerEvents={headerCollapsed ? 'none' : 'auto'}
+          style={fullHeaderStyle}
+          onLayout={(e) => {
+            expandedHeaderHeight.value = e.nativeEvent.layout.height;
+          }}
+        >
       <View style={[styles.headerBlock, { borderBottomWidth: borderWidth.emphatic, borderBottomColor: colors.border }]}>
         <View style={[styles.backStrip, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
           <HoverPressable onPress={handleBack} lightenOpacity={0.08} style={styles.backButton}>
@@ -431,6 +499,51 @@ export default function MoveRoomScreen() {
         )}
       </View>
 
+      {/* GOING block */}
+      {approvedMembers.length > 0 ? (
+        <View style={[styles.goingBlock, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+          <View style={styles.goingHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.whosHere')}</Text>
+            <Text style={[styles.goingCount, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>{approvedMembers.length}</Text>
+          </View>
+          <View style={styles.avatarStackWrap}>
+            <AvatarStack
+              size={32}
+              avatars={approvedMembers.slice(0, 6).map((m) => ({ src: m.profile.avatar_url ?? undefined, alt: m.profile.display_name ?? m.profile.username }))}
+              overflow={Math.max(0, approvedMembers.length - 6)}
+            />
+          </View>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={approvedMembers}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={styles.attendeeRow}
+            renderItem={({ item: m }) => (
+              <HoverPressable
+                onPress={() => (m.user_id !== myId ? router.push(`/users/${m.user_id}`) : undefined)}
+                style={styles.attendeeTile}
+                lightenOpacity={0.15}
+              >
+                <View style={styles.attendeeAvatarWrap}>
+                  <Avatar uri={m.profile.avatar_url} name={m.profile.display_name ?? m.profile.username} size={48} closeFriend={closeFriendIds.has(m.user_id)} />
+                  {isHost && m.user_id !== move.host_id ? (
+                    <HoverPressable onPress={() => handleKick(m.id)} style={[styles.kickBadge, { backgroundColor: colors.danger, borderColor: colors.border, borderWidth: border.rest.width }]}>
+                      <Text style={[styles.kickText, { color: colors.textInverse }]}>×</Text>
+                    </HoverPressable>
+                  ) : null}
+                </View>
+                <Text style={[styles.attendeeName, { color: colors.textMuted, fontFamily: font.family.monoRegular }]} numberOfLines={1}>
+                  {(m.profile.display_name ?? m.profile.username).split(' ')[0]}
+                </Text>
+              </HoverPressable>
+            )}
+          />
+        </View>
+      ) : null}
+        </Animated.View>
+      </Animated.View>
+
       {reportOpen && !isHost && hostMember ? (
         <View style={styles.reportPanelWrap}>
           <ReportUserPanel
@@ -442,51 +555,12 @@ export default function MoveRoomScreen() {
         </View>
       ) : null}
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        onTouchStart={collapseChat}
+      >
         {move.degree_limit === 0 ? <ShareMovePanel shareToken={move.share_token} /> : null}
-
-        {/* GOING block */}
-        {approvedMembers.length > 0 ? (
-          <View style={[styles.goingBlock, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
-            <View style={styles.goingHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.whosHere')}</Text>
-              <Text style={[styles.goingCount, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>{approvedMembers.length}</Text>
-            </View>
-            <View style={styles.avatarStackWrap}>
-              <AvatarStack
-                size={32}
-                avatars={approvedMembers.slice(0, 6).map((m) => ({ src: m.profile.avatar_url ?? undefined, alt: m.profile.display_name ?? m.profile.username }))}
-                overflow={Math.max(0, approvedMembers.length - 6)}
-              />
-            </View>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={approvedMembers}
-              keyExtractor={(m) => m.id}
-              contentContainerStyle={styles.attendeeRow}
-              renderItem={({ item: m }) => (
-                <HoverPressable
-                  onPress={() => (m.user_id !== myId ? router.push(`/users/${m.user_id}`) : undefined)}
-                  style={styles.attendeeTile}
-                  lightenOpacity={0.15}
-                >
-                  <View style={styles.attendeeAvatarWrap}>
-                    <Avatar uri={m.profile.avatar_url} name={m.profile.display_name ?? m.profile.username} size={48} closeFriend={closeFriendIds.has(m.user_id)} />
-                    {isHost && m.user_id !== move.host_id ? (
-                      <HoverPressable onPress={() => handleKick(m.id)} style={[styles.kickBadge, { backgroundColor: colors.danger, borderColor: colors.border, borderWidth: border.rest.width }]}>
-                        <Text style={[styles.kickText, { color: colors.textInverse }]}>×</Text>
-                      </HoverPressable>
-                    ) : null}
-                  </View>
-                  <Text style={[styles.attendeeName, { color: colors.textMuted, fontFamily: font.family.monoRegular }]} numberOfLines={1}>
-                    {(m.profile.display_name ?? m.profile.username).split(' ')[0]}
-                  </Text>
-                </HoverPressable>
-              )}
-            />
-          </View>
-        ) : null}
 
         {/* Approval requests (host only, inline) */}
         {isHost && pendingMembers.length > 0 ? (
@@ -518,6 +592,7 @@ export default function MoveRoomScreen() {
               ref={messagesRef}
               data={messages}
               keyExtractor={(item) => item.id}
+              onScrollBeginDrag={collapseChat}
               contentContainerStyle={styles.messagesContent}
               renderItem={({ item }) => {
                 const mine = item.sender_id === myId;
@@ -570,12 +645,20 @@ export default function MoveRoomScreen() {
             />
 
             {isActive ? (
-              <View style={[styles.composer, { borderTopWidth: border.rest.width, borderTopColor: border.rest.color, backgroundColor: colors.bg }]}>
-                <View style={styles.composerInput}>
-                  <TextField value={messageText} onChangeText={setMessageText} placeholder={t('room.messagePlaceholder')} onSubmitEditing={handleSend} />
+              <GestureDetector gesture={composerPan}>
+                <View style={[styles.composer, { borderTopWidth: border.rest.width, borderTopColor: border.rest.color, backgroundColor: colors.bg }]}>
+                  <View style={styles.composerInput}>
+                    <TextField
+                      ref={composerInputRef}
+                      value={messageText}
+                      onChangeText={setMessageText}
+                      placeholder={t('room.messagePlaceholder')}
+                      onSubmitEditing={handleSend}
+                    />
+                  </View>
+                  <Button label={t('room.send')} onPress={handleSend} size="md" />
                 </View>
-                <Button label={t('room.send')} onPress={handleSend} size="md" />
-              </View>
+              </GestureDetector>
             ) : (
               <View style={styles.closedBanner}>
                 <Text style={[styles.closedText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('room.moveEnded')}</Text>
@@ -611,6 +694,32 @@ const styles = StyleSheet.create({
   reportLink: { fontSize: 11, letterSpacing: 0.9 },
   reportPanelWrap: { paddingHorizontal: 16, paddingTop: 12 },
 
+  collapsibleHeader: {
+    flexShrink: 0,
+    overflow: 'hidden',
+  },
+  miniBarAbs: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: MINI_BAR_HEIGHT,
+    zIndex: 2,
+  },
+  miniBar: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  miniBarPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+  },
+  miniBarTitle: {
+    flex: 1,
+    fontSize: 15,
+  },
   headerBlock: {
     flexShrink: 0,
   },

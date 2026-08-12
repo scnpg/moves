@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,7 +16,7 @@ export function AppHeader() {
   const { session } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, border, font } = useTheme();
+  const { colors, border } = useTheme();
 
   const goHome = () => {
     router.replace(session ? '/(tabs)' : '/(auth)/sign-in');
@@ -35,7 +35,7 @@ export function AppHeader() {
       ]}
     >
       <HoverPressable onPress={goHome} style={styles.logoWrap} lightenOpacity={0.08}>
-        <Text style={[styles.logo, { fontFamily: font.family.logo, color: colors.textPrimary }]}>MOVES?</Text>
+        <Image source={require('../../assets/images/movesletterlogo-trimmed.png')} style={styles.logo} resizeMode="contain" />
       </HoverPressable>
       <HoverPressable onPress={() => router.push('/settings')} style={styles.settingsButton} lightenOpacity={0.2}>
         <Text style={[styles.settingsIcon, { color: colors.textSecondary }]}>⚙</Text>
@@ -59,8 +59,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   logo: {
-    fontSize: 22,
-    lineHeight: 24,
+    width: 120,
+    height: 24,
   },
   settingsButton: {
     width: 34,

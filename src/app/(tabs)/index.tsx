@@ -37,9 +37,10 @@ const REFERRAL_BAR_HEIGHT = 40;
 const TAB_BAR_HEIGHT = 64;
 
 const MILES_TO_METERS = 1609.34;
-const MIN_RADIUS_MILES = 1;
+const MIN_RADIUS_MILES = 0.5;
 const MAX_RADIUS_MILES = 100;
 const DEFAULT_RADIUS_MILES = 25;
+const RADIUS_MILESTONES = [2, 50, 100];
 // Recenter button size (44) + comfortable margins above the sheet and below
 // the map's top edge - below this much visible map, there's no room to float
 // the button without it crowding the sheet handle or the map's own chrome.
@@ -240,6 +241,7 @@ export default function MovesScreen() {
                       onChange={setRadiusMiles}
                       onSlidingComplete={setFetchRadiusMiles}
                       formatValue={(v) => formatRadius(v, unitSystem, t)}
+                      milestones={RADIUS_MILESTONES}
                     />
                   </View>
                 ) : null}
