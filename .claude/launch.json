@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "moves-web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "web"],
+      "runtimeExecutable": "/bin/zsh",
+      "runtimeArgs": ["-c", "export PATH=\"/opt/homebrew/bin:$PATH\"; exec npm run web"],
       "port": 8081
     }
   ]

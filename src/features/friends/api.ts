@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type {
   ContactSuggestion,
   FriendListItem,
+  FriendOfFriendId,
   FriendOfFriendSuggestion,
   FriendRequest,
   MutualFriend,
@@ -119,6 +120,19 @@ export async function getFriendOfFriendSuggestions(limit = 20): Promise<FriendOf
   const { data, error } = await supabase.rpc('get_friend_of_friend_suggestions', { p_limit: limit });
   if (error) throw error;
   return (data ?? []) as FriendOfFriendSuggestion[];
+}
+
+/**
+ * Every friend-of-friend (degree exactly 2) of the caller, mapped to how
+ * many mutual friends connect them - unlike getFriendOfFriendSuggestions
+ * (capped, ordered, for a "people you may know" UI), this is meant for
+ * membership checks: "is this Move's host/attendee a friend-of-friend of
+ * mine", the same way friendIds already answers that for direct friends.
+ */
+export async function getFriendOfFriendIds(): Promise<Map<string, number>> {
+  const { data, error } = await supabase.rpc('get_my_friend_of_friend_ids');
+  if (error) throw error;
+  return new Map(((data ?? []) as FriendOfFriendId[]).map((row) => [row.friend_of_friend_id, row.mutual_count]));
 }
 
 /** Empty until the caller has called updateMyLocation() at least once. */

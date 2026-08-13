@@ -150,8 +150,12 @@ function buildTheme(mode: 'light' | 'dark', p: ModePalette): Theme {
       focused: { width: mode === 'light' ? 2 : 1.5, color: p.brightEdge, hasInsetBar: p.hasFocusInsetBar },
     },
     card: {
-      live: { width: p.cardLiveBorderWidth, color: mode === 'light' ? p.ink900 : p.brightEdge },
-      rest: { width: p.cardRestBorderWidth, color: mode === 'light' ? p.ink900 : p.ink200 },
+      // Every Move card gets the same bright edge (brightEdge already flips
+      // per-mode: black on light paper, near-white on dark paper) - live
+      // cards swap it for red instead, so color alone signals "happening
+      // now" rather than a plain border-vs-no-border distinction.
+      live: { width: p.cardLiveBorderWidth, color: p.signal.red },
+      rest: { width: p.cardRestBorderWidth, color: p.brightEdge },
     },
     shadow: {
       hard: shadowFor(3),

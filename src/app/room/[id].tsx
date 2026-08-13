@@ -2,13 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Avatar, AvatarStack } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -20,7 +22,7 @@ import { Screen } from '@/components/Screen';
 import { ShareMovePanel } from '@/components/ShareMovePanel';
 import { SubHeader } from '@/components/SubHeader';
 import { TextField } from '@/components/TextField';
-import { getCloseFriendIds } from '@/features/friends/api';
+import { getCloseFriendIds, getFriendOfFriendIds, getMyFriends } from '@/features/friends/api';
 import {
   approveMember,
   deleteMove,
@@ -63,12 +65,21 @@ export default function MoveRoomScreen() {
   const [members, setMembers] = useState<MoveMemberWithProfile[]>([]);
   const [messages, setMessages] = useState<MoveMessageWithSender[]>([]);
   const [closeFriendIds, setCloseFriendIds] = useState<Set<string>>(new Set());
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  const [friendOfFriendIds, setFriendOfFriendIds] = useState<Set<string>>(new Set());
   const [messageText, setMessageText] = useState('');
   const [joining, setJoining] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
   const [, forceCountdownTick] = useState(0);
   const messagesRef = useRef<FlatList>(null);
+  // Drives the composer up above the keyboard directly off real keyboard
+  // frame events (see effect below) instead of KeyboardAvoidingView's
+  // "padding" behavior, which measures its own on-screen frame to compute
+  // the overlap - that measurement came back wrong/stale in this screen
+  // (composer ended up rendered underneath the keyboard, never visible).
+  // Using the keyboard's own reported height directly sidesteps that.
+  const keyboardHeight = useSharedValue(0);
 
   const isHost = !!(move && myId && move.host_id === myId);
   const isApproved = isHost || membership?.status === 'approved';
@@ -76,14 +87,18 @@ export default function MoveRoomScreen() {
   const load = useCallback(async () => {
     if (!id || !myId) return;
 
-    const [directMove, myMembership, closeIds] = await Promise.all([
+    const [directMove, myMembership, closeIds, friends, fofCounts] = await Promise.all([
       getMove(id),
       getMyMembership(id, myId),
       getCloseFriendIds().catch(() => new Set<string>()),
+      getMyFriends().catch(() => []),
+      getFriendOfFriendIds().catch(() => new Map<string, number>()),
     ]);
 
     setMembership(myMembership);
     setCloseFriendIds(closeIds);
+    setFriendIds(new Set(friends.map((f) => f.id)));
+    setFriendOfFriendIds(new Set(fofCounts.keys()));
 
     if (directMove) {
       setMove(directMove);
@@ -135,6 +150,36 @@ export default function MoveRoomScreen() {
     const interval = setInterval(() => forceCountdownTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // "will" events fire before the keyboard finishes animating (iOS only -
+  // Android doesn't emit them), so the composer lifts in lockstep with the
+  // keyboard's own motion rather than lagging a frame behind it like "did".
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      keyboardHeight.value = withTiming(e.endCoordinates.height, {
+        duration: e.duration || 250,
+        easing: Easing.out(Easing.ease),
+      });
+    });
+    const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      keyboardHeight.value = withTiming(0, {
+        duration: e?.duration || 250,
+        easing: Easing.out(Easing.ease),
+      });
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardHeight]);
+
+  const keyboardOffsetStyle = useAnimatedStyle(() => ({
+    paddingBottom: keyboardHeight.value,
+  }));
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -193,6 +238,29 @@ export default function MoveRoomScreen() {
   };
 
   const handleBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  // Shared row for every attendee list (Who's here, Friends here, Friends of
+  // friends here) so the tile markup - avatar, close-friend ring, host-only
+  // kick control, tap-to-profile - only exists once.
+  const renderAttendeeTile = ({ item: m }: { item: MoveMemberWithProfile }) => (
+    <HoverPressable
+      onPress={() => (m.user_id !== myId ? router.push(`/users/${m.user_id}`) : undefined)}
+      style={styles.attendeeTile}
+      lightenOpacity={0.15}
+    >
+      <View style={styles.attendeeAvatarWrap}>
+        <Avatar uri={m.profile.avatar_url} name={m.profile.display_name ?? m.profile.username} size={48} closeFriend={closeFriendIds.has(m.user_id)} />
+        {isHost && move && m.user_id !== move.host_id ? (
+          <HoverPressable onPress={() => handleKick(m.id)} style={[styles.kickBadge, { backgroundColor: colors.danger, borderColor: colors.border, borderWidth: border.rest.width }]}>
+            <Text style={[styles.kickText, { color: colors.textInverse }]}>×</Text>
+          </HoverPressable>
+        ) : null}
+      </View>
+      <Text style={[styles.attendeeName, { color: colors.textMuted, fontFamily: font.family.monoRegular }]} numberOfLines={1}>
+        {(m.profile.display_name ?? m.profile.username).split(' ')[0]}
+      </Text>
+    </HoverPressable>
+  );
 
   const handleEndMove = async () => {
     if (!id) return;
@@ -353,6 +421,8 @@ export default function MoveRoomScreen() {
 
   const approvedMembers = members.filter((m) => m.status === 'approved');
   const pendingMembers = members.filter((m) => m.status === 'pending');
+  const friendsHere = approvedMembers.filter((m) => friendIds.has(m.user_id));
+  const friendsOfFriendsHere = approvedMembers.filter((m) => friendOfFriendIds.has(m.user_id));
   const hostMember = members.find((m) => m.user_id === move.host_id);
   const isActive = move.status === 'active';
   const countdownTarget = isActive
@@ -361,6 +431,103 @@ export default function MoveRoomScreen() {
       ? new Date(new Date(move.cooldown_started_at).getTime() + 60 * 60_000).toISOString()
       : move.expires_at;
   const countdown = formatCountdown(countdownTarget);
+
+  // Shared between the two render paths below: when chat is enabled this
+  // renders as the messages FlatList's ListHeaderComponent so the whole
+  // screen (member lists + messages) scrolls as one unit with the composer
+  // pinned after it - otherwise KeyboardAvoidingView's padding has no
+  // scrollable container to work with once this content plus the keyboard
+  // exceeds the screen height, and the composer becomes unreachable. When
+  // chat is disabled there's no composer/keyboard involved, so it's fine
+  // rendered directly instead.
+  const roomHeaderSections = (
+    <>
+      {move.degree_limit === 0 ? <ShareMovePanel shareToken={move.share_token} /> : null}
+
+      {/* GOING block */}
+      {approvedMembers.length > 0 ? (
+        <View style={[styles.goingBlock, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+          <View style={styles.goingHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.whosHere')}</Text>
+            <Text style={[styles.goingCount, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>{approvedMembers.length}</Text>
+          </View>
+          <View style={styles.avatarStackWrap}>
+            <AvatarStack
+              size={32}
+              avatars={approvedMembers.slice(0, 6).map((m) => ({ src: m.profile.avatar_url ?? undefined, alt: m.profile.display_name ?? m.profile.username }))}
+              overflow={Math.max(0, approvedMembers.length - 6)}
+            />
+          </View>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={approvedMembers}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={styles.attendeeRow}
+            renderItem={renderAttendeeTile}
+          />
+        </View>
+      ) : null}
+
+      {/* Friends / friends-of-friends breakdown, in two clearly-labeled categories */}
+      {friendsHere.length > 0 ? (
+        <View style={[styles.goingBlock, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+          <View style={styles.goingHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.yourFriendsHere')}</Text>
+            <Text style={[styles.goingCount, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>{friendsHere.length}</Text>
+          </View>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={friendsHere}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={styles.attendeeRow}
+            renderItem={renderAttendeeTile}
+          />
+        </View>
+      ) : null}
+
+      {friendsOfFriendsHere.length > 0 ? (
+        <View style={[styles.goingBlock, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+          <View style={styles.goingHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.friendsOfFriendsHere')}</Text>
+            <Text style={[styles.goingCount, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>{friendsOfFriendsHere.length}</Text>
+          </View>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={friendsOfFriendsHere}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={styles.attendeeRow}
+            renderItem={renderAttendeeTile}
+          />
+        </View>
+      ) : null}
+
+      {/* Approval requests (host only, inline) */}
+      {isHost && pendingMembers.length > 0 ? (
+        <View style={[styles.requestsSection, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.requests', { count: pendingMembers.length })}</Text>
+          {pendingMembers.map((pm) => (
+            <View key={pm.id} style={styles.requestRow}>
+              <HoverPressable
+                onPress={() => router.push(`/users/${pm.user_id}`)}
+                style={styles.requestIdentityWrap}
+                lightenOpacity={0.1}
+              >
+                <Avatar uri={pm.profile.avatar_url} name={pm.profile.display_name ?? pm.profile.username} size={44} closeFriend={closeFriendIds.has(pm.user_id)} />
+                <Text style={[styles.requestName, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={1}>
+                  {pm.profile.display_name ?? pm.profile.username}
+                </Text>
+              </HoverPressable>
+              <Button label={t('room.decline')} variant="secondary" size="sm" onPress={() => handleReject(pm.id)} />
+              <Button label={t('room.approve')} size="sm" onPress={() => handleApprove(pm.id)} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </>
+  );
 
   return (
     <Screen style={styles.noPadding}>
@@ -442,82 +609,16 @@ export default function MoveRoomScreen() {
         </View>
       ) : null}
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {move.degree_limit === 0 ? <ShareMovePanel shareToken={move.share_token} /> : null}
-
-        {/* GOING block */}
-        {approvedMembers.length > 0 ? (
-          <View style={[styles.goingBlock, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
-            <View style={styles.goingHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.whosHere')}</Text>
-              <Text style={[styles.goingCount, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>{approvedMembers.length}</Text>
-            </View>
-            <View style={styles.avatarStackWrap}>
-              <AvatarStack
-                size={32}
-                avatars={approvedMembers.slice(0, 6).map((m) => ({ src: m.profile.avatar_url ?? undefined, alt: m.profile.display_name ?? m.profile.username }))}
-                overflow={Math.max(0, approvedMembers.length - 6)}
-              />
-            </View>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={approvedMembers}
-              keyExtractor={(m) => m.id}
-              contentContainerStyle={styles.attendeeRow}
-              renderItem={({ item: m }) => (
-                <HoverPressable
-                  onPress={() => (m.user_id !== myId ? router.push(`/users/${m.user_id}`) : undefined)}
-                  style={styles.attendeeTile}
-                  lightenOpacity={0.15}
-                >
-                  <View style={styles.attendeeAvatarWrap}>
-                    <Avatar uri={m.profile.avatar_url} name={m.profile.display_name ?? m.profile.username} size={48} closeFriend={closeFriendIds.has(m.user_id)} />
-                    {isHost && m.user_id !== move.host_id ? (
-                      <HoverPressable onPress={() => handleKick(m.id)} style={[styles.kickBadge, { backgroundColor: colors.danger, borderColor: colors.border, borderWidth: border.rest.width }]}>
-                        <Text style={[styles.kickText, { color: colors.textInverse }]}>×</Text>
-                      </HoverPressable>
-                    ) : null}
-                  </View>
-                  <Text style={[styles.attendeeName, { color: colors.textMuted, fontFamily: font.family.monoRegular }]} numberOfLines={1}>
-                    {(m.profile.display_name ?? m.profile.username).split(' ')[0]}
-                  </Text>
-                </HoverPressable>
-              )}
-            />
-          </View>
-        ) : null}
-
-        {/* Approval requests (host only, inline) */}
-        {isHost && pendingMembers.length > 0 ? (
-          <View style={[styles.requestsSection, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.requests', { count: pendingMembers.length })}</Text>
-            {pendingMembers.map((pm) => (
-              <View key={pm.id} style={styles.requestRow}>
-                <HoverPressable
-                  onPress={() => router.push(`/users/${pm.user_id}`)}
-                  style={styles.requestIdentityWrap}
-                  lightenOpacity={0.1}
-                >
-                  <Avatar uri={pm.profile.avatar_url} name={pm.profile.display_name ?? pm.profile.username} size={44} closeFriend={closeFriendIds.has(pm.user_id)} />
-                  <Text style={[styles.requestName, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={1}>
-                    {pm.profile.display_name ?? pm.profile.username}
-                  </Text>
-                </HoverPressable>
-                <Button label={t('room.decline')} variant="secondary" size="sm" onPress={() => handleReject(pm.id)} />
-                <Button label={t('room.approve')} size="sm" onPress={() => handleApprove(pm.id)} />
-              </View>
-            ))}
-          </View>
-        ) : null}
-
+      <Animated.View style={[styles.flex, keyboardOffsetStyle]}>
         {/* Chat */}
         {move.chat_enabled ? (
           <>
             <FlatList
               ref={messagesRef}
+              style={styles.flex}
               data={messages}
               keyExtractor={(item) => item.id}
+              ListHeaderComponent={roomHeaderSections}
               contentContainerStyle={styles.messagesContent}
               renderItem={({ item }) => {
                 const mine = item.sender_id === myId;
@@ -583,11 +684,14 @@ export default function MoveRoomScreen() {
             )}
           </>
         ) : (
-          <View style={styles.center}>
-            <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('room.chatDisabled')}</Text>
-          </View>
+          <ScrollView>
+            {roomHeaderSections}
+            <View style={styles.center}>
+              <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('room.chatDisabled')}</Text>
+            </View>
+          </ScrollView>
         )}
-      </KeyboardAvoidingView>
+      </Animated.View>
     </Screen>
   );
 }

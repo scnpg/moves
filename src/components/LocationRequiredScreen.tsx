@@ -24,10 +24,10 @@ export function LocationRequiredScreen({ loading, denied, onRetry }: LocationReq
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
       <Text style={styles.icon}>📍</Text>
       <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>
-        {t('locationGate.title')}
+        {!denied && loading ? t('locationGate.locatingTitle') : t('locationGate.title')}
       </Text>
       <Text style={[styles.body, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>
-        {denied ? t('locationGate.deniedBody') : t('locationGate.body')}
+        {denied ? t('locationGate.deniedBody') : loading ? t('locationGate.locatingBody') : t('locationGate.body')}
       </Text>
       {loading ? (
         <ActivityIndicator color={colors.brand} style={styles.spinner} />

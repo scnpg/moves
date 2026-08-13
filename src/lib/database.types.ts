@@ -159,6 +159,11 @@ export interface FriendOfFriendSuggestion {
   mutual_count: number;
 }
 
+export interface FriendOfFriendId {
+  friend_of_friend_id: string;
+  mutual_count: number;
+}
+
 export interface NearbyUserSuggestion {
   id: string;
   username: string;

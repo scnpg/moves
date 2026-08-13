@@ -1,0 +1,24 @@
+{
+  "cli": {
+    "version": ">= 21.7.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascApiKeyPath": "/Users/greysoda762211/.appstoreconnect/private_keys/AuthKey_PF7GA3P9QX.p8",
+        "ascApiKeyIssuerId": "990f2fb0-fb2f-4f95-81fb-e6227b08abb5",
+        "ascApiKeyId": "PF7GA3P9QX",
+        "ascAppId": "6800038333"
+      }
+    }
+  }
+}

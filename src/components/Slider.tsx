@@ -31,8 +31,18 @@ export function Slider({ min, max, value, onChange, onSlidingComplete, formatVal
   const trackWidth = useSharedValue(0);
   const fraction = useSharedValue((value - min) / (max - min));
 
-  const clampFraction = (x: number, width: number) => Math.min(1, Math.max(0, width > 0 ? x / width : 0));
-  const valueFromFraction = (f: number) => Math.round(min + f * (max - min));
+  // Called from .onUpdate()/.onEnd() below, which run as worklets on the UI
+  // thread - these need the 'worklet' directive too, otherwise Reanimated
+  // treats them as JS-thread-only functions and crashes trying to call them
+  // synchronously from the UI thread.
+  const clampFraction = (x: number, width: number) => {
+    'worklet';
+    return Math.min(1, Math.max(0, width > 0 ? x / width : 0));
+  };
+  const valueFromFraction = (f: number) => {
+    'worklet';
+    return Math.round(min + f * (max - min));
+  };
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {

@@ -95,6 +95,28 @@ export interface CreateMoveInput {
   chatEnabled: boolean;
 }
 
+export interface TitleModerationResult {
+  verdict: 'allowed' | 'blocked';
+  reason?: string;
+}
+
+/**
+ * Checks a Move title for intense profanity or hate speech before
+ * creation - see supabase/functions/check-title. Fails open (resolves to
+ * "allowed") on any network/function error rather than throwing, so a
+ * moderation-service hiccup can never block someone from creating a Move.
+ */
+export async function checkTitleForModeration(title: string): Promise<TitleModerationResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke('check-title', { body: { title } });
+    if (error) throw error;
+    return data as TitleModerationResult;
+  } catch (err) {
+    console.warn('checkTitleForModeration failed, allowing by default', err);
+    return { verdict: 'allowed' };
+  }
+}
+
 export async function createMove(input: CreateMoveInput): Promise<Move> {
   const { data, error } = await supabase
     .from('moves')

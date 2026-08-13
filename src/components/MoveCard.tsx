@@ -14,12 +14,22 @@ import { useTheme } from '@/theme/ThemeProvider';
 interface MoveCardProps {
   move: EligibleMove;
   hostIsCloseFriend?: boolean;
+  /** Direct friend hosting - takes priority over friendOfFriendCount when both would apply. */
+  hostIsFriend?: boolean;
+  /** How many mutual friends connect the viewer to the host - presence (not just truthiness) means "is a friend-of-friend", so 0 still counts. */
+  friendOfFriendCount?: number;
   onPress: () => void;
   /** Condensed single-row layout for lists nested inside another screen (e.g. profile's active moves). */
   compact?: boolean;
 }
 
 const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink', 4: 'red' } as const;
+
+// Literal black, not theme-derived - card.rest/card.live already flip
+// light-vs-dark on their own (see themes.ts), but the keyline around them is
+// meant to read as a fixed black outline in both modes, not invert to white
+// the way ink900 does in dark mode.
+const OUTLINE_COLOR = '#000000';
 
 /** Live-ticking "M:SS" style string, remounting the crossfade whenever it changes. Stops ticking once ended. */
 function useLiveCountdown(targetIso: string, status: MoveCardStatus): string {
@@ -69,10 +79,10 @@ function statusPillColors(theme: ReturnType<typeof useTheme>, status: MoveCardSt
   }
 }
 
-export function MoveCard({ move, hostIsCloseFriend, onPress, compact }: MoveCardProps) {
+export function MoveCard({ move, hostIsCloseFriend, hostIsFriend, friendOfFriendCount, onPress, compact }: MoveCardProps) {
   const { t } = useLocale();
   const theme = useTheme();
-  const { colors, border, card, font } = theme;
+  const { colors, border, borderWidth, card, font } = theme;
 
   const status = deriveMoveStatus(move);
   const countdownTarget = countdownTargetFor(status, move);
@@ -108,59 +118,75 @@ export function MoveCard({ move, hostIsCloseFriend, onPress, compact }: MoveCard
     );
   }
 
+  // The keyline only reads as a distinct layer in dark mode, where the
+  // card's own border is white/red against a black ring. In light mode
+  // card.rest is already black (brightEdge flips per-mode), so stacking
+  // another black ring on top of it would just look like one smeared-out
+  // border rather than two - skip it there.
+  const outlineWidth = theme.mode === 'dark' ? borderWidth.emphatic : 0;
+
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.85 }]}>
-      <View style={[styles.card, { backgroundColor: colors.bgCard, borderWidth: cardBorder.width, borderColor: cardBorder.color }]}>
-        <View style={[styles.statusStrip, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
-          <View style={[styles.statusPill, { backgroundColor: pill.bg, borderWidth: border.rest.width, borderColor: colors.border }]}>
-            {pill.dot ? <View style={[styles.statusDot, { backgroundColor: pill.fg }]} /> : null}
-            <Text style={[styles.statusPillText, { color: pill.fg, fontFamily: font.family.monoRegular }]}>{statusLabel}</Text>
-          </View>
-          <View style={status === 'ending' ? [styles.countdownEndingBlock, { backgroundColor: colors.border }] : undefined}>
-            <CrossfadeText
-              text={countdown}
-              style={[
-                styles.countdownText,
-                { color: status === 'ending' ? colors.bgCard : colors.textPrimary, fontFamily: font.family.monoBold },
-              ]}
-            />
-          </View>
-        </View>
-
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Avatar
-              uri={move.host_avatar_url}
-              name={hostName}
-              size={44}
-              closeFriend={hostIsCloseFriend}
-              hosting={status === 'live'}
-              tint={move.degree_limit}
-            />
-            <View style={styles.headerText}>
-              <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={2}>
-                {move.title}
-              </Text>
-              {move.description ? (
-                <Text style={[styles.description, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]} numberOfLines={1}>
-                  {move.description}
-                </Text>
-              ) : (
-                <Text style={[styles.host, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]} numberOfLines={1}>
-                  {t('common.hostedByName', { name: hostName })}
-                </Text>
-              )}
+      <View style={[styles.outline, { borderWidth: outlineWidth, borderColor: OUTLINE_COLOR }]}>
+        <View style={[styles.card, { backgroundColor: colors.bgCard, borderWidth: cardBorder.width, borderColor: cardBorder.color }]}>
+          <View style={[styles.statusStrip, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+            <View style={[styles.statusPill, { backgroundColor: pill.bg, borderWidth: border.rest.width, borderColor: colors.border }]}>
+              {pill.dot ? <View style={[styles.statusDot, { backgroundColor: pill.fg }]} /> : null}
+              <Text style={[styles.statusPillText, { color: pill.fg, fontFamily: font.family.monoRegular }]}>{statusLabel}</Text>
+            </View>
+            <View style={status === 'ending' ? [styles.countdownEndingBlock, { backgroundColor: colors.border }] : undefined}>
+              <CrossfadeText
+                text={countdown}
+                style={[
+                  styles.countdownText,
+                  { color: status === 'ending' ? colors.bgCard : colors.textPrimary, fontFamily: font.family.monoBold },
+                ]}
+              />
             </View>
           </View>
 
-          <View style={styles.metaRow}>
-            <Badge label={t(`degree.badge.${move.degree_limit}`)} tone={DEGREE_TONE[move.degree_limit]} />
-            <Text style={[styles.metaText, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
-              {t('moveCard.peopleIn', { count: move.approved_count })}
-            </Text>
-            {move.requires_approval ? <Badge label={t('moveCard.approval')} tone="yellow" /> : null}
-            {move.is_full ? <Badge label={t('moveCard.full')} tone="ink" /> : null}
-            {distance ? <Text style={[styles.metaText, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>{distance}</Text> : null}
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Avatar
+                uri={move.host_avatar_url}
+                name={hostName}
+                size={44}
+                closeFriend={hostIsCloseFriend}
+                hosting={status === 'live'}
+                tint={move.degree_limit}
+              />
+              <View style={styles.headerText}>
+                <Text style={[styles.title, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={2}>
+                  {move.title}
+                </Text>
+                {move.description ? (
+                  <Text style={[styles.description, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]} numberOfLines={1}>
+                    {move.description}
+                  </Text>
+                ) : (
+                  <View style={styles.hostRow}>
+                    <Text style={[styles.host, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]} numberOfLines={1}>
+                      {t('common.hostedByName', { name: hostName })}
+                    </Text>
+                    {hostIsFriend ? (
+                      <Badge label={t('moveCard.friend')} tone="teal" />
+                    ) : friendOfFriendCount !== undefined ? (
+                      <Badge label={t('moveCard.friendOfFriend')} tone="orange" />
+                    ) : null}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.metaRow}>
+              <Badge label={t(`degree.badge.${move.degree_limit}`)} tone={DEGREE_TONE[move.degree_limit]} />
+              <Text style={[styles.metaText, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
+                {t('moveCard.peopleIn', { count: move.approved_count })}
+              </Text>
+              {move.requires_approval ? <Badge label={t('moveCard.approval')} tone="yellow" /> : null}
+              {move.is_full ? <Badge label={t('moveCard.full')} tone="ink" /> : null}
+              {distance ? <Text style={[styles.metaText, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>{distance}</Text> : null}
+            </View>
           </View>
         </View>
       </View>
@@ -169,6 +195,10 @@ export function MoveCard({ move, hostIsCloseFriend, onPress, compact }: MoveCard
 }
 
 const styles = StyleSheet.create({
+  // Sits directly outside the card's own colored border with no gap, so the
+  // two read as one layered "colored border + black keyline" edge rather
+  // than two separate rings.
+  outline: {},
   card: {
     overflow: 'hidden',
   },
@@ -219,7 +249,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
   },
+  hostRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   host: {
+    flexShrink: 1,
     fontSize: 12,
   },
   description: {

@@ -64,8 +64,8 @@ export const lightPalette: ModePalette = {
   borderStructural: 2,
   borderEmphatic: 3,
   hasFocusInsetBar: true,
-  cardLiveBorderWidth: 3,
-  cardRestBorderWidth: 2,
+  cardLiveBorderWidth: 4,
+  cardRestBorderWidth: 4,
   map: {
     bg: '#E2E2E2',
     water: '#C4D2D9',
@@ -103,8 +103,8 @@ export const darkPalette: ModePalette = {
   borderStructural: 1.5,
   borderEmphatic: 1.5,
   hasFocusInsetBar: false,
-  cardLiveBorderWidth: 1.5,
-  cardRestBorderWidth: 1.5,
+  cardLiveBorderWidth: 3,
+  cardRestBorderWidth: 3,
   map: {
     bg: '#171717',
     water: '#1A2428',

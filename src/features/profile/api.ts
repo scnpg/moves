@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 import { supabase } from '@/lib/supabase';
 import type { Profile, PublicProfile } from '@/lib/database.types';
 
@@ -33,15 +31,17 @@ export async function updateProfile(
 export async function uploadAvatar(userId: string, uri: string, mimeType: string): Promise<string> {
   const path = `${userId}/avatar.jpg`;
 
-  let body: Blob | FormData;
-  if (Platform.OS === 'web') {
-    const response = await fetch(uri);
-    body = await response.blob();
-  } else {
-    const formData = new FormData();
-    formData.append('file', { uri, name: 'avatar.jpg', type: mimeType } as unknown as Blob);
-    body = formData;
-  }
+  // Reading the local uri into a real Blob (same on native and web) rather
+  // than building a React Native-style FormData part ({uri, name, type})
+  // matters as of Expo SDK 57's fetch implementation: its FormData encoder
+  // only recognizes string/Blob/File parts (see
+  // node_modules/expo/src/winter/fetch/convertFormData.ts), not RN's
+  // classic uri-based part shape, so passing that shape through
+  // storage-js's own FormData wrapping threw "Unsupported FormDataPart
+  // implementation" on native. A real Blob is a part type that encoder
+  // does handle.
+  const response = await fetch(uri);
+  const body = await response.blob();
 
   const { error } = await supabase.storage.from('avatars').upload(path, body, {
     upsert: true,

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useBottomTabBarHeight } from 'expo-router/build/react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { Chip } from '@/components/Chip';
@@ -9,14 +11,16 @@ import { HoverPressable } from '@/components/HoverPressable';
 import { LiveMap } from '@/components/LiveMap';
 import type { LiveMapHandle } from '@/components/LiveMap.types';
 import { MoveCard } from '@/components/MoveCard';
+import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { Slider } from '@/components/Slider';
-import { getCloseFriendIds, getMyFriends, getReferralCount } from '@/features/friends/api';
+import { getCloseFriendIds, getFriendOfFriendIds, getMyFriends, getReferralCount } from '@/features/friends/api';
 import { getEligibleMoves } from '@/features/moves/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import type { EligibleMove } from '@/lib/database.types';
 import { formatRadius } from '@/lib/format';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { nextMilestoneLabel } from '@/lib/referrals';
 import { useUserLocation } from '@/lib/useLocation';
 import { useAuth } from '@/providers/AuthProvider';
@@ -33,8 +37,6 @@ type Tab = 'friends' | 'public';
 const APP_HEADER_HEIGHT = 42; // + insets.top, added separately below
 const TOP_BAR_HEIGHT = 40;
 const REFERRAL_BAR_HEIGHT = 40;
-// Must match (tabs)/_layout.tsx's tabBarStyle.height.
-const TAB_BAR_HEIGHT = 64;
 
 const MILES_TO_METERS = 1609.34;
 const MIN_RADIUS_MILES = 1;
@@ -57,6 +59,7 @@ export default function MovesScreen() {
   const { coords } = useUserLocation();
   const { colors, border, font, unitSystem } = useTheme();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const { height: windowHeight } = useWindowDimensions();
   const [tab, setTab] = useState<Tab>('friends');
   // radiusMiles drives the slider's live label while dragging; fetchRadiusMiles
@@ -66,10 +69,10 @@ export default function MovesScreen() {
   const [fetchRadiusMiles, setFetchRadiusMiles] = useState(DEFAULT_RADIUS_MILES);
   const [moves, setMoves] = useState<EligibleMove[]>([]);
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  const [friendOfFriendCounts, setFriendOfFriendCounts] = useState<Map<string, number>>(new Map());
   const [closeFriendIds, setCloseFriendIds] = useState<Set<string>>(new Set());
   const [referralCount, setReferralCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [clockLabel] = useState(() =>
     new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   );
@@ -80,7 +83,7 @@ export default function MovesScreen() {
 
   const load = useCallback(async () => {
     if (!session?.user) return;
-    const [movesData, friends, closeIds, referrals] = await Promise.all([
+    const [movesData, friends, fofCounts, closeIds, referrals] = await Promise.all([
       getEligibleMoves({
         userId: session.user.id,
         lat: coords?.lat,
@@ -88,11 +91,13 @@ export default function MovesScreen() {
         radiusM: Math.round(fetchRadiusMiles * MILES_TO_METERS),
       }),
       getMyFriends().catch(() => []),
+      getFriendOfFriendIds().catch(() => new Map<string, number>()),
       getCloseFriendIds(),
       getReferralCount(session.user.id).catch(() => 0),
     ]);
     setMoves(movesData);
     setFriendIds(new Set(friends.map((f) => f.id)));
+    setFriendOfFriendCounts(fofCounts);
     setCloseFriendIds(closeIds);
     setReferralCount(referrals);
   }, [session?.user, coords, fetchRadiusMiles]);
@@ -135,22 +140,23 @@ export default function MovesScreen() {
     mapRef.current?.recenter();
   }, [tab]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  };
+  const { scrollRef, scrollHandler, openAmount, progress, refreshing, reservedHeight } = usePullToRefresh({ onRefresh: load, threshold: 70 });
+  const reservedSpaceStyle = useAnimatedStyle(() => ({ height: reservedHeight.value }));
 
   const liveCount = useMemo(() => moves.filter(isLiveNow).length, [moves]);
 
   const filtered = moves
     .filter((m) => {
-      // An Open Move hosted by a friend is still "your friend's Move" - the
-      // Friends tab isn't just "moves with a friends-only degree", it's
-      // "moves connected to your social graph". Without the host-is-friend
-      // check, a friend's public Move would only ever show under Public.
+      // A Public Move hosted by a friend (or a friend-of-friend) is still
+      // "connected to you" - the Friends tab isn't just "moves with a
+      // friends-only degree", it's "moves connected to your social graph".
+      // Without these checks, a friend's or FoF's public Move would only
+      // ever show under Public.
       const hostIsFriend = friendIds.has(m.host_id);
-      return tab === 'friends' ? m.degree_limit !== 3 || hostIsFriend : m.degree_limit === 3 && !hostIsFriend;
+      const hostIsFriendOfFriend = friendOfFriendCounts.has(m.host_id);
+      return tab === 'friends'
+        ? m.degree_limit !== 3 || hostIsFriend || hostIsFriendOfFriend
+        : m.degree_limit === 3 && !hostIsFriend && !hostIsFriendOfFriend;
     })
     .sort((a, b) => {
       // Nearest first on both tabs now that Friends isn't radius-filtered
@@ -166,7 +172,12 @@ export default function MovesScreen() {
   const showReferralBar = referralCount != null && !!nextMilestoneLabel(referralCount, t);
   const mapHeight = Math.max(
     300,
-    windowHeight - insets.top - APP_HEADER_HEIGHT - TOP_BAR_HEIGHT - (showReferralBar ? REFERRAL_BAR_HEIGHT : 0) - TAB_BAR_HEIGHT
+    windowHeight -
+      insets.top -
+      APP_HEADER_HEIGHT -
+      TOP_BAR_HEIGHT -
+      (showReferralBar ? REFERRAL_BAR_HEIGHT : 0) -
+      tabBarHeight
   );
 
   return (
@@ -197,6 +208,8 @@ export default function MovesScreen() {
           onSelectMove={(moveId) => router.push(`/room/${moveId}`)}
           radiusMiles={tab === 'public' ? radiusMiles : null}
           fitRadiusMiles={tab === 'public' ? fetchRadiusMiles : null}
+          mapHeight={mapHeight}
+          obscuredBottom={sheetHeight}
         />
 
         {coords && mapHeight - sheetHeight >= MIN_VISIBLE_MAP_FOR_RECENTER ? (
@@ -213,60 +226,71 @@ export default function MovesScreen() {
         ) : null}
 
         <BottomSheet containerHeight={mapHeight} defaultSnap="half" onHeightChange={setSheetHeight}>
-          <FlatList
-            data={filtered}
-            keyExtractor={(item) => item.id}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
-            contentContainerStyle={styles.listContent}
-            ListHeaderComponent={
-              <View style={styles.segmentWrap}>
-                <SegmentedControl
-                  segments={[
-                    { value: 'friends', label: t('moves.friendsTab') },
-                    { value: 'public', label: t('moves.publicTab') },
-                  ]}
-                  value={tab}
-                  onChange={setTab}
-                />
-                {tab === 'public' ? (
-                  <View style={styles.radiusWrap}>
-                    <Text style={[styles.radiusLabel, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>
-                      {t('moves.searchRadius')}
-                    </Text>
-                    <Slider
-                      min={MIN_RADIUS_MILES}
-                      max={MAX_RADIUS_MILES}
-                      value={radiusMiles}
-                      onChange={setRadiusMiles}
-                      onSlidingComplete={setFetchRadiusMiles}
-                      formatValue={(v) => formatRadius(v, unitSystem, t)}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            }
-            renderItem={({ item }) => (
-              <View style={styles.cardWrap}>
-                <MoveCard
-                  move={item}
-                  hostIsCloseFriend={closeFriendIds.has(item.host_id)}
-                  onPress={() => router.push(`/room/${item.id}`)}
-                />
-              </View>
-            )}
-            ListEmptyComponent={
-              !loading ? (
-                <View style={styles.empty}>
-                  <Text style={[styles.emptyTitle, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>
-                    {t('moves.nothingYet')}
-                  </Text>
-                  <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>
-                    {tab === 'friends' ? t('moves.noFriendsMoves') : t('moves.noPublicMoves')}
-                  </Text>
+          <View style={styles.listWrap}>
+            <PullToRefreshIndicator openAmount={openAmount} progress={progress} refreshing={refreshing} />
+            <Animated.View style={reservedSpaceStyle} />
+            <Animated.FlatList
+              ref={scrollRef}
+              data={filtered}
+              keyExtractor={(item) => item.id}
+              onScroll={scrollHandler}
+              scrollEventThrottle={1}
+              bounces
+              alwaysBounceVertical
+              overScrollMode="always"
+              contentContainerStyle={styles.listContent}
+              ListHeaderComponent={
+                <View style={styles.segmentWrap}>
+                  <SegmentedControl
+                    segments={[
+                      { value: 'friends', label: t('moves.friendsTab') },
+                      { value: 'public', label: t('moves.publicTab') },
+                    ]}
+                    value={tab}
+                    onChange={setTab}
+                  />
+                  {tab === 'public' ? (
+                    <View style={styles.radiusWrap}>
+                      <Text style={[styles.radiusLabel, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>
+                        {t('moves.searchRadius')}
+                      </Text>
+                      <Slider
+                        min={MIN_RADIUS_MILES}
+                        max={MAX_RADIUS_MILES}
+                        value={radiusMiles}
+                        onChange={setRadiusMiles}
+                        onSlidingComplete={setFetchRadiusMiles}
+                        formatValue={(v) => formatRadius(v, unitSystem, t)}
+                      />
+                    </View>
+                  ) : null}
                 </View>
-              ) : null
-            }
-          />
+              }
+              renderItem={({ item }) => (
+                <View style={styles.cardWrap}>
+                  <MoveCard
+                    move={item}
+                    hostIsCloseFriend={closeFriendIds.has(item.host_id)}
+                    hostIsFriend={friendIds.has(item.host_id)}
+                    friendOfFriendCount={friendOfFriendCounts.get(item.host_id)}
+                    onPress={() => router.push(`/room/${item.id}`)}
+                  />
+                </View>
+              )}
+              ListEmptyComponent={
+                !loading ? (
+                  <View style={styles.empty}>
+                    <Text style={[styles.emptyTitle, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>
+                      {t('moves.nothingYet')}
+                    </Text>
+                    <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>
+                      {tab === 'friends' ? t('moves.noFriendsMoves') : t('moves.noPublicMoves')}
+                    </Text>
+                  </View>
+                ) : null
+              }
+            />
+          </View>
         </BottomSheet>
       </View>
     </Screen>
@@ -313,6 +337,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 20,
+  },
+  listWrap: {
+    flex: 1,
+    position: 'relative',
   },
   segmentWrap: {
     paddingBottom: 12,

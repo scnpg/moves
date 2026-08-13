@@ -13,7 +13,7 @@ import { TextField } from '@/components/TextField';
 import { Toggle } from '@/components/Toggle';
 import { WheelPicker } from '@/components/WheelPicker';
 import { getFriendOfFriendSuggestions, getMyFriends, getReferralCount } from '@/features/friends/api';
-import { addMoveExclusions, createMove } from '@/features/moves/api';
+import { addMoveExclusions, checkTitleForModeration, createMove } from '@/features/moves/api';
 import { searchUsers } from '@/features/search/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
@@ -123,7 +123,8 @@ export default function CreateMoveScreen() {
 
   const handleCreate = async () => {
     if (!session?.user) return;
-    if (title.trim().length === 0) {
+    const trimmedTitle = title.trim();
+    if (trimmedTitle.length === 0) {
       notify(t('createMove.titleRequired'), t('createMove.giveTitle'));
       return;
     }
@@ -147,9 +148,15 @@ export default function CreateMoveScreen() {
 
     setSubmitting(true);
     try {
+      const moderation = await checkTitleForModeration(trimmedTitle);
+      if (moderation.verdict === 'blocked') {
+        notify(t('createMove.titleInappropriate'), t('createMove.titleInappropriateMessage'));
+        return;
+      }
+
       const move = await createMove({
         hostId: session.user.id,
-        title: title.trim(),
+        title: trimmedTitle,
         description: description.trim() || null,
         degreeLimit,
         requiresApproval,
