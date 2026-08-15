@@ -4,13 +4,21 @@ import {
   FlatList,
   Keyboard,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { Avatar, AvatarStack } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -49,6 +57,13 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const DEGREE_TONE = { 0: 'violet', 1: 'green', 2: 'blue', 3: 'pink', 4: 'red' } as const;
+const MINI_BAR_HEIGHT = 52;
+// Downward drag distance (px) needed before a swipe collapses the header -
+// short enough to feel responsive, long enough that scrolling the
+// horizontal attendee rows inside it doesn't accidentally trigger it
+// (failOffsetX below is the first line of defense for that; this is the
+// second).
+const COLLAPSE_SWIPE_THRESHOLD = 30;
 
 export default function MoveRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -73,6 +88,44 @@ export default function MoveRoomScreen() {
   const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
   const [, forceCountdownTick] = useState(0);
   const messagesRef = useRef<FlatList>(null);
+
+  // Collapsible header: the title block + attendee lists (GOING/friends/
+  // friends-of-friends/requests) shrink to a compact mini-bar on a downward
+  // swipe (or when the message list starts scrolling, or the composer gets
+  // focus), so the chat gets significantly more vertical room. Driven by a
+  // discrete boolean, not a scroll-position-following animation -
+  // collapseProgress just eases between the two states.
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const collapseProgress = useSharedValue(0);
+  const expandedHeaderHeight = useSharedValue(0);
+
+  useEffect(() => {
+    collapseProgress.value = withTiming(headerCollapsed ? 1 : 0, { duration: 220 });
+  }, [headerCollapsed, collapseProgress]);
+
+  const collapseHeader = useCallback(() => setHeaderCollapsed(true), []);
+  const expandHeader = useCallback(() => setHeaderCollapsed(false), []);
+
+  const headerSwipe = Gesture.Pan()
+    .activeOffsetY(COLLAPSE_SWIPE_THRESHOLD)
+    .failOffsetX([-20, 20])
+    .onStart(() => {
+      runOnJS(collapseHeader)();
+    });
+
+  const headerContainerStyle = useAnimatedStyle(() => {
+    if (expandedHeaderHeight.value <= 0) return {};
+    return {
+      height: interpolate(collapseProgress.value, [0, 1], [expandedHeaderHeight.value, MINI_BAR_HEIGHT], Extrapolation.CLAMP),
+    };
+  });
+  const fullHeaderStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(collapseProgress.value, [0, 0.6], [1, 0], Extrapolation.CLAMP),
+  }));
+  const miniBarStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(collapseProgress.value, [0.4, 1], [0, 1], Extrapolation.CLAMP),
+  }));
+
   // Drives the composer up above the keyboard directly off real keyboard
   // frame events (see effect below) instead of KeyboardAvoidingView's
   // "padding" behavior, which measures its own on-screen frame to compute
@@ -432,16 +485,78 @@ export default function MoveRoomScreen() {
       : move.expires_at;
   const countdown = formatCountdown(countdownTarget);
 
-  // Shared between the two render paths below: when chat is enabled this
-  // renders as the messages FlatList's ListHeaderComponent so the whole
-  // screen (member lists + messages) scrolls as one unit with the composer
-  // pinned after it - otherwise KeyboardAvoidingView's padding has no
-  // scrollable container to work with once this content plus the keyboard
-  // exceeds the screen height, and the composer becomes unreachable. When
-  // chat is disabled there's no composer/keyboard involved, so it's fine
-  // rendered directly instead.
+  // The collapsible region: title/countdown block + every attendee list.
+  // Lives in its own animated container above the chat (see the main
+  // return below) rather than as the messages FlatList's ListHeaderComponent -
+  // collapsing it to MINI_BAR_HEIGHT is what actually reclaims the vertical
+  // space for chat, and that reclaiming needs to happen above a fixed-size
+  // FlatList, not inside its scrollable content.
   const roomHeaderSections = (
     <>
+      <View style={[styles.backStrip, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
+        <HoverPressable onPress={handleBack} lightenOpacity={0.08} style={styles.backButton}>
+          <Text style={[styles.backText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>← {t('common.back').toUpperCase()}</Text>
+        </HoverPressable>
+      </View>
+
+      <View style={styles.headerMain}>
+        <View style={styles.headerLeft}>
+          <Badge
+            label={isActive ? t('room.endsIn', { time: countdown }) : t('room.closingIn', { time: countdown })}
+            tone={isActive ? 'green' : 'pink'}
+          />
+          <Text style={[styles.title, styles.headerTitle, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={2}>
+            {move.title}
+          </Text>
+          <HoverPressable
+            onPress={() => (hostMember && hostMember.user_id !== myId ? router.push(`/users/${hostMember.user_id}`) : undefined)}
+            style={styles.hostLineWrap}
+            lightenOpacity={0.1}
+          >
+            <Text style={[styles.hostLine, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
+              {t('common.hostedByName', { name: hostMember ? hostMember.profile.display_name ?? hostMember.profile.username : '…' })}
+            </Text>
+          </HoverPressable>
+        </View>
+
+        <View style={styles.headerRight}>
+          <Text style={[styles.countdown, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]} key={countdown}>
+            {countdown}
+          </Text>
+          <Text style={[styles.countdownLabel, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>{t('moveCreated.left')}</Text>
+        </View>
+      </View>
+
+      <View style={styles.metaRow}>
+        <Badge label={t(`degree.badge.${move.degree_limit}`)} tone={DEGREE_TONE[move.degree_limit]} />
+        {move.requires_approval ? <Badge label={t('room.approvalRequired')} tone="yellow" /> : null}
+        <Text style={[styles.memberCount, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
+          {move.max_members ? t('room.hereWithCap', { count: approvedMembers.length, max: move.max_members }) : t('room.here', { count: approvedMembers.length })}
+        </Text>
+      </View>
+
+      {isHost ? (
+        <View style={styles.hostActionsRow}>
+          {isActive ? (
+            <HoverPressable onPress={handleEndMove} style={styles.endLinkWrap}>
+              <Text style={[styles.endLink, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('room.endMove')}</Text>
+            </HoverPressable>
+          ) : null}
+          <HoverPressable onPress={handleDeleteMove} style={styles.endLinkWrap}>
+            <Text style={[styles.deleteLink, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.delete')}</Text>
+          </HoverPressable>
+        </View>
+      ) : (
+        <View style={styles.hostActionsRow}>
+          <HoverPressable onPress={handleLeaveMove} style={styles.endLinkWrap}>
+            <Text style={[styles.deleteLink, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.leaveMove')}</Text>
+          </HoverPressable>
+          <HoverPressable onPress={() => setReportOpen((o) => !o)} style={styles.endLinkWrap}>
+            <Text style={[styles.deleteLink, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('room.reportMove')}</Text>
+          </HoverPressable>
+        </View>
+      )}
+
       {move.degree_limit === 0 ? <ShareMovePanel shareToken={move.share_token} /> : null}
 
       {/* GOING block */}
@@ -531,72 +646,48 @@ export default function MoveRoomScreen() {
 
   return (
     <Screen style={styles.noPadding}>
-      {/* Header block */}
-      <View style={[styles.headerBlock, { borderBottomWidth: borderWidth.emphatic, borderBottomColor: colors.border }]}>
-        <View style={[styles.backStrip, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
-          <HoverPressable onPress={handleBack} lightenOpacity={0.08} style={styles.backButton}>
-            <Text style={[styles.backText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>← {t('common.back').toUpperCase()}</Text>
-          </HoverPressable>
-        </View>
-
-        <View style={styles.headerMain}>
-          <View style={styles.headerLeft}>
-            <Badge
-              label={isActive ? t('room.endsIn', { time: countdown }) : t('room.closingIn', { time: countdown })}
-              tone={isActive ? 'green' : 'pink'}
-            />
-            <Text style={[styles.title, styles.headerTitle, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={2}>
-              {move.title}
-            </Text>
-            <HoverPressable
-              onPress={() => (hostMember && hostMember.user_id !== myId ? router.push(`/users/${hostMember.user_id}`) : undefined)}
-              style={styles.hostLineWrap}
-              lightenOpacity={0.1}
-            >
-              <Text style={[styles.hostLine, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
-                {t('common.hostedByName', { name: hostMember ? hostMember.profile.display_name ?? hostMember.profile.username : '…' })}
+      {/* Collapsible header: title/countdown + every attendee list, shrinks
+          to a tap-to-expand mini-bar on a downward swipe (or when the
+          message list starts scrolling, or the composer gets focus) so the
+          chat below gets significantly more room. */}
+      <Animated.View style={[styles.collapsibleHeader, headerContainerStyle]}>
+        <View pointerEvents={headerCollapsed ? 'auto' : 'none'} style={styles.miniBarAbs}>
+          <Animated.View
+            style={[
+              styles.miniBar,
+              { backgroundColor: colors.bgElevated, borderBottomWidth: borderWidth.emphatic, borderBottomColor: colors.border },
+              miniBarStyle,
+            ]}
+          >
+            <HoverPressable onPress={expandHeader} style={styles.miniBarPressable} lightenOpacity={0.08}>
+              <AvatarStack
+                size={22}
+                avatars={approvedMembers.slice(0, 4).map((m) => ({ src: m.profile.avatar_url ?? undefined, alt: m.profile.display_name ?? m.profile.username }))}
+                overflow={Math.max(0, approvedMembers.length - 4)}
+              />
+              <Text style={[styles.miniBarTitle, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]} numberOfLines={1}>
+                {move.title}
               </Text>
+              <Badge
+                label={isActive ? t('room.endsIn', { time: countdown }) : t('room.closingIn', { time: countdown })}
+                tone={isActive ? 'green' : 'pink'}
+              />
             </HoverPressable>
-          </View>
-
-          <View style={styles.headerRight}>
-            <Text style={[styles.countdown, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]} key={countdown}>
-              {countdown}
-            </Text>
-            <Text style={[styles.countdownLabel, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>{t('moveCreated.left')}</Text>
-          </View>
+          </Animated.View>
         </View>
 
-        <View style={styles.metaRow}>
-          <Badge label={t(`degree.badge.${move.degree_limit}`)} tone={DEGREE_TONE[move.degree_limit]} />
-          {move.requires_approval ? <Badge label={t('room.approvalRequired')} tone="yellow" /> : null}
-          <Text style={[styles.memberCount, { color: colors.textMuted, fontFamily: font.family.monoRegular }]}>
-            {move.max_members ? t('room.hereWithCap', { count: approvedMembers.length, max: move.max_members }) : t('room.here', { count: approvedMembers.length })}
-          </Text>
-        </View>
-
-        {isHost ? (
-          <View style={styles.hostActionsRow}>
-            {isActive ? (
-              <HoverPressable onPress={handleEndMove} style={styles.endLinkWrap}>
-                <Text style={[styles.endLink, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('room.endMove')}</Text>
-              </HoverPressable>
-            ) : null}
-            <HoverPressable onPress={handleDeleteMove} style={styles.endLinkWrap}>
-              <Text style={[styles.deleteLink, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.delete')}</Text>
-            </HoverPressable>
-          </View>
-        ) : (
-          <View style={styles.hostActionsRow}>
-            <HoverPressable onPress={handleLeaveMove} style={styles.endLinkWrap}>
-              <Text style={[styles.deleteLink, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.leaveMove')}</Text>
-            </HoverPressable>
-            <HoverPressable onPress={() => setReportOpen((o) => !o)} style={styles.endLinkWrap}>
-              <Text style={[styles.deleteLink, { color: colors.danger, fontFamily: font.family.monoBold }]}>{t('room.reportMove')}</Text>
-            </HoverPressable>
-          </View>
-        )}
-      </View>
+        <GestureDetector gesture={headerSwipe}>
+          <Animated.View
+            pointerEvents={headerCollapsed ? 'none' : 'auto'}
+            style={[fullHeaderStyle, { borderBottomWidth: borderWidth.emphatic, borderBottomColor: colors.border }]}
+            onLayout={(e) => {
+              expandedHeaderHeight.value = e.nativeEvent.layout.height;
+            }}
+          >
+            {roomHeaderSections}
+          </Animated.View>
+        </GestureDetector>
+      </Animated.View>
 
       {reportOpen && !isHost && hostMember ? (
         <View style={styles.reportPanelWrap}>
@@ -618,7 +709,7 @@ export default function MoveRoomScreen() {
               style={styles.flex}
               data={messages}
               keyExtractor={(item) => item.id}
-              ListHeaderComponent={roomHeaderSections}
+              onScrollBeginDrag={collapseHeader}
               contentContainerStyle={styles.messagesContent}
               renderItem={({ item }) => {
                 const mine = item.sender_id === myId;
@@ -673,7 +764,13 @@ export default function MoveRoomScreen() {
             {isActive ? (
               <View style={[styles.composer, { borderTopWidth: border.rest.width, borderTopColor: border.rest.color, backgroundColor: colors.bg }]}>
                 <View style={styles.composerInput}>
-                  <TextField value={messageText} onChangeText={setMessageText} placeholder={t('room.messagePlaceholder')} onSubmitEditing={handleSend} />
+                  <TextField
+                    value={messageText}
+                    onChangeText={setMessageText}
+                    placeholder={t('room.messagePlaceholder')}
+                    onSubmitEditing={handleSend}
+                    onFocus={collapseHeader}
+                  />
                 </View>
                 <Button label={t('room.send')} onPress={handleSend} size="md" />
               </View>
@@ -684,12 +781,9 @@ export default function MoveRoomScreen() {
             )}
           </>
         ) : (
-          <ScrollView>
-            {roomHeaderSections}
-            <View style={styles.center}>
-              <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('room.chatDisabled')}</Text>
-            </View>
-          </ScrollView>
+          <View style={styles.center}>
+            <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('room.chatDisabled')}</Text>
+          </View>
         )}
       </Animated.View>
     </Screen>
@@ -715,8 +809,31 @@ const styles = StyleSheet.create({
   reportLink: { fontSize: 11, letterSpacing: 0.9 },
   reportPanelWrap: { paddingHorizontal: 16, paddingTop: 12 },
 
-  headerBlock: {
+  collapsibleHeader: {
     flexShrink: 0,
+    overflow: 'hidden',
+  },
+  miniBarAbs: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: MINI_BAR_HEIGHT,
+    zIndex: 2,
+  },
+  miniBar: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  miniBarPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+  },
+  miniBarTitle: {
+    flex: 1,
+    fontSize: 15,
   },
   backStrip: {
     height: 44,

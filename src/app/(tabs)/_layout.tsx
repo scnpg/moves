@@ -32,6 +32,8 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
           },
         ]}
         numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
       >
         {label.toUpperCase()}
       </Text>
@@ -148,6 +150,12 @@ const styles = StyleSheet.create({
   labelText: {
     fontSize: 11,
     letterSpacing: 0.9,
+    // Explicit cap (rather than relying on the flex parent to constrain
+    // width) - RNWeb doesn't shrink text nodes to their container by
+    // default, so numberOfLines/adjustsFontSizeToFit have nothing to
+    // shrink against without this and the label can overflow into
+    // neighboring tabs on narrow (mobile) widths.
+    maxWidth: 62,
   },
   createSlot: {
     flex: 1,
