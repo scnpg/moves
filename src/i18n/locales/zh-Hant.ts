@@ -418,6 +418,17 @@ const zhHant: TranslationDictionary = {
   liveMap: {
     label: '即時地圖',
   },
+  onboarding: {
+    skip: '略過',
+    next: '下一步',
+    getStarted: '開始使用',
+    discoverTitle: '看看附近正在發生什麼',
+    discoverBody: '好友和附近的人發起的揪團會即時顯示在地圖和動態上。',
+    hostTitle: '發起你自己的揪團',
+    hostBody: '幾秒鐘就能發起一個活動，並選擇誰能看到 - 好友、朋友的朋友，或附近所有人。',
+    chatTitle: '加入後即可開始聊天',
+    chatBody: '每個揪團都有自己的群組聊天，讓你在抵達前就能和大家協調。',
+  },
   locationGate: {
     title: '開啟定位',
     body: 'Moves 是以你附近正在發生的事情為核心，因此需要你的定位才能運作。',

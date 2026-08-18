@@ -418,6 +418,17 @@ const es: TranslationDictionary = {
   liveMap: {
     label: 'MAPA EN VIVO',
   },
+  onboarding: {
+    skip: 'Saltar',
+    next: 'Siguiente',
+    getStarted: 'Empezar',
+    discoverTitle: 'Descubre qué está pasando cerca',
+    discoverBody: 'Los Moves que organizan tus amigos y la gente cerca de ti aparecen en vivo en el mapa y en tu feed.',
+    hostTitle: 'Organiza tu propio Move',
+    hostBody: 'Organiza un plan en segundos y elige quién puede verlo: amigos, amigos de amigos, o cualquiera cerca.',
+    chatTitle: 'Chatea en cuanto te unas',
+    chatBody: 'Cada Move tiene su propio chat grupal, para que puedas coordinarte con todos antes de llegar.',
+  },
   locationGate: {
     title: 'Activa tu ubicación',
     body: 'Moves se basa en lo que ocurre cerca de ti, así que necesita tu ubicación para funcionar.',

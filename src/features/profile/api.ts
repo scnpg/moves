@@ -24,6 +24,11 @@ export async function updateProfile(
   if (error) throw error;
 }
 
+export async function completeOnboarding(userId: string) {
+  const { error } = await supabase.from('profiles').update({ onboarding_completed: true }).eq('id', userId);
+  if (error) throw error;
+}
+
 /**
  * Uploads to a fixed "<uid>/avatar.jpg" path (upsert), so re-uploading
  * replaces the old photo rather than accumulating orphaned files. Returns a
