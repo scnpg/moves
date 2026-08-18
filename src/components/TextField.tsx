@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
@@ -11,7 +11,10 @@ interface TextFieldProps extends TextInputProps {
   hint?: string | null;
 }
 
-export function TextField({ label, required, error, hint, style, onFocus, onBlur, multiline, ...inputProps }: TextFieldProps) {
+export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
+  { label, required, error, hint, style, onFocus, onBlur, multiline, ...inputProps },
+  ref
+) {
   const { colors, border, font } = useTheme();
   const [focused, setFocused] = useState(false);
 
@@ -28,6 +31,7 @@ export function TextField({ label, required, error, hint, style, onFocus, onBlur
           <View style={[styles.insetBar, { backgroundColor: colors.border }]} pointerEvents="none" />
         ) : null}
         <TextInput
+          ref={ref}
           placeholderTextColor={colors.textMuted}
           multiline={multiline}
           onFocus={(e) => {
@@ -57,7 +61,7 @@ export function TextField({ label, required, error, hint, style, onFocus, onBlur
       {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrapper: {

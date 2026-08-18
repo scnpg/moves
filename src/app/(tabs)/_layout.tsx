@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     // default, so numberOfLines/adjustsFontSizeToFit have nothing to
     // shrink against without this and the label can overflow into
     // neighboring tabs on narrow (mobile) widths.
-    maxWidth: 62,
+    maxWidth: 60,
   },
   createSlot: {
     flex: 1,

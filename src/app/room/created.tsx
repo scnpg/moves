@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Button } from '@/components/Button';
@@ -43,7 +43,7 @@ export default function MoveCreatedScreen() {
   return (
     <Screen style={styles.noPadding}>
       <View style={[styles.topBar, { borderBottomWidth: borderWidth.structural, borderBottomColor: colors.border }]}>
-        <Text style={[styles.wordmark, { fontFamily: font.family.logo, color: colors.textPrimary }]}>MOVES?</Text>
+        <Image source={require('../../../assets/images/movesletterlogo-trimmed.png')} style={styles.wordmark} resizeMode="contain" />
       </View>
 
       <View style={styles.content}>
@@ -91,8 +91,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   wordmark: {
-    fontSize: 20,
-    lineHeight: 20,
+    width: 100,
+    height: 20,
   },
   content: {
     paddingHorizontal: 16,

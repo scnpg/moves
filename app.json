@@ -24,8 +24,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
       ]
     },
     "web": {
@@ -53,8 +56,12 @@
           "contactsPermission": "Moves can check your contacts against people already on Moves to suggest friends - numbers never leave your device unhashed."
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-secure-store"
     ],
+    "experiments": {
+      "baseUrl": "/moves"
+    },
     "extra": {
       "router": {},
       "eas": {

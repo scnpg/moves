@@ -11,6 +11,8 @@ import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 
 import { AppHeader } from '@/components/AppHeader';
 import { LocationRequiredScreen } from '@/components/LocationRequiredScreen';
+import { OnboardingCarousel } from '@/components/OnboardingCarousel';
+import { completeOnboarding } from '@/features/profile/api';
 import { LocaleProvider } from '@/i18n/LocaleProvider';
 import { PENDING_JOIN_TOKEN_KEY } from '@/lib/links';
 import { useUserLocation } from '@/lib/useLocation';
@@ -57,7 +59,7 @@ export default function RootLayout() {
 }
 
 function RootNavigation() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, refreshProfile } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const { colors, scheme } = useTheme();
@@ -114,18 +116,47 @@ function RootNavigation() {
   // redundant there.
   const onSignIn = segments.join('/') === '(auth)/sign-in';
 
+  // Same route exclusions as the location gate below, and gated ahead of
+  // it deliberately - finishing onboarding (Skip or the last slide's Get
+  // Started) drops straight into that gate, so location permission is the
+  // very next thing asked for. profile can be briefly null right after
+  // sign-up (loadProfile() hasn't resolved yet) - same "self-corrects a
+  // beat later" tolerance as needsUsername above, not worth a separate
+  // loading state for one frame.
+  const needsOnboarding =
+    !!session &&
+    !inAuthGroup &&
+    !onJoinRoute &&
+    !onUsersRoute &&
+    !onLegalRoute &&
+    !needsUsername &&
+    !!profile &&
+    !profile.onboarding_completed;
+
+  const handleFinishOnboarding = async () => {
+    if (!session?.user) return;
+    try {
+      await completeOnboarding(session.user.id);
+    } catch {
+      // Non-fatal - worst case the user sees onboarding again next launch.
+    }
+    await refreshProfile();
+  };
+
   // Moves is location-first (nearby feed, map centering, Move creation all
   // need it) - once past sign-in/legal/preview routes, block the rest of
   // the app behind a resolved location rather than let every screen handle
   // a null-coords fallback individually.
   const needsLocationGate =
-    !!session && !inAuthGroup && !onJoinRoute && !onUsersRoute && !onLegalRoute && !needsUsername;
+    !!session && !inAuthGroup && !onJoinRoute && !onUsersRoute && !onLegalRoute && !needsUsername && !needsOnboarding;
 
   return (
     <View style={styles.flex}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {!onSignIn ? <AppHeader /> : null}
-      {needsLocationGate && !coords ? (
+      {needsOnboarding ? (
+        <OnboardingCarousel onComplete={handleFinishOnboarding} />
+      ) : needsLocationGate && !coords ? (
         <LocationRequiredScreen loading={locationLoading} denied={permissionDenied} onRetry={retryLocation} />
       ) : (
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>

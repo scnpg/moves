@@ -22,6 +22,7 @@ export interface Profile {
   referred_by: string | null;
   is_moderator: boolean;
   username_reset_required: boolean;
+  onboarding_completed: boolean;
 }
 
 export type ModerationCaseKind = 'move' | 'profile' | 'message';

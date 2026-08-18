@@ -425,6 +425,17 @@ const en = {
   liveMap: {
     label: 'LIVE MAP',
   },
+  onboarding: {
+    skip: 'Skip',
+    next: 'Next',
+    getStarted: 'Get started',
+    discoverTitle: "See what's happening nearby",
+    discoverBody: 'Moves your friends and people near you are hosting show up live on the map and in your feed.',
+    hostTitle: 'Start your own Move',
+    hostBody: 'Host a hangout in seconds and choose who can see it - friends, friends-of-friends, or anyone open nearby.',
+    chatTitle: "Chat once you're in",
+    chatBody: 'Every Move gets its own group chat, so you can coordinate with everyone before you get there.',
+  },
   locationGate: {
     title: 'Turn on location',
     body: "Moves is built around what's happening near you, so it needs your location to work.",

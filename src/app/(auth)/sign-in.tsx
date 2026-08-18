@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,7 +45,7 @@ export default function SignInScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.logoWrap}>
             <SunburstBackdrop />
-            <Text style={[styles.title, { fontFamily: font.family.logo, color: colors.textPrimary }]}>MOVES?</Text>
+            <Image source={require('../../../assets/images/movesletterlogo-trimmed.png')} style={styles.title} resizeMode="contain" />
             <Text style={[styles.tagline, { color: colors.textPrimary, fontFamily: font.family.bodyRegular }]}>
               {t('auth.tagline')}
             </Text>
@@ -102,9 +102,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontSize: 40,
-    lineHeight: 40,
-    textAlign: 'center',
+    width: 220,
+    height: 44,
+    alignSelf: 'center',
   },
   tagline: {
     fontSize: 16,

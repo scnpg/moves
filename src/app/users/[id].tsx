@@ -17,7 +17,7 @@ import {
   sendFriendRequest,
   setCloseFriend,
 } from '@/features/friends/api';
-import { getProfile, getPublicProfile } from '@/features/profile/api';
+import { getPublicProfile } from '@/features/profile/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { MutualFriend, PublicProfile, SearchFriendshipStatus } from '@/lib/database.types';
@@ -55,7 +55,7 @@ export default function UserProfileScreen() {
       (async () => {
         if (session?.user) {
           const [profileData, friendship, mutualData, blockedUsers] = await Promise.all([
-            getProfile(id),
+            getPublicProfile(id),
             getFriendshipStatus(session.user.id, id),
             getMutualFriends(session.user.id, id).catch(() => []),
             getBlockedUsers().catch(() => []),

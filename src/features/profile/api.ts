@@ -1,13 +1,13 @@
 import { supabase } from '@/lib/supabase';
 import type { Profile, PublicProfile } from '@/lib/database.types';
 
-export async function getProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-  if (error) throw error;
-  return data as Profile;
-}
-
-/** Anon-callable preview for shareable profile links/QR codes - see get_public_profile(). */
+/**
+ * Safe for viewing any user's profile (not just your own) - only
+ * non-sensitive fields. last_lat/last_lng/phone_hash/referred_by are
+ * locked down at the column-grant level (see
+ * 20260818090000_lock_down_profile_columns.sql); your own profile comes
+ * from AuthProvider's get_my_profile() RPC instead.
+ */
 export async function getPublicProfile(userId: string): Promise<PublicProfile | null> {
   const { data, error } = await supabase.rpc('get_public_profile', { p_user_id: userId });
   if (error) throw error;
@@ -19,6 +19,11 @@ export async function updateProfile(
   updates: Partial<Pick<Profile, 'username' | 'display_name' | 'avatar_url' | 'phone_hash' | 'bio'>>
 ) {
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
+  if (error) throw error;
+}
+
+export async function completeOnboarding(userId: string) {
+  const { error } = await supabase.from('profiles').update({ onboarding_completed: true }).eq('id', userId);
   if (error) throw error;
 }
 
