@@ -55,7 +55,8 @@
           "contactsPermission": "Moves can check your contacts against people already on Moves to suggest friends - numbers never leave your device unhashed."
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-secure-store"
     ],
     "experiments": {
       "baseUrl": "/moves"

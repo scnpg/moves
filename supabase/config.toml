@@ -31,7 +31,11 @@ file_size_limit = "50MiB"
 enabled = true
 site_url = "https://scnpg.github.io/moves"
 additional_redirect_urls = ["https://scnpg.github.io/moves/*", "http://localhost:8081"]
-jwt_expiry = 3600
+# Short-lived access token - autoRefreshToken (src/lib/supabase.ts) renews
+# it transparently in the background via the (separately long-lived)
+# refresh token, so this is invisible to the user. Keeps the blast radius
+# of a leaked/intercepted access token small.
+jwt_expiry = 900
 enable_signup = true
 
 [auth.email]
@@ -52,6 +56,11 @@ otp_length = 8
 # so it still throttled signups after Resend was wired up.
 [auth.rate_limit]
 email_sent = 30
+# Sign-in/sign-up attempts (brute-force guard on the password login and
+# signup endpoints) and refresh-token redemptions, per 5-minute window per
+# IP - GoTrue's defaults if left unset are far looser than this app needs.
+sign_in_sign_ups = 30
+token_refresh = 150
 
 # {{ .ConfirmationURL }} already embeds {{ .RedirectTo }} as a query param
 # (it's the full "verify then redirect" link GoTrue builds server-side) -
