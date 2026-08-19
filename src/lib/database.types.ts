@@ -178,6 +178,7 @@ export interface ContactSuggestion {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  phone_hash: string;
 }
 
 export interface MoveByShareToken {
@@ -194,6 +195,35 @@ export interface MoveByShareToken {
   approved_count: number;
   is_full: boolean;
   already_member: boolean;
+}
+
+export interface MoveInviteLink {
+  id: string;
+  move_id: string;
+  token: string;
+  created_by: string;
+  max_uses: number | null;
+  use_count: number;
+  revoked_at: string | null;
+  created_at: string;
+}
+
+export interface MoveByInviteLink {
+  id: string;
+  title: string;
+  description: string | null;
+  host_username: string;
+  host_display_name: string | null;
+  host_avatar_url: string | null;
+  starts_at: string;
+  expires_at: string;
+  status: MoveStatus;
+  degree_limit: DegreeLimit;
+  max_members: number | null;
+  approved_count: number;
+  is_full: boolean;
+  already_member: boolean;
+  link_valid: boolean;
 }
 
 export interface PublicProfile {

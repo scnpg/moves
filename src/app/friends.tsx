@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 
+import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { UserRow } from '@/components/UserRow';
@@ -119,6 +120,7 @@ export default function FriendsScreen() {
         options={{
           headerShown: true,
           title: t('friendsScreen.title'),
+          headerLeft: () => <HeaderBackButton />,
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.textPrimary,
         }}

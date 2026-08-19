@@ -87,7 +87,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    lineHeight: 24,
   },
   inputMultiline: {
     minHeight: 88,

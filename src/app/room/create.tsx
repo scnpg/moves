@@ -95,6 +95,17 @@ export default function CreateMoveScreen() {
     { value: 0, label: t('createMove.privateOption'), disabled: privateLocked },
   ];
 
+  // Same hues as the degree Badges shown elsewhere (room screen, invite
+  // preview) - see DEGREE_TONE in src/app/invite/[token].tsx and
+  // signal.degree in src/theme/themes.ts.
+  const DEGREE_ACCENT: Record<DegreeLimit, string> = {
+    0: colors.accentViolet,
+    1: colors.accentGreenFlat,
+    2: colors.accentBlue,
+    3: colors.accentPink,
+    4: colors.accentRed,
+  };
+
   const hasUnsavedInput =
     title.trim() !== '' ||
     description.trim() !== '' ||
@@ -265,8 +276,9 @@ export default function CreateMoveScreen() {
                     },
                   ]}
                 >
+                  <View style={[styles.whoAccentBar, { backgroundColor: DEGREE_ACCENT[selectedRow.value] }]} pointerEvents="none" />
                   <View style={styles.whoTriggerText}>
-                    <Text style={[styles.degreeLabel, { fontFamily: font.family.monoBold, color: colors.textPrimary }]}>
+                    <Text style={[styles.degreeLabel, { fontFamily: font.family.monoBold, color: DEGREE_ACCENT[selectedRow.value] }]}>
                       {selectedRow.label.toUpperCase()}
                     </Text>
                     <Text style={[styles.degreeDescription, { fontFamily: font.family.bodyRegular, color: colors.textMuted }]}>
@@ -294,19 +306,22 @@ export default function CreateMoveScreen() {
                             { backgroundColor: selected ? colors.border : row.disabled ? colors.bgElevated : 'transparent' },
                           ]}
                         >
-                          <Text
-                            style={[
-                              styles.degreeLabel,
-                              { fontFamily: font.family.monoBold, color: selected ? colors.textInverse : row.disabled ? colors.textMuted : colors.textPrimary },
-                            ]}
-                          >
-                            {row.disabled ? '🔒 ' : ''}
-                            {row.label.toUpperCase()}
-                          </Text>
+                          <View style={styles.degreeLabelRow}>
+                            {!row.disabled ? <View style={[styles.degreeSwatch, { backgroundColor: DEGREE_ACCENT[row.value] }]} /> : null}
+                            <Text
+                              style={[
+                                styles.degreeLabel,
+                                { fontFamily: font.family.monoBold, color: selected ? colors.textInverse : row.disabled ? colors.textMuted : colors.textPrimary },
+                              ]}
+                            >
+                              {row.disabled ? '🔒 ' : ''}
+                              {row.label.toUpperCase()}
+                            </Text>
+                          </View>
                           <Text
                             style={[
                               styles.degreeDescription,
-                              { fontFamily: font.family.bodyRegular, color: selected ? colors.brand : colors.textMuted },
+                              { fontFamily: font.family.bodyRegular, color: selected ? DEGREE_ACCENT[row.value] : colors.textMuted },
                             ]}
                           >
                             {t(`degree.description.${row.value}`)}
@@ -444,6 +459,7 @@ function TimeDropdown({
           { backgroundColor: colors.well, borderWidth: open ? border.focused.width : border.rest.width, borderColor: open ? border.focused.color : border.rest.color },
         ]}
       >
+        <View style={[styles.whoAccentBar, { backgroundColor: colors.brand }]} pointerEvents="none" />
         <Text style={[styles.degreeLabel, { fontFamily: font.family.bodySemibold, color: colors.textPrimary, fontSize: 15, letterSpacing: 0 }]}>
           {selectedLabel}
         </Text>
@@ -543,6 +559,7 @@ function DatePicker({
           { backgroundColor: colors.well, borderWidth: open ? border.focused.width : border.rest.width, borderColor: open ? border.focused.color : border.rest.color },
         ]}
       >
+        <View style={[styles.whoAccentBar, { backgroundColor: colors.brand }]} pointerEvents="none" />
         <Text style={[styles.degreeLabel, { fontFamily: font.family.bodySemibold, color: colors.textPrimary, fontSize: 15, letterSpacing: 0 }]}>
           {formatDateTrigger(value, t)}
         </Text>
@@ -589,12 +606,12 @@ function DatePicker({
                     onChange(cellDate);
                     onToggle();
                   }}
-                  style={[styles.calendarCell, selected && { backgroundColor: colors.border }]}
+                  style={[styles.calendarCell, selected && { backgroundColor: colors.brand }]}
                 >
                   <Text
                     style={[
                       styles.calendarDayText,
-                      { fontFamily: font.family.bodyRegular, color: selected ? colors.textInverse : disabled ? colors.textMuted : colors.textPrimary, opacity: disabled ? 0.4 : 1 },
+                      { fontFamily: font.family.bodyRegular, color: selected ? colors.onAccent : disabled ? colors.textMuted : colors.textPrimary, opacity: disabled ? 0.4 : 1 },
                     ]}
                   >
                     {day}
@@ -787,6 +804,15 @@ const styles = StyleSheet.create({
     minHeight: 64,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  whoAccentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   whoTriggerText: {
     flex: 1,
@@ -865,6 +891,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 2,
+  },
+  degreeLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  degreeSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
   },
   degreeLabel: {
     fontSize: 11,

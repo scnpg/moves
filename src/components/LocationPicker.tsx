@@ -83,16 +83,16 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         {searching ? <ActivityIndicator size="small" color={colors.textMuted} /> : null}
       </View>
       <View style={styles.actionsRow}>
-        <Text style={[styles.hint, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>
-          {value ? t('locationPicker.pinnedAt', { lat: value.lat.toFixed(3), lng: value.lng.toFixed(3) }) : t('locationPicker.noLocationSet')}
+        <Text style={[styles.hint, { color: value ? colors.brand : colors.textMuted, fontFamily: font.family.bodyRegular }]}>
+          {value ? `📍 ${t('locationPicker.pinnedAt', { lat: value.lat.toFixed(3), lng: value.lng.toFixed(3) })}` : t('locationPicker.noLocationSet')}
         </Text>
         <View style={styles.actionButtons}>
           <HoverPressable
             onPress={handleUseMyLocation}
-            style={[styles.smallButton, { borderWidth: border.rest.width, borderColor: border.rest.color }]}
+            style={[styles.smallButton, { borderWidth: border.rest.width, borderColor: colors.brand }]}
             disabled={locating}
           >
-            <Text style={[styles.smallButtonText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>
+            <Text style={[styles.smallButtonText, { color: colors.brand, fontFamily: font.family.monoBold }]}>
               {locating ? t('locationPicker.locating') : t('locationPicker.useMyLocation')}
             </Text>
           </HoverPressable>

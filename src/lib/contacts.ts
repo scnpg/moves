@@ -1,5 +1,9 @@
 import { Platform } from 'react-native';
-import * as Contacts from 'expo-contacts';
+// expo-contacts's top-level getContactsAsync/requestPermissionsAsync now
+// throw ("deprecated, use the class-based API or expo-contacts/legacy")
+// instead of just warning - the legacy submodule keeps the same API shape
+// this file already uses.
+import * as Contacts from 'expo-contacts/legacy';
 
 import { hashPhone } from '@/lib/phone';
 
@@ -28,6 +32,54 @@ export async function getDeviceContactPhoneHashes(): Promise<string[] | null> {
 
   const hashes = await Promise.all(Array.from(numbers).map(hashPhone));
   return hashes.filter((hash): hash is string => hash != null);
+}
+
+export interface DeviceContactEntry {
+  name: string;
+  phone: string;
+  hash: string;
+}
+
+/**
+ * Structured sibling of getDeviceContactPhoneHashes() that also keeps each
+ * contact's display name and original phone number in memory - never
+ * persisted or sent anywhere, same as above, only the hash crosses the
+ * network via match_contacts(). Lets the caller diff the full contact list
+ * against the matched accounts to find who to show an "invite" action for.
+ */
+export async function getDeviceContactsWithHashes(): Promise<DeviceContactEntry[] | null> {
+  if (Platform.OS === 'web') return null;
+
+  const { status } = await Contacts.requestPermissionsAsync();
+  if (status !== 'granted') return null;
+
+  const { data } = await Contacts.getContactsAsync({
+    fields: [Contacts.Fields.PhoneNumbers],
+  });
+
+  // One row per person, not per phone number - a contact with a mobile and
+  // a home number should only show up once in the invite list, so just
+  // take their first number.
+  const candidates: Array<{ name: string; phone: string }> = [];
+  const seenPhones = new Set<string>();
+  for (const contact of data) {
+    const name = contact.name?.trim();
+    const phone = contact.phoneNumbers?.find((p) => !!p.number)?.number;
+    if (!name || !phone || seenPhones.has(phone)) continue;
+    seenPhones.add(phone);
+    candidates.push({ name, phone });
+  }
+
+  const hashes = await Promise.all(candidates.map((c) => hashPhone(c.phone)));
+  const seenHashes = new Set<string>();
+  const entries: DeviceContactEntry[] = [];
+  candidates.forEach((c, i) => {
+    const hash = hashes[i];
+    if (!hash || seenHashes.has(hash)) return;
+    seenHashes.add(hash);
+    entries.push({ ...c, hash });
+  });
+  return entries;
 }
 
 interface WebContactsManager {

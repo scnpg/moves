@@ -5,6 +5,7 @@ import { Stack, useFocusEffect } from 'expo-router';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { Screen } from '@/components/Screen';
 import { getBlockedUsers, unblockUser } from '@/features/blocking/api';
 import { useLocale } from '@/i18n/LocaleProvider';
@@ -56,6 +57,7 @@ export default function BlockedUsersScreen() {
         options={{
           headerShown: true,
           title: t('blocked.title'),
+          headerLeft: () => <HeaderBackButton />,
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.textPrimary,
         }}

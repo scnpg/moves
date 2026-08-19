@@ -20,6 +20,11 @@ export function joinMoveUrl(shareToken: string): string {
   return `${appOrigin()}/join/${shareToken}`;
 }
 
+/** Host-issued bypass link (see InviteLinkPanel) - distinct from joinMoveUrl(), which is share_token, a fixed property of Private-tier Moves only. */
+export function inviteLinkUrl(token: string): string {
+  return `${appOrigin()}/invite/${token}`;
+}
+
 export function referralSignUpUrl(referrerId: string): string {
   return `${appOrigin()}/sign-up?ref=${referrerId}`;
 }
@@ -30,3 +35,6 @@ export function profileShareUrl(userId: string): string {
 
 /** AsyncStorage key for a share token captured while signed out, processed right after sign-in. */
 export const PENDING_JOIN_TOKEN_KEY = 'moves:pending_join_token';
+
+/** Same idea as PENDING_JOIN_TOKEN_KEY, for a bypass invite link's token instead. */
+export const PENDING_INVITE_TOKEN_KEY = 'moves:pending_invite_token';

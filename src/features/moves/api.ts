@@ -3,7 +3,9 @@ import type {
   DegreeLimit,
   EligibleMove,
   Move,
+  MoveByInviteLink,
   MoveByShareToken,
+  MoveInviteLink,
   MoveMember,
   MoveMessage,
   Profile,
@@ -176,6 +178,49 @@ export async function getMoveByShareToken(shareToken: string): Promise<MoveBySha
 /** Self-service join via a Private (Link-Only) Move's share token. Authenticated only; idempotent if already a member. */
 export async function joinMoveViaToken(shareToken: string) {
   const { error } = await supabase.rpc('join_move_via_token', { p_share_token: shareToken });
+  if (error) throw error;
+}
+
+/** Host-only: mints a bypass link for this Move. singleUse=true limits it to one join, ever. */
+export async function createMoveInviteLink(moveId: string, hostId: string, singleUse: boolean): Promise<MoveInviteLink> {
+  const { data, error } = await supabase
+    .from('move_invite_links')
+    .insert({ move_id: moveId, created_by: hostId, max_uses: singleUse ? 1 : null })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as MoveInviteLink;
+}
+
+/** Host-only: every bypass link ever created for this Move, active or not - RLS scopes this to the host automatically. */
+export async function listMoveInviteLinks(moveId: string): Promise<MoveInviteLink[]> {
+  const { data, error } = await supabase
+    .from('move_invite_links')
+    .select('*')
+    .eq('move_id', moveId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as MoveInviteLink[];
+}
+
+export async function revokeMoveInviteLink(linkId: string) {
+  const { error } = await supabase
+    .from('move_invite_links')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('id', linkId);
+  if (error) throw error;
+}
+
+/** Public preview for a bypass invite link - works while signed out, and for a Move at any degree_limit tier. Null if the token doesn't exist at all. */
+export async function getMoveByInviteLink(token: string): Promise<MoveByInviteLink | null> {
+  const { data, error } = await supabase.rpc('get_move_by_invite_link', { p_token: token });
+  if (error) throw error;
+  return ((data as MoveByInviteLink[] | null)?.[0] as MoveByInviteLink) ?? null;
+}
+
+/** Self-service join via a host-issued bypass link. Authenticated only; idempotent if already a member. */
+export async function joinMoveViaInviteLink(token: string) {
+  const { error } = await supabase.rpc('join_move_via_invite_link', { p_token: token });
   if (error) throw error;
 }
 

@@ -31,7 +31,7 @@ export function AppHeader() {
   const { session } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, border } = useTheme();
+  const { colors, border, scheme } = useTheme();
 
   const goHome = () => {
     router.replace(session ? '/(tabs)' : '/(auth)/sign-in');
@@ -50,7 +50,15 @@ export function AppHeader() {
       ]}
     >
       <HoverPressable onPress={goHome} style={styles.logoWrap} lightenOpacity={0.08}>
-        <Image source={require('../../assets/images/movesletterlogo-trimmed.png')} style={styles.logo} resizeMode="contain" />
+        <Image
+          source={
+            scheme === 'dark'
+              ? require('../../assets/images/movesletterlogo-trimmed-dark.png')
+              : require('../../assets/images/movesletterlogo-trimmed.png')
+          }
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </HoverPressable>
       <HoverPressable onPress={() => router.push('/settings')} style={styles.settingsButton} lightenOpacity={0.2}>
         <GearIcon size={21} color={colors.textSecondary} />

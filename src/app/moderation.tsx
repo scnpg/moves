@@ -5,6 +5,7 @@ import { Stack, useFocusEffect } from 'expo-router';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { Screen } from '@/components/Screen';
 import { getModerationQueue, resolveModerationCase } from '@/features/blocking/api';
 import { useLocale } from '@/i18n/LocaleProvider';
@@ -65,6 +66,7 @@ export default function ModerationScreen() {
         options={{
           headerShown: true,
           title: t('moderation.title'),
+          headerLeft: () => <HeaderBackButton />,
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.textPrimary,
         }}

@@ -26,7 +26,7 @@ export default function MoveCreatedScreen() {
   const isPrivate = degreeLimit === '0';
   const router = useRouter();
   const { t } = useLocale();
-  const { colors, borderWidth, font } = useTheme();
+  const { colors, borderWidth, font, scheme } = useTheme();
   const [countdown, setCountdown] = useState(() => (expiresAt ? formatCountdown(expiresAt) : '0:00'));
 
   useEffect(() => {
@@ -43,7 +43,15 @@ export default function MoveCreatedScreen() {
   return (
     <Screen style={styles.noPadding}>
       <View style={[styles.topBar, { borderBottomWidth: borderWidth.structural, borderBottomColor: colors.border }]}>
-        <Image source={require('../../../assets/images/movesletterlogo-trimmed.png')} style={styles.wordmark} resizeMode="contain" />
+        <Image
+          source={
+            scheme === 'dark'
+              ? require('../../../assets/images/movesletterlogo-trimmed-dark.png')
+              : require('../../../assets/images/movesletterlogo-trimmed.png')
+          }
+          style={styles.wordmark}
+          resizeMode="contain"
+        />
       </View>
 
       <View style={styles.content}>

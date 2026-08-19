@@ -5,6 +5,7 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-rou
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HoverPressable } from '@/components/HoverPressable';
 import { ReportUserPanel } from '@/components/ReportUserPanel';
 import { Screen } from '@/components/Screen';
@@ -168,7 +169,7 @@ export default function UserProfileScreen() {
   if (loading) {
     return (
       <Screen>
-        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen options={{ headerShown: true, title: '', headerLeft: () => <HeaderBackButton />, headerStyle: { backgroundColor: colors.bg } }} />
         <View style={styles.loading}>
           <ActivityIndicator color={colors.brand} />
         </View>
@@ -179,7 +180,7 @@ export default function UserProfileScreen() {
   if (notFound || !profile) {
     return (
       <Screen>
-        <Stack.Screen options={{ headerShown: true, title: '', headerStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen options={{ headerShown: true, title: '', headerLeft: () => <HeaderBackButton />, headerStyle: { backgroundColor: colors.bg } }} />
         <View style={styles.loading}>
           <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('userProfile.notAvailable')}</Text>
         </View>
@@ -193,6 +194,7 @@ export default function UserProfileScreen() {
         options={{
           headerShown: true,
           title: '',
+          headerLeft: () => <HeaderBackButton />,
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.textPrimary,
         }}
@@ -225,6 +227,7 @@ export default function UserProfileScreen() {
                 <Button
                   label={isCloseFriend ? t('userProfile.closeFriendActive') : t('userProfile.markAsCloseFriend')}
                   variant="secondary"
+                  accentColor={isCloseFriend ? colors.closeFriend : undefined}
                   onPress={handleToggleClose}
                   style={styles.flexButton}
                 />
@@ -273,10 +276,13 @@ export default function UserProfileScreen() {
               data={mutuals}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
-                <Card style={styles.mutualCard} raised={false}>
-                  <Avatar uri={item.avatar_url} name={item.display_name ?? item.username} size={36} />
-                  <Text style={[styles.mutualName, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{item.display_name ?? item.username}</Text>
-                </Card>
+                <HoverPressable onPress={() => router.push(`/users/${item.id}`)}>
+                  <Card style={styles.mutualCard} raised={false}>
+                    <Avatar uri={item.avatar_url} name={item.display_name ?? item.username} size={36} />
+                    <Text style={[styles.mutualName, { color: colors.textPrimary, fontFamily: font.family.bodySemibold }]}>{item.display_name ?? item.username}</Text>
+                    <Text style={[styles.mutualChevron, { color: colors.textMuted }]}>›</Text>
+                  </Card>
+                </HoverPressable>
               )}
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
               ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('userProfile.noMutualFriends')}</Text>}
@@ -354,7 +360,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   mutualName: {
+    flex: 1,
     fontSize: 14,
+  },
+  mutualChevron: {
+    fontSize: 18,
   },
   emptyText: {
     fontSize: 14,

@@ -17,7 +17,7 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
     <View
       style={[
         styles.labelBox,
-        { borderTopWidth: 4, borderTopColor: focused ? colors.border : 'transparent', marginTop: -6 },
+        { borderTopWidth: 4, borderTopColor: focused ? colors.border : 'transparent', marginTop: -20 },
       ]}
       // @ts-expect-error react-native-web forwards unrecognized props to the underlying DOM node; no-op on native.
       onMouseEnter={() => setHovered(true)}

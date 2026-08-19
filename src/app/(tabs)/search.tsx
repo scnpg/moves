@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
+import { ContactInviteRow } from '@/components/ContactInviteRow';
 import { HoverPressable } from '@/components/HoverPressable';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
@@ -17,8 +18,14 @@ import {
 } from '@/features/friends/api';
 import { searchUsers } from '@/features/search/api';
 import { useLocale } from '@/i18n/LocaleProvider';
-import { getDeviceContactPhoneHashes, getWebContactPhoneHashes, isWebContactPickerAvailable } from '@/lib/contacts';
+import {
+  getDeviceContactsWithHashes,
+  getWebContactPhoneHashes,
+  isWebContactPickerAvailable,
+  type DeviceContactEntry,
+} from '@/lib/contacts';
 import { PHONE_CONTACTS_FEATURE_ENABLED } from '@/lib/features';
+import { referralSignUpUrl } from '@/lib/links';
 import type {
   ContactSuggestion,
   FriendOfFriendSuggestion,
@@ -42,6 +49,8 @@ export default function SearchScreen() {
   const [fof, setFof] = useState<FriendOfFriendSuggestion[]>([]);
   const [nearby, setNearby] = useState<NearbyUserSuggestion[]>([]);
   const [contacts, setContacts] = useState<ContactSuggestion[]>([]);
+  const [inviteCandidates, setInviteCandidates] = useState<DeviceContactEntry[]>([]);
+  const [invitedHashes, setInvitedHashes] = useState<Set<string>>(new Set());
   const [contactsSyncing, setContactsSyncing] = useState(false);
   const [contactsSynced, setContactsSynced] = useState(false);
 
@@ -80,13 +89,49 @@ export default function SearchScreen() {
   const handleSyncContacts = async () => {
     setContactsSyncing(true);
     try {
-      const hashes = Platform.OS === 'web' ? await getWebContactPhoneHashes() : await getDeviceContactPhoneHashes();
-      if (hashes == null) return; // unavailable, cancelled, or denied - leave the prompt up to retry
-      const matches = await matchContacts(hashes);
+      if (Platform.OS === 'web') {
+        const hashes = await getWebContactPhoneHashes();
+        if (hashes == null) return; // unavailable, cancelled, or denied - leave the prompt up to retry
+        const matches = await matchContacts(hashes);
+        setContacts(matches);
+        setContactsSynced(true);
+        return;
+      }
+      // Native: keep each contact's name/phone alongside its hash so that
+      // whichever ones don't match an account can still be shown by name
+      // with an "invite" action - matchContacts() only gets the hashes.
+      const entries = await getDeviceContactsWithHashes();
+      if (entries == null) return;
+      const matches = await matchContacts(entries.map((e) => e.hash));
+      const matchedHashes = new Set(matches.map((m) => m.phone_hash));
       setContacts(matches);
+      setInviteCandidates(entries.filter((e) => !matchedHashes.has(e.hash)));
       setContactsSynced(true);
     } finally {
       setContactsSyncing(false);
+    }
+  };
+
+  const handleInvite = async (contact: DeviceContactEntry) => {
+    if (!session?.user) return;
+    const link = referralSignUpUrl(session.user.id);
+    const body = t('search.inviteSmsBody', { link });
+    setInvitedHashes((prev) => new Set(prev).add(contact.hash));
+    try {
+      const digits = contact.phone.replace(/[^\d+]/g, '');
+      const smsUrl = `sms:${digits}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(body)}`;
+      const canOpen = await Linking.canOpenURL(smsUrl);
+      if (canOpen) {
+        await Linking.openURL(smsUrl);
+        return;
+      }
+    } catch {
+      // fall through to the share sheet below
+    }
+    try {
+      await Share.share({ message: body });
+    } catch {
+      // user dismissed the share sheet - the contact is still marked invited above, that's fine either way
     }
   };
 
@@ -141,7 +186,7 @@ export default function SearchScreen() {
 
   const showingSuggestions = !query.trim();
   const showContactsSection = PHONE_CONTACTS_FEATURE_ENABLED && (Platform.OS !== 'web' || isWebContactPickerAvailable());
-  const hasAnySuggestions = fof.length > 0 || nearby.length > 0 || contacts.length > 0;
+  const hasAnySuggestions = fof.length > 0 || nearby.length > 0 || contacts.length > 0 || inviteCandidates.length > 0;
 
   return (
     <Screen>
@@ -213,8 +258,22 @@ export default function SearchScreen() {
                     {contactsSyncing ? t('search.syncing') : t('search.findFriendsFromContacts')}
                   </Text>
                 </HoverPressable>
-              ) : contacts.length === 0 ? (
+              ) : contacts.length === 0 && inviteCandidates.length === 0 ? (
                 <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{t('search.noContactsYet')}</Text>
+              ) : null}
+
+              {contactsSynced && inviteCandidates.length > 0 ? (
+                <View style={styles.inviteSection}>
+                  <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('search.inviteToMoves')}</Text>
+                  {inviteCandidates.map((contact) => (
+                    <ContactInviteRow
+                      key={contact.hash}
+                      name={contact.name}
+                      invited={invitedHashes.has(contact.hash)}
+                      onInvite={() => handleInvite(contact)}
+                    />
+                  ))}
+                </View>
               ) : null}
             </View>
           ) : null}
@@ -290,6 +349,9 @@ const styles = StyleSheet.create({
   syncButtonText: {
     fontSize: 11,
     letterSpacing: 0.9,
+  },
+  inviteSection: {
+    marginTop: 20,
   },
   empty: {
     paddingTop: 48,

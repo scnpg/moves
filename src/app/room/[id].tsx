@@ -25,6 +25,7 @@ import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { HoverPressable } from '@/components/HoverPressable';
+import { InviteLinkPanel } from '@/components/InviteLinkPanel';
 import { ReportUserPanel } from '@/components/ReportUserPanel';
 import { Screen } from '@/components/Screen';
 import { ShareMovePanel } from '@/components/ShareMovePanel';
@@ -497,6 +498,13 @@ export default function MoveRoomScreen() {
         <HoverPressable onPress={handleBack} lightenOpacity={0.08} style={styles.backButton}>
           <Text style={[styles.backText, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>← {t('common.back').toUpperCase()}</Text>
         </HoverPressable>
+        {/* Explicit, always-available toggle - the swipe-down gesture and the
+            auto-collapse-on-focus/scroll still work, but neither is
+            discoverable enough to rely on as the only way back to the
+            compact mini-bar once the header has been manually re-expanded. */}
+        <HoverPressable onPress={collapseHeader} lightenOpacity={0.08} style={styles.collapseButton}>
+          <Text style={[styles.backText, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.collapse').toUpperCase()} ▴</Text>
+        </HoverPressable>
       </View>
 
       <View style={styles.headerMain}>
@@ -559,19 +567,18 @@ export default function MoveRoomScreen() {
 
       {move.degree_limit === 0 ? <ShareMovePanel shareToken={move.share_token} /> : null}
 
-      {/* GOING block */}
+      {/* degree_limit 0 (Private) already lets anyone with the base link in,
+          and 3 (Public) already excludes nobody - a bypass link only means
+          something for the tiers that actually exclude people by default. */}
+      {isHost && move.degree_limit !== 0 && move.degree_limit !== 3 ? <InviteLinkPanel moveId={move.id} /> : null}
+
+      {/* GOING block - just the tile row (avatar + name, tap-to-profile);
+          the count alone covers what a summary AvatarStack would repeat. */}
       {approvedMembers.length > 0 ? (
         <View style={[styles.goingBlock, { borderBottomWidth: border.soft.width, borderBottomColor: border.soft.color }]}>
           <View style={styles.goingHeaderRow}>
             <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('room.whosHere')}</Text>
             <Text style={[styles.goingCount, { color: colors.textPrimary, fontFamily: font.family.heroDisplay }]}>{approvedMembers.length}</Text>
-          </View>
-          <View style={styles.avatarStackWrap}>
-            <AvatarStack
-              size={32}
-              avatars={approvedMembers.slice(0, 6).map((m) => ({ src: m.profile.avatar_url ?? undefined, alt: m.profile.display_name ?? m.profile.username }))}
-              overflow={Math.max(0, approvedMembers.length - 6)}
-            />
           </View>
           <FlatList
             horizontal
@@ -672,6 +679,7 @@ export default function MoveRoomScreen() {
                 label={isActive ? t('room.endsIn', { time: countdown }) : t('room.closingIn', { time: countdown })}
                 tone={isActive ? 'green' : 'pink'}
               />
+              <Text style={[styles.miniBarChevron, { color: colors.textMuted }]}>▾</Text>
             </HoverPressable>
           </Animated.View>
         </View>
@@ -802,7 +810,7 @@ const styles = StyleSheet.create({
   headerTitle: { marginBottom: 2 },
   hostLine: { fontSize: 11, letterSpacing: 0.9 },
   description: { fontSize: 16 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 8 },
   helperText: { fontSize: 11 },
   waitingText: { fontSize: 15, textAlign: 'center' },
   reportLinkWrap: { alignSelf: 'center', paddingHorizontal: 8, paddingVertical: 4 },
@@ -835,13 +843,21 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
   },
+  miniBarChevron: {
+    fontSize: 12,
+  },
   backStrip: {
-    height: 44,
+    height: 38,
     paddingHorizontal: 16,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   backButton: {
     alignSelf: 'flex-start',
+  },
+  collapseButton: {
+    alignSelf: 'flex-end',
   },
   backText: {
     fontSize: 11,
@@ -850,12 +866,13 @@ const styles = StyleSheet.create({
   headerMain: {
     flexDirection: 'row',
     gap: 12,
-    padding: 16,
-    paddingBottom: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   headerLeft: {
     flex: 1,
-    gap: 10,
+    gap: 6,
   },
   headerRight: {
     alignItems: 'flex-end',
@@ -863,8 +880,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   countdown: {
-    fontSize: 36,
-    lineHeight: 36,
+    fontSize: 30,
+    lineHeight: 32,
   },
   countdownLabel: {
     fontSize: 10,
@@ -874,21 +891,20 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   memberCount: { fontSize: 11, letterSpacing: 0.7 },
-  hostActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingBottom: 12 },
+  hostActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingBottom: 8 },
   endLinkWrap: { paddingHorizontal: 8, paddingVertical: 4 },
   endLink: { fontSize: 12, letterSpacing: 0.7 },
   deleteLink: { fontSize: 12, letterSpacing: 0.7 },
 
-  goingBlock: { padding: 16, gap: 12 },
+  goingBlock: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   goingHeaderRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
-  goingCount: { fontSize: 24, lineHeight: 24 },
-  avatarStackWrap: {},
+  goingCount: { fontSize: 20, lineHeight: 20 },
   attendeeRow: { gap: 12 },
   attendeeTile: { alignItems: 'center', gap: 6, width: 56 },
   attendeeAvatarWrap: { position: 'relative' },
   attendeeName: { fontSize: 10, letterSpacing: 0.7, maxWidth: 56 },
 
-  requestsSection: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
+  requestsSection: { paddingHorizontal: 16, paddingVertical: 10, gap: 10 },
   sectionTitle: { fontSize: 10, letterSpacing: 0.9 },
   requestRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   requestIdentityWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },

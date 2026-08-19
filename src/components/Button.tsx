@@ -16,6 +16,8 @@ interface ButtonProps {
   disabled?: boolean;
   loading?: boolean;
   style?: ViewStyle;
+  /** Overrides the secondary variant's border/text color - e.g. gold for an active "close friend" toggle. No effect on filled or ghost variants. */
+  accentColor?: string;
 }
 
 const HEIGHTS: Record<Size, number> = { lg: 52, md: 40, sm: 32 };
@@ -29,6 +31,7 @@ export function Button({
   disabled,
   loading,
   style,
+  accentColor,
 }: ButtonProps) {
   const theme = useTheme();
   const { colors, borderWidth, shadow, font } = theme;
@@ -44,13 +47,13 @@ export function Button({
     : isFilled
       ? { backgroundColor: fillColor, borderWidth: borderWidth.emphatic, borderColor: colors.border }
       : resolvedVariant === 'secondary'
-        ? { backgroundColor: colors.bgElevated, borderWidth: borderWidth.structural, borderColor: colors.border }
+        ? { backgroundColor: colors.bgElevated, borderWidth: borderWidth.structural, borderColor: accentColor ?? colors.border }
         : { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0 };
 
   const textColor = isDisabled
     ? colors.textMuted
     : resolvedVariant === 'secondary'
-      ? colors.textPrimary
+      ? (accentColor ?? colors.textPrimary)
       : resolvedVariant === 'ghost'
         ? colors.textPrimary
         : fillTextColor;

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { LayoutAnimation, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button } from '@/components/Button';
@@ -26,6 +26,62 @@ const NOTIFICATION_ROWS: { key: keyof NotificationPrefs; labelSuffix: string }[]
   { key: 'notify_group_chat', labelSuffix: 'GroupChat' },
 ];
 
+type PreferenceKey = 'timeFormat' | 'units' | 'language';
+
+/**
+ * A tap-to-expand row for settings that get picked once and rarely
+ * revisited (unlike Appearance/Notifications, which stay as always-visible
+ * controls) - keeps three full-width segmented controls from stacking
+ * before the reader even reaches Notifications.
+ */
+function PreferenceRow({
+  label,
+  value,
+  expanded,
+  onPress,
+  isFirst,
+  children,
+}: {
+  label: string;
+  value: string;
+  expanded: boolean;
+  onPress: () => void;
+  isFirst?: boolean;
+  children: ReactNode;
+}) {
+  const { colors, border, font } = useTheme();
+
+  return (
+    <View>
+      <HoverPressable
+        onPress={onPress}
+        style={[
+          styles.prefRow,
+          !isFirst && { borderTopWidth: border.soft.width, borderTopColor: border.soft.color },
+        ]}
+      >
+        <Text style={[styles.prefRowLabel, { color: colors.textPrimary, fontFamily: font.family.bodyRegular }]}>{label}</Text>
+        <View style={styles.prefRowRight}>
+          <Text style={[styles.prefRowValue, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>{value}</Text>
+          <Text
+            style={[
+              styles.chevron,
+              { color: colors.textMuted, transform: [{ rotate: expanded ? '90deg' : '0deg' }] },
+            ]}
+          >
+            ›
+          </Text>
+        </View>
+      </HoverPressable>
+      {expanded ? (
+        <View style={[styles.prefPanel, { borderTopWidth: border.soft.width, borderTopColor: border.soft.color }]}>
+          {children}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { session, profile } = useAuth();
@@ -33,6 +89,22 @@ export default function SettingsScreen() {
   const { colors, font, themeMode, setThemeMode, timeFormat, setTimeFormat, unitSystem, setUnitSystem } = useTheme();
   const [deleting, setDeleting] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
+  const [expandedPref, setExpandedPref] = useState<PreferenceKey | null>(null);
+
+  const togglePref = (key: PreferenceKey) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedPref((current) => (current === key ? null : key));
+  };
+
+  // Small delay so the segmented control's own selection state is visible
+  // for a beat before the row collapses back, rather than vanishing instantly.
+  const selectAndCollapse = (apply: () => void) => {
+    apply();
+    setTimeout(() => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setExpandedPref(null);
+    }, 220);
+  };
 
   useEffect(() => {
     if (!session?.user) return;
@@ -104,36 +176,52 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('settings.timeFormat')}</Text>
-          <SegmentedControl
-            segments={[
-              { value: '12h', label: t('settings.hour12') },
-              { value: '24h', label: t('settings.hour24') },
-            ]}
-            value={timeFormat}
-            onChange={(v) => setTimeFormat(v as TimeFormat)}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('settings.units')}</Text>
-          <SegmentedControl
-            segments={[
-              { value: 'imperial', label: t('settings.imperial') },
-              { value: 'metric', label: t('settings.metric') },
-            ]}
-            value={unitSystem}
-            onChange={(v) => setUnitSystem(v as UnitSystem)}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('settings.language')}</Text>
-          <SegmentedControl
-            segments={SUPPORTED_LOCALES.map((loc) => ({ value: loc, label: LOCALE_LABELS[loc] }))}
-            value={locale}
-            onChange={(v) => setLocale(v as Locale)}
-          />
+          <Text style={[styles.sectionTitle, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('settings.preferences')}</Text>
+          <Card style={styles.notifCard} raised={false}>
+            <PreferenceRow
+              label={t('settings.timeFormat')}
+              value={timeFormat === '12h' ? t('settings.hour12') : t('settings.hour24')}
+              expanded={expandedPref === 'timeFormat'}
+              onPress={() => togglePref('timeFormat')}
+              isFirst
+            >
+              <SegmentedControl
+                segments={[
+                  { value: '12h', label: t('settings.hour12') },
+                  { value: '24h', label: t('settings.hour24') },
+                ]}
+                value={timeFormat}
+                onChange={(v) => selectAndCollapse(() => setTimeFormat(v as TimeFormat))}
+              />
+            </PreferenceRow>
+            <PreferenceRow
+              label={t('settings.units')}
+              value={unitSystem === 'imperial' ? t('settings.imperial') : t('settings.metric')}
+              expanded={expandedPref === 'units'}
+              onPress={() => togglePref('units')}
+            >
+              <SegmentedControl
+                segments={[
+                  { value: 'imperial', label: t('settings.imperial') },
+                  { value: 'metric', label: t('settings.metric') },
+                ]}
+                value={unitSystem}
+                onChange={(v) => selectAndCollapse(() => setUnitSystem(v as UnitSystem))}
+              />
+            </PreferenceRow>
+            <PreferenceRow
+              label={t('settings.language')}
+              value={LOCALE_LABELS[locale]}
+              expanded={expandedPref === 'language'}
+              onPress={() => togglePref('language')}
+            >
+              <SegmentedControl
+                segments={SUPPORTED_LOCALES.map((loc) => ({ value: loc, label: LOCALE_LABELS[loc] }))}
+                value={locale}
+                onChange={(v) => selectAndCollapse(() => setLocale(v as Locale))}
+              />
+            </PreferenceRow>
+          </Card>
         </View>
 
         <View style={styles.field}>
@@ -218,6 +306,29 @@ const styles = StyleSheet.create({
   },
   notifLabel: {
     fontSize: 14,
+  },
+  prefRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  prefRowLabel: {
+    fontSize: 15,
+  },
+  prefRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  prefRowValue: {
+    fontSize: 13,
+  },
+  prefPanel: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    paddingTop: 4,
   },
   rowLabel: {
     fontSize: 13,

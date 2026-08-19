@@ -16,7 +16,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 export default function SignInScreen() {
   const { t } = useLocale();
   const insets = useSafeAreaInsets();
-  const { colors, font } = useTheme();
+  const { colors, font, scheme } = useTheme();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,7 +45,15 @@ export default function SignInScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.logoWrap}>
             <SunburstBackdrop />
-            <Image source={require('../../../assets/images/movesletterlogo-trimmed.png')} style={styles.title} resizeMode="contain" />
+            <Image
+              source={
+                scheme === 'dark'
+                  ? require('../../../assets/images/movesletterlogo-trimmed-dark.png')
+                  : require('../../../assets/images/movesletterlogo-trimmed.png')
+              }
+              style={styles.title}
+              resizeMode="contain"
+            />
             <Text style={[styles.tagline, { color: colors.textPrimary, fontFamily: font.family.bodyRegular }]}>
               {t('auth.tagline')}
             </Text>

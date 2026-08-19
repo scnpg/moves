@@ -14,7 +14,7 @@ import { LocationRequiredScreen } from '@/components/LocationRequiredScreen';
 import { OnboardingCarousel } from '@/components/OnboardingCarousel';
 import { completeOnboarding } from '@/features/profile/api';
 import { LocaleProvider } from '@/i18n/LocaleProvider';
-import { PENDING_JOIN_TOKEN_KEY } from '@/lib/links';
+import { PENDING_INVITE_TOKEN_KEY, PENDING_JOIN_TOKEN_KEY } from '@/lib/links';
 import { useUserLocation } from '@/lib/useLocation';
 import { isPlaceholderUsername } from '@/lib/username';
 import { AlertProvider } from '@/providers/AlertProvider';
@@ -69,6 +69,9 @@ function RootNavigation() {
   // /join/:token has its own signed-out preview (get_move_by_share_token
   // is anon-callable) - don't bounce visitors to sign-in before they see it.
   const onJoinRoute = segments[0] === 'join';
+  // /invite/:token is the same idea, for a host-issued bypass link instead
+  // of a Move's own share_token (get_move_by_invite_link is anon-callable).
+  const onInviteRoute = segments[0] === 'invite';
   // /users/:id has its own signed-out preview too (get_public_profile is
   // anon-callable) - for shared profile links/QR codes.
   const onUsersRoute = segments[0] === 'users';
@@ -89,19 +92,22 @@ function RootNavigation() {
 
   useEffect(() => {
     if (loading) return;
-    if (!session && !inAuthGroup && !onJoinRoute && !onUsersRoute && !onLegalRoute) {
+    if (!session && !inAuthGroup && !onJoinRoute && !onInviteRoute && !onUsersRoute && !onLegalRoute) {
       router.replace('/(auth)/sign-in');
     } else if (session && needsUsername && !onCompleteProfile) {
       router.replace('/complete-profile');
     } else if (session && inAuthGroup) {
-      // A token stashed by join/[share_token].tsx (visitor tapped "Sign in
-      // to join" while signed out) takes priority over the default landing.
-      AsyncStorage.getItem(PENDING_JOIN_TOKEN_KEY).then((token) => {
-        router.replace(token ? `/join/${token}` : '/(tabs)');
-      });
+      // A token stashed by join/[share_token].tsx or invite/[token].tsx
+      // (visitor tapped "Sign in to join" while signed out) takes priority
+      // over the default landing.
+      Promise.all([AsyncStorage.getItem(PENDING_JOIN_TOKEN_KEY), AsyncStorage.getItem(PENDING_INVITE_TOKEN_KEY)]).then(
+        ([joinToken, inviteToken]) => {
+          router.replace(joinToken ? `/join/${joinToken}` : inviteToken ? `/invite/${inviteToken}` : '/(tabs)');
+        }
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, needsUsername, onCompleteProfile, inAuthGroup, onJoinRoute, onUsersRoute, onLegalRoute, loading, router]);
+  }, [session, needsUsername, onCompleteProfile, inAuthGroup, onJoinRoute, onInviteRoute, onUsersRoute, onLegalRoute, loading, router]);
 
   if (loading) {
     return (
@@ -127,6 +133,7 @@ function RootNavigation() {
     !!session &&
     !inAuthGroup &&
     !onJoinRoute &&
+    !onInviteRoute &&
     !onUsersRoute &&
     !onLegalRoute &&
     !needsUsername &&
@@ -148,14 +155,21 @@ function RootNavigation() {
   // the app behind a resolved location rather than let every screen handle
   // a null-coords fallback individually.
   const needsLocationGate =
-    !!session && !inAuthGroup && !onJoinRoute && !onUsersRoute && !onLegalRoute && !needsUsername && !needsOnboarding;
+    !!session &&
+    !inAuthGroup &&
+    !onJoinRoute &&
+    !onInviteRoute &&
+    !onUsersRoute &&
+    !onLegalRoute &&
+    !needsUsername &&
+    !needsOnboarding;
 
   return (
     <View style={styles.flex}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {!onSignIn ? <AppHeader /> : null}
       {needsOnboarding ? (
-        <OnboardingCarousel onComplete={handleFinishOnboarding} />
+        <OnboardingCarousel onComplete={handleFinishOnboarding} coords={coords} locationLoading={locationLoading} />
       ) : needsLocationGate && !coords ? (
         <LocationRequiredScreen loading={locationLoading} denied={permissionDenied} onRetry={retryLocation} />
       ) : (
