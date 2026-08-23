@@ -245,6 +245,13 @@ export default function SettingsScreen() {
           </Card>
         </View>
 
+        <HoverPressable onPress={() => router.push('/support')}>
+          <Card style={styles.row} raised={false}>
+            <Text style={[styles.rowLabel, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>{t('settings.contactSupport')}</Text>
+            <Text style={[styles.chevron, { color: colors.textMuted }]}>›</Text>
+          </Card>
+        </HoverPressable>
+
         <HoverPressable onPress={() => router.push('/blocked')}>
           <Card style={styles.row} raised={false}>
             <Text style={[styles.rowLabel, { color: colors.textPrimary, fontFamily: font.family.monoBold }]}>{t('settings.blockedUsers')}</Text>

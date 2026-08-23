@@ -49,7 +49,7 @@ function DiscoverIllustration() {
   );
 }
 
-/** A Move card mid-creation - the degree-tier badges plus who's already in. */
+/** A Move card mid-creation, plus the "+" create affordance from the tab bar - tap a pin to join, or hit + to host your own. */
 function HostIllustration() {
   const { colors, border } = useTheme();
   return (
@@ -65,29 +65,28 @@ function HostIllustration() {
         <View style={[styles.hostDivider, { borderColor: border.soft.color, borderWidth: border.soft.width }]} />
         <AvatarStack size={28} avatars={FAKE_PEOPLE} overflow={2} />
       </Card>
+      <View style={[styles.createFab, { backgroundColor: colors.brand, borderColor: colors.border, borderWidth: border.rest.width }]}>
+        <Text style={[styles.createFabText, { color: colors.onAccent }]}>+</Text>
+      </View>
     </View>
   );
 }
 
-/** Two chat bubbles plus a "who's here" row - stands in for a Move's group chat. */
-function ChatIllustration() {
+/** A shield plus the real Report/Block actions - stands in for the safety guidelines and Terms of Service link. */
+function SafetyIllustration() {
   const { colors, border } = useTheme();
   return (
-    <View style={styles.panel}>
-      <View style={styles.chatWhosHere}>
-        <AvatarStack size={24} avatars={FAKE_PEOPLE} overflow={1} />
-      </View>
-      <View style={styles.chatBubbleRow}>
-        <Avatar name="Ari" size={26} />
-        <View style={[styles.bubble, styles.bubbleTheirs, { backgroundColor: colors.bgCard, borderColor: border.rest.color, borderWidth: border.rest.width }]}>
-          <View style={[styles.textBarNarrow, { backgroundColor: colors.borderSubtle, marginBottom: 0 }]} />
+    <View style={[styles.panel, styles.safetyPanel]}>
+      <Text style={styles.safetyIcon}>🛡️</Text>
+      <View style={styles.safetyChipRow}>
+        <View style={[styles.safetyChip, { backgroundColor: colors.danger, borderColor: colors.border, borderWidth: border.rest.width }]}>
+          <Text style={[styles.safetyChipText, { color: colors.textInverse }]}>⚑ Report</Text>
+        </View>
+        <View style={[styles.safetyChip, { backgroundColor: colors.bgElevated, borderColor: colors.border, borderWidth: border.rest.width }]}>
+          <Text style={[styles.safetyChipText, { color: colors.textPrimary }]}>Block</Text>
         </View>
       </View>
-      <View style={[styles.chatBubbleRow, styles.chatBubbleRowMine]}>
-        <View style={[styles.bubble, styles.bubbleMine, { backgroundColor: colors.brand, borderColor: border.rest.color, borderWidth: border.rest.width }]}>
-          <View style={[styles.textBarNarrow, { backgroundColor: colors.onAccent, opacity: 0.5, marginBottom: 0 }]} />
-        </View>
-      </View>
+      <View style={[styles.textBarNarrow, styles.safetyLink, { backgroundColor: colors.borderSubtle }]} />
     </View>
   );
 }
@@ -253,7 +252,7 @@ function ConnectSlide({
 const SLIDES = [
   { key: 'discover', titleKey: 'onboarding.discoverTitle', bodyKey: 'onboarding.discoverBody', Illustration: DiscoverIllustration },
   { key: 'host', titleKey: 'onboarding.hostTitle', bodyKey: 'onboarding.hostBody', Illustration: HostIllustration },
-  { key: 'chat', titleKey: 'onboarding.chatTitle', bodyKey: 'onboarding.chatBody', Illustration: ChatIllustration },
+  { key: 'safety', titleKey: 'onboarding.safetyTitle', bodyKey: 'onboarding.safetyBody', Illustration: SafetyIllustration },
   { key: 'connect', titleKey: 'onboarding.connectTitle', bodyKey: 'onboarding.connectBody', Illustration: null },
 ] as const;
 
@@ -470,25 +469,46 @@ const styles = StyleSheet.create({
   hostDivider: {
     borderTopWidth: 1,
   },
+  createFab: {
+    position: 'absolute',
+    top: -6,
+    right: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createFabText: {
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: '700',
+  },
 
-  // Chat
-  chatWhosHere: {
-    marginBottom: 14,
+  // Safety
+  safetyPanel: {
+    alignItems: 'center',
+    gap: 14,
   },
-  chatBubbleRow: {
+  safetyIcon: {
+    fontSize: 48,
+  },
+  safetyChipRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
     gap: 8,
-    marginBottom: 10,
   },
-  chatBubbleRowMine: {
-    justifyContent: 'flex-end',
-  },
-  bubble: {
+  safetyChip: {
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    maxWidth: 150,
+    height: 28,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  bubbleTheirs: {},
-  bubbleMine: {},
+  safetyChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  safetyLink: {
+    width: '55%',
+  },
 });
