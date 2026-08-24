@@ -34,6 +34,8 @@ async function fetchHighAccuracyPosition(): Promise<Coords> {
   return { lat: position.coords.latitude, lng: position.coords.longitude };
 }
 
+const LOCATION_TIMEOUT_MS = 15000;
+
 /**
  * Ambient location for feed sorting / map centering, and (via `retry`) the
  * app-wide "location required" gate in src/app/_layout.tsx - the whole app
@@ -48,18 +50,35 @@ export function useUserLocation() {
     let cancelled = false;
     setLoading(true);
     setPermissionDenied(false);
+
+    // getCurrentPositionAsync() has no built-in timeout and can hang
+    // indefinitely (weak GPS signal, indoors, simulator with no location
+    // set - all common right after a fresh signup) - stop blocking the UI
+    // on it after LOCATION_TIMEOUT_MS so the "enable location" retry screen
+    // appears instead of spinning forever. The request keeps running in the
+    // background and still resolves into coords/permissionDenied below if
+    // it finishes late.
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, LOCATION_TIMEOUT_MS);
+
     fetchHighAccuracyPosition()
       .then((c) => {
-        if (!cancelled) setCoords(c);
+        if (cancelled) return;
+        clearTimeout(timeoutId);
+        setCoords(c);
+        setLoading(false);
       })
       .catch(() => {
-        if (!cancelled) setPermissionDenied(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (cancelled) return;
+        clearTimeout(timeoutId);
+        setPermissionDenied(true);
+        setLoading(false);
       });
+
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, []);
 
