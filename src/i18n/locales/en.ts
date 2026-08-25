@@ -488,8 +488,8 @@ const en = {
     title: 'Turn on location',
     body: 'We need your location to find moves nearby',
     deniedBody: 'Location access is off. Enable it for Moves in your browser or device settings, then try again.',
-    locatingTitle: 'Gathering location information',
-    locatingBody: "Hang tight - we're pinpointing you now.",
+    locatingTitle: 'Fetching your location',
+    locatingBody: 'We need your location to see moves nearby',
     enableButton: 'Enable location',
   },
   moderation: {

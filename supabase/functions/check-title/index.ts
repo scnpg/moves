@@ -9,7 +9,11 @@
 // hate speech, extreme obscenity) - ordinary swearing or edgy-but-harmless
 // titles are meant to pass through untouched. See README.md.
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,6 +81,22 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Unlike Move creation itself (rate-limited at the DB level),
+    // nothing stopped a client from calling this function in a tight loop
+    // without ever creating a Move - each call is a real Anthropic spend.
+    // Scoped to the caller's own JWT (forwarded, not service_role) so the
+    // RPC's auth.uid() is the actual user, not this function. Throwing
+    // here (rather than checking `error`) lands in the catch below, which
+    // already fails open exactly the same way a missing key or an
+    // Anthropic outage does - the rate limit only ever stops the Anthropic
+    // call, never Move creation itself (see checkTitleForModeration() in
+    // src/features/moves/api.ts, which fails open on any error already).
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+    });
+    const { error: rateLimitError } = await supabase.rpc('check_title_rate_limit');
+    if (rateLimitError) throw rateLimitError;
 
     const { verdict, reason } = await classify(title);
     return new Response(JSON.stringify({ verdict, reason }), {
