@@ -152,12 +152,12 @@ export default function MovesScreen() {
       // "connected to you" - the Friends tab isn't just "moves with a
       // friends-only degree", it's "moves connected to your social graph".
       // Without these checks, a friend's or FoF's public Move would only
-      // ever show under Public.
+      // ever show under Public. Public itself always shows every public
+      // Move regardless of host, so a friend's public Move deliberately
+      // shows on both tabs rather than being Friends-tab-exclusive.
       const hostIsFriend = friendIds.has(m.host_id);
       const hostIsFriendOfFriend = friendOfFriendCounts.has(m.host_id);
-      return tab === 'friends'
-        ? m.degree_limit !== 3 || hostIsFriend || hostIsFriendOfFriend
-        : m.degree_limit === 3 && !hostIsFriend && !hostIsFriendOfFriend;
+      return tab === 'friends' ? m.degree_limit !== 3 || hostIsFriend || hostIsFriendOfFriend : m.degree_limit === 3;
     })
     .sort((a, b) => {
       // Nearest first on both tabs now that Friends isn't radius-filtered
