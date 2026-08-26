@@ -18,7 +18,7 @@ import { searchUsers } from '@/features/search/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { confirmAction, notify } from '@/lib/alerts';
 import type { DegreeLimit, FriendListItem, FriendOfFriendSuggestion, SearchUserResult } from '@/lib/database.types';
-import { isCloseFriendsUnlocked, isPrivateUnlocked, nextMilestoneLabel } from '@/lib/referrals';
+import { isCloseFriendsUnlocked, isPublicUnlocked, nextMilestoneLabel } from '@/lib/referrals';
 import { combineDateAndTime, timeString } from '@/lib/time';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -52,7 +52,10 @@ export default function CreateMoveScreen() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [degreeLimit, setDegreeLimit] = useState<DegreeLimit>(3);
+  // Friends, not Open (Public) - Public is now gated behind 3 invites (see
+  // referrals.ts), so a brand-new host with zero invites would otherwise
+  // land on a pre-selected tier they can't actually submit.
+  const [degreeLimit, setDegreeLimit] = useState<DegreeLimit>(1);
   const [startTime, setStartTime] = useState(() => timeString(new Date()));
   const [endTime, setEndTime] = useState(() => timeString(new Date(Date.now() + 2 * 60 * 60_000)));
   const [startDate, setStartDate] = useState(() => new Date());
@@ -84,15 +87,18 @@ export default function CreateMoveScreen() {
     });
   };
 
-  const privateLocked = !isPrivateUnlocked(referralCount ?? 0);
+  const publicLocked = !isPublicUnlocked(referralCount ?? 0);
   const closeFriendsLocked = !isCloseFriendsUnlocked(referralCount ?? 0);
 
+  // Unlocked tiers first, locked ones pushed to the bottom - previously
+  // sorted by degree strictness instead, which put a locked row (Close
+  // Friends) at the very top.
   const DEGREE_ROWS: { value: DegreeLimit; label: string; disabled?: boolean }[] = [
-    { value: 4, label: t('createMove.closeFriendsOption'), disabled: closeFriendsLocked },
     { value: 1, label: t('createMove.friendsOption') },
     { value: 2, label: t('createMove.mutualsOption') },
-    { value: 3, label: t('createMove.openOption') },
-    { value: 0, label: t('createMove.privateOption'), disabled: privateLocked },
+    { value: 0, label: t('createMove.privateOption') },
+    { value: 4, label: t('createMove.closeFriendsOption'), disabled: closeFriendsLocked },
+    { value: 3, label: t('createMove.openOption'), disabled: publicLocked },
   ];
 
   // Same hues as the degree Badges shown elsewhere (room screen, invite

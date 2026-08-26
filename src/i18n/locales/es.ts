@@ -9,6 +9,7 @@ const es: TranslationDictionary = {
   },
   auth: {
     signIn: 'Iniciar sesión',
+    or: 'O',
     tagline: 'Planea algo. Ahora mismo.',
     email: 'Correo electrónico',
     password: 'Contraseña',
@@ -25,6 +26,7 @@ const es: TranslationDictionary = {
     usernameHelp: '3-20 caracteres: minúsculas, números o guiones bajos.',
     displayName: 'Nombre para mostrar',
     displayNamePlaceholder: 'Ej. David D.',
+    phoneLabel: 'Número de teléfono',
     passwordMinPlaceholder: 'Al menos 8 caracteres',
     signUp: 'Crear cuenta',
     checkEmailTitle: 'Revisa tu correo',
