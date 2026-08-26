@@ -488,7 +488,7 @@ const es: TranslationDictionary = {
     body: 'Necesitamos tu ubicación para encontrar Moves cerca de ti',
     deniedBody: 'El acceso a tu ubicación está desactivado. Actívalo para Moves en la configuración de tu navegador o dispositivo, y vuelve a intentarlo.',
     locatingTitle: 'Obteniendo tu ubicación',
-    locatingBody: 'Un momento, te estamos localizando.',
+    locatingBody: 'Necesitamos tu ubicación para ver Moves cerca de ti',
     enableButton: 'Activar ubicación',
   },
   moderation: {

@@ -487,8 +487,8 @@ const zhHant: TranslationDictionary = {
     title: '開啟定位',
     body: '我們需要你的定位才能找到附近的局',
     deniedBody: '目前定位存取權已關閉。請在瀏覽器或裝置設定中為 Moves 開啟定位，然後再試一次。',
-    locatingTitle: '正在取得定位資訊',
-    locatingBody: '請稍候，我們正在為你定位。',
+    locatingTitle: '正在取得你的定位',
+    locatingBody: '我們需要你的定位才能查看附近的揪團',
     enableButton: '開啟定位',
   },
   moderation: {

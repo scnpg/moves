@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 
 import { HoverPressable } from '@/components/HoverPressable';
 import { TextField } from '@/components/TextField';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
-import { getCurrentLocation } from '@/lib/useLocation';
+import { getCurrentLocation, useUserLocation } from '@/lib/useLocation';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export interface LocationValue {
@@ -18,82 +19,29 @@ interface LocationPickerProps {
   onChange: (value: LocationValue | null) => void;
 }
 
-const ZOOM = 16;
-const TILE_SIZE = 256;
-const CANVAS_SIZE = TILE_SIZE * 3;
-const MARKER_SIZE = 18;
-
-/** Standard Web Mercator slippy-map projection - same math the {z}/{x}/{y} tile scheme is built on. */
-function project(lat: number, lng: number, zoom: number) {
-  const n = 2 ** zoom;
-  const latRad = (lat * Math.PI) / 180;
-  const xtile = ((lng + 180) / 360) * n;
-  const ytile = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
-  return { xtile, ytile };
-}
+// Violette's Lock, Potomac, MD - same fallback LiveMap.tsx and the web
+// picker use until a real value (pin, ambient location, or search result)
+// is available.
+const DEFAULT_CENTER: LocationValue = { lat: 39.0672, lng: -77.3285 };
+const DEFAULT_DELTA = 0.02;
 
 /**
- * No interactive native map library wired up (would need react-native-maps
- * - a new native module requiring a fresh EAS build, plus a Google Maps API
- * key on Android). This gets a real, correctly-centered map without either:
- * a 3x3 grid of the same CARTO tiles LocationPicker.web.tsx already uses,
- * manually positioned from the pin's Web Mercator projection, with the pin
- * itself drawn as an overlay at the exact computed pixel. Static, not
- * click-to-pin - search and "use my location" remain how the pin moves.
+ * Real interactive map on iOS via Apple's own MapKit (react-native-maps,
+ * PROVIDER_DEFAULT) - already linked and in active use by LiveMap.tsx, so
+ * this needs no new native module or EAS build. Tap the map (or drag the
+ * marker) to place/move the pin, mirroring LocationPicker.web.tsx's
+ * click-to-pin Leaflet map.
  */
-function StaticPinMap({ lat, lng }: { lat: number; lng: number }) {
-  const { colors, border, scheme } = useTheme();
-  const { xtile, ytile } = project(lat, lng, ZOOM);
-  const tileX = Math.floor(xtile);
-  const tileY = Math.floor(ytile);
-  const pixelX = (xtile - tileX) * TILE_SIZE;
-  const pixelY = (ytile - tileY) * TILE_SIZE;
-  // Top-left of the *center* tile, in canvas coordinates, such that the
-  // pin's exact fractional position lands on the canvas's own center.
-  const originX = CANVAS_SIZE / 2 - pixelX;
-  const originY = CANVAS_SIZE / 2 - pixelY;
-  const baseUrl = scheme === 'dark' ? 'https://a.basemaps.cartocdn.com/dark_all' : 'https://a.basemaps.cartocdn.com/light_all';
-
-  const tiles: { dx: number; dy: number; x: number; y: number }[] = [];
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
-      tiles.push({ dx, dy, x: tileX + dx, y: tileY + dy });
-    }
-  }
-
-  return (
-    <View style={[styles.mapWrap, { borderWidth: border.rest.width, borderColor: border.rest.color }]}>
-      <View style={[styles.canvas, { backgroundColor: colors.bgElevated }]}>
-        {tiles.map(({ dx, dy, x, y }) => (
-          <Image
-            key={`${x},${y}`}
-            source={{ uri: `${baseUrl}/${ZOOM}/${x}/${y}.png` }}
-            style={{ position: 'absolute', left: originX + dx * TILE_SIZE, top: originY + dy * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE }}
-          />
-        ))}
-        <View
-          style={[
-            styles.marker,
-            {
-              left: CANVAS_SIZE / 2 - MARKER_SIZE / 2,
-              top: CANVAS_SIZE / 2 - MARKER_SIZE / 2,
-              backgroundColor: colors.accentBlue,
-              borderColor: colors.border,
-              borderWidth: border.rest.width + 1,
-            },
-          ]}
-        />
-      </View>
-    </View>
-  );
-}
-
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const { t } = useLocale();
-  const { colors, border, font } = useTheme();
+  const { colors, border, font, scheme } = useTheme();
+  const { coords } = useUserLocation();
+  const mapRef = useRef<MapView | null>(null);
   const [address, setAddress] = useState('');
   const [searching, setSearching] = useState(false);
   const [locating, setLocating] = useState(false);
+
+  const center = value ?? coords ?? DEFAULT_CENTER;
 
   // Debounced forward-geocoding: search fires 300ms after typing stops.
   useEffect(() => {
@@ -118,6 +66,17 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address]);
+
+  // Search results and "use my location" both change `value`/`coords`
+  // without the user touching the map directly - animate there instead of
+  // silently updating out of view, same idea as web's <Recenter>.
+  useEffect(() => {
+    mapRef.current?.animateToRegion(
+      { latitude: center.lat, longitude: center.lng, latitudeDelta: DEFAULT_DELTA, longitudeDelta: DEFAULT_DELTA },
+      300
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center.lat, center.lng]);
 
   const handleUseMyLocation = async () => {
     setLocating(true);
@@ -147,10 +106,32 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         </View>
         {searching ? <ActivityIndicator size="small" color={colors.textMuted} /> : null}
       </View>
-      {value ? <StaticPinMap lat={value.lat} lng={value.lng} /> : null}
+
+      <View style={[styles.mapWrap, { borderWidth: border.rest.width, borderColor: border.rest.color }]}>
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_DEFAULT}
+          userInterfaceStyle={scheme}
+          style={styles.map}
+          initialRegion={{ latitude: center.lat, longitude: center.lng, latitudeDelta: DEFAULT_DELTA, longitudeDelta: DEFAULT_DELTA }}
+          onPress={(e) => onChange({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })}
+        >
+          {value ? (
+            <Marker
+              coordinate={{ latitude: value.lat, longitude: value.lng }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              draggable
+              onDragEnd={(e) => onChange({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })}
+            >
+              <View style={[styles.pinDot, { borderColor: colors.border, backgroundColor: colors.accentBlue }]} />
+            </Marker>
+          ) : null}
+        </MapView>
+      </View>
+
       <View style={styles.actionsRow}>
-        <Text style={[styles.hint, { color: value ? colors.brand : colors.textMuted, fontFamily: font.family.bodyRegular }]}>
-          {value ? `📍 ${t('locationPicker.pinnedAt', { lat: value.lat.toFixed(3), lng: value.lng.toFixed(3) })}` : t('locationPicker.noLocationSet')}
+        <Text style={[styles.hint, { color: colors.textMuted, fontFamily: font.family.bodyRegular }]}>
+          {value ? t('locationPicker.tapToMove') : t('locationPicker.tapToPin')}
         </Text>
         <View style={styles.actionButtons}>
           <HoverPressable
@@ -189,20 +170,14 @@ const styles = StyleSheet.create({
     height: 200,
     overflow: 'hidden',
   },
-  canvas: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    marginLeft: -(CANVAS_SIZE / 2),
-    marginTop: -(CANVAS_SIZE / 2),
-    width: CANVAS_SIZE,
-    height: CANVAS_SIZE,
+  map: {
+    flex: 1,
   },
-  marker: {
-    position: 'absolute',
-    width: MARKER_SIZE,
-    height: MARKER_SIZE,
-    borderRadius: MARKER_SIZE / 2,
+  pinDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
   },
   actionsRow: {
     flexDirection: 'row',
