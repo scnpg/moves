@@ -37,6 +37,11 @@ additional_redirect_urls = ["https://scnpg.github.io/moves/*", "http://localhost
 # of a leaked/intercepted access token small.
 jwt_expiry = 900
 enable_signup = true
+# GoTrue's own default is 6 - raised since that's weak enough to be
+# meaningfully brute-forceable even with sign_in_sign_ups's rate limit.
+# Only affects new/changed passwords - existing accounts are unaffected.
+minimum_password_length = 8
+password_requirements = "lower_upper_letters_digits"
 
 [auth.email]
 enable_signup = true

@@ -9,6 +9,14 @@
 // - get_moderation_queue() treats that the same as `possible_threat`, so a
 // human moderator still sees and can resolve every case even with this
 // function never deployed.
+//
+// verify_jwt (on by default for a deployed function) only checks that the
+// caller presents *some* valid Supabase JWT - the anon key is public by
+// design, so that alone doesn't stop an arbitrary internet client from
+// invoking this function's URL directly with a fabricated payload,
+// wasting an Anthropic call per hit. The webhook-secret header check below
+// verifies the request actually came from the Database Webhook, not just
+// anyone holding the public anon key - see README.md for the setup step.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -28,6 +36,7 @@ interface WebhookPayload {
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+const webhookSecret = Deno.env.get('MODERATE_REPORT_WEBHOOK_SECRET');
 
 type Verdict = 'confirmed_threat' | 'possible_threat' | 'no_threat';
 
@@ -59,6 +68,14 @@ async function classify(prompt: string): Promise<{ verdict: Verdict; reasoning: 
 }
 
 Deno.serve(async (req) => {
+  if (webhookSecret && req.headers.get('x-webhook-secret') !== webhookSecret) {
+    // No secret configured yet = can't verify, so don't block (same
+    // fail-open posture as the missing-ANTHROPIC_API_KEY case below) -
+    // once MODERATE_REPORT_WEBHOOK_SECRET is set (see README.md), this
+    // starts actually rejecting anything that isn't the real webhook.
+    return new Response('unauthorized', { status: 401 });
+  }
+
   const payload = (await req.json()) as WebhookPayload;
 
   if (payload.table !== 'moderation_cases' || payload.type !== 'INSERT') {
