@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import Constants from 'expo-constants';
 
 import { supabase } from '@/lib/supabase';
@@ -23,19 +24,22 @@ export async function signUp(params: {
   password: string;
   username: string;
   displayName: string;
+  /** Already hashed client-side (see src/lib/phone.ts hashPhone()) - the raw number never leaves the device. */
+  phoneHash: string;
   referredBy?: string | null;
 }): Promise<{ signedIn: boolean }> {
-  const { email, password, username, displayName, referredBy } = params;
+  const { email, password, username, displayName, phoneHash, referredBy } = params;
   // handle_new_user() (supabase/migrations/20260801120100_profiles.sql,
-  // extended in 20260803140200_referrals.sql) reads these keys straight out
-  // of raw_user_meta_data to provision the profile row. referred_by is the
+  // extended in 20260803140200_referrals.sql and 20260826090100_require_
+  // phone_at_signup.sql) reads these keys straight out of
+  // raw_user_meta_data to provision the profile row. referred_by is the
   // referrer's own user id (see src/lib/links.ts referralSignUpUrl()) -
   // self-referral and invalid ids are silently dropped server-side.
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { username, display_name: displayName, referred_by: referredBy ?? null },
+      data: { username, display_name: displayName, phone_hash: phoneHash, referred_by: referredBy ?? null },
       emailRedirectTo: emailRedirectTo(),
     },
   });
@@ -59,6 +63,50 @@ export async function signIn(params: { identifier: string; password: string }) {
   }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+}
+
+/**
+ * Native-only Sign in with Apple. Handles both sign-up and sign-in in one
+ * flow - if there's no existing account for this Apple ID, GoTrue creates
+ * one automatically (via handle_new_user(), same trigger the email/
+ * password form goes through, so it lands on the exact same profile
+ * shape). A brand-new account this way has no username/phone metadata to
+ * give that trigger (Apple's identity token carries none of this app's
+ * own fields), so it gets the placeholder username handle_new_user()
+ * already falls back to either way - the root layout's existing
+ * needsUsername gate gets them to complete-profile.tsx, which now also
+ * collects phone in that same step. Configured server-side entirely
+ * through the app's own Bundle ID as an authorized client (see
+ * supabase/config.toml's [auth.external.apple]) - no Services ID or
+ * signing key needed, since this is the native id-token flow, not the
+ * web/OAuth-redirect one.
+ *
+ * Returns silently (no error) if the user dismisses the native sheet -
+ * that's not a failure worth surfacing an alert for.
+ */
+export async function signInWithApple(): Promise<void> {
+  let credential: AppleAuthentication.AppleAuthenticationCredential;
+  try {
+    credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+  } catch (err) {
+    if (err instanceof Error && 'code' in err && err.code === 'ERR_REQUEST_CANCELED') return;
+    throw err;
+  }
+
+  if (!credential.identityToken) {
+    throw new Error('Apple did not return an identity token.');
+  }
+
+  const { error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
+  });
   if (error) throw error;
 }
 

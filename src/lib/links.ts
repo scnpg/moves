@@ -29,7 +29,18 @@ export function referralSignUpUrl(referrerId: string): string {
   return `${appOrigin()}/sign-up?ref=${referrerId}`;
 }
 
+/**
+ * Unlike the other links here, this one is meant to be opened by someone
+ * who most likely already has the app (sharing your own profile), so it
+ * points straight at the native app via its URL scheme on native rather
+ * than the GitHub Pages web build - referralSignUpUrl()/joinMoveUrl()
+ * intentionally stay web links since those need to work for people who
+ * don't have the app yet.
+ */
 export function profileShareUrl(userId: string): string {
+  if (Platform.OS !== 'web') {
+    return `moves://users/${userId}`;
+  }
   return `${appOrigin()}/users/${userId}`;
 }
 

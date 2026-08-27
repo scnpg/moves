@@ -9,6 +9,7 @@ import { TextField } from '@/components/TextField';
 import { signUp } from '@/features/auth/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { notify } from '@/lib/alerts';
+import { hashPhone } from '@/lib/phone';
 import { USERNAME_PATTERN } from '@/lib/username';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -21,8 +22,10 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
 
   const handleSignUp = async () => {
@@ -32,6 +35,13 @@ export default function SignUpScreen() {
       return;
     }
     setUsernameError(null);
+
+    const phoneHash = await hashPhone(phone);
+    if (!phoneHash) {
+      setPhoneError(t('profile.phoneTooShort'));
+      return;
+    }
+    setPhoneError(null);
 
     if (!email || !password) return;
 
@@ -47,6 +57,7 @@ export default function SignUpScreen() {
         password,
         username: normalizedUsername,
         displayName: displayName.trim() || normalizedUsername,
+        phoneHash,
         referredBy: referredBy || null,
       });
       // If confirmations are on, there's no session yet and the root
@@ -96,6 +107,16 @@ export default function SignUpScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               placeholder={t('auth.emailPlaceholder')}
+            />
+            <TextField
+              label={t('auth.phoneLabel')}
+              required
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              placeholder={t('profile.phoneFindPlaceholder')}
+              error={phoneError}
+              hint={t('profile.phoneHelp')}
             />
             <TextField
               label={t('auth.password')}

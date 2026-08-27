@@ -9,6 +9,7 @@ const zhHant: TranslationDictionary = {
   },
   auth: {
     signIn: '登入',
+    or: '或',
     tagline: '現在就計劃點什麼。',
     email: '電子郵件',
     password: '密碼',
@@ -25,6 +26,7 @@ const zhHant: TranslationDictionary = {
     usernameHelp: '3-20 個字元：小寫字母、數字或底線。',
     displayName: '顯示名稱',
     displayNamePlaceholder: '例：David D.',
+    phoneLabel: '電話號碼',
     passwordMinPlaceholder: '至少 8 個字元',
     signUp: '建立帳號',
     checkEmailTitle: '請查看你的電子郵件',

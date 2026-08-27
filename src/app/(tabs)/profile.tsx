@@ -19,7 +19,7 @@ import { notify } from '@/lib/alerts';
 import { PHONE_CONTACTS_FEATURE_ENABLED } from '@/lib/features';
 import { referralSignUpUrl } from '@/lib/links';
 import { hashPhone } from '@/lib/phone';
-import { isPrivateUnlocked, nextMilestoneLabel } from '@/lib/referrals';
+import { isPublicUnlocked, nextMilestoneLabel } from '@/lib/referrals';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -153,7 +153,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const unlocked = isPrivateUnlocked(referralCount ?? 0);
+  const unlocked = isPublicUnlocked(referralCount ?? 0);
 
   return (
     <Screen>

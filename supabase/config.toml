@@ -88,6 +88,17 @@ pass = "env(RESEND_SMTP_PASS)"
 admin_email = "onboarding@resend.dev"
 sender_name = "Moves?"
 
+# Native-only Sign in with Apple (expo-apple-authentication ->
+# supabase.auth.signInWithIdToken(), see src/features/auth/api.ts). No
+# Services ID or signing key needed for this flow - those only matter for
+# the web/OAuth-redirect flow, which this app doesn't use. client_id is
+# the app's own Bundle ID, registered here as an authorized audience for
+# the identity token Apple hands back to the app directly.
+[auth.external.apple]
+enabled = true
+client_id = "com.movesquestion.app"
+secret = ""
+
 [realtime]
 enabled = true
 
