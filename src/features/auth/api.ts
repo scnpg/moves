@@ -1,21 +1,19 @@
-import { Platform } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import Constants from 'expo-constants';
 
+import { appOrigin } from '@/lib/links';
 import { supabase } from '@/lib/supabase';
 
-// The confirmation email's link redirects here after verifying - same
-// origin the signup happened from (so local dev links go back to
-// localhost, and real users land back on the deployed site). The app's
-// base path (experiments.baseUrl in app.json) only applies to the static
-// `expo export` build GitHub Pages serves - the local dev server always
-// serves from "/", regardless of that setting.
-function emailRedirectTo(): string | undefined {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
-  const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-  if (isLocalDev) return window.location.origin;
-  const baseUrl = Constants.expoConfig?.experiments?.baseUrl ?? '';
-  return `${window.location.origin}${baseUrl}`;
+// Where a Supabase auth email's link redirects after verifying. Always a
+// real, fully-qualified URL - appOrigin() already falls back to the
+// deployed GitHub Pages site on native (there's no window there to
+// resolve a "current origin" from), which matters more here than it did
+// when this only handled signup confirmation: that flow works fine
+// landing on the site root regardless of platform, but password reset
+// needs to land specifically on /reset-password to be handled at all, so
+// an unresolved redirect isn't an option the way plain `undefined` used
+// to be.
+function emailRedirectTo(path = ''): string {
+  return `${appOrigin()}${path}`;
 }
 
 /** Returns whether the caller is now signed in - false means email confirmation is pending. */
@@ -63,6 +61,25 @@ export async function signIn(params: { identifier: string; password: string }) {
   }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+}
+
+/**
+ * Sends the "forgot password" email - the link inside it redirects to
+ * /reset-password with a short-lived recovery session appended to the URL
+ * (see that screen). Never reveals whether the address actually has an
+ * account - Supabase returns success either way, and the UI should too
+ * (same "don't confirm/deny" reasoning as signIn()'s username lookup
+ * above), so this only ever throws on a genuine network/rate-limit error.
+ */
+export async function requestPasswordReset(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: emailRedirectTo('/reset-password') });
+  if (error) throw error;
+}
+
+/** Call once the recovery session from the emailed link is active (see /reset-password) - sets the new password on that same session. */
+export async function confirmPasswordReset(newPassword: string) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw error;
 }
 

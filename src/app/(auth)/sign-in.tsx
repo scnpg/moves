@@ -93,6 +93,11 @@ export default function SignInScreen() {
               secureTextEntry
               placeholder={t('auth.passwordPlaceholder')}
             />
+            <Link href="/(auth)/forgot-password" style={styles.forgotLink}>
+              <Text style={[styles.forgotLinkText, { color: colors.textSecondary, fontFamily: font.family.bodyRegular }]}>
+                {t('auth.forgotPassword')}
+              </Text>
+            </Link>
             <Button label={t('auth.signIn')} onPress={handleSignIn} loading={loading} size="lg" />
           </View>
 
@@ -156,6 +161,14 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 16,
+  },
+  forgotLink: {
+    alignSelf: 'flex-end',
+    marginTop: -8,
+  },
+  forgotLinkText: {
+    fontSize: 13,
+    textDecorationLine: 'underline',
   },
   appleSection: {
     gap: 16,
