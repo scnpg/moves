@@ -1,12 +1,12 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-// Same origin-resolution logic as emailRedirectTo() in features/auth/api.ts,
-// plus a hardcoded prod fallback for native contexts where there's no
-// window - this app's only real deployment is the GitHub Pages web build.
+// Hardcoded prod fallback for native contexts where there's no window -
+// this app's only real deployment is the GitHub Pages web build.
 const PROD_ORIGIN = 'https://scnpg.github.io/moves';
 
-function appOrigin(): string {
+/** Exported for auth/api.ts's own redirect-URL construction (signup confirmation, password reset) - same origin-resolution logic, no reason to duplicate it. */
+export function appOrigin(): string {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
     if (isLocalDev) return window.location.origin;

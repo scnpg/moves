@@ -77,6 +77,13 @@ function RootNavigation() {
   // anon-callable) - for shared profile links/QR codes.
   const onUsersRoute = segments[0] === 'users';
   const onCompleteProfile = segments[0] === 'complete-profile';
+  // /reset-password establishes its own short-lived recovery session from
+  // the emailed link (see that screen) - it has to survive both the
+  // signed-out redirect below (there's no session yet on first load, right
+  // up until the screen parses the link) and, once that recovery session
+  // lands, every other signed-in gate that would otherwise whisk them off
+  // to onboarding/location/tabs before they've actually set a new password.
+  const onResetPasswordRoute = segments[0] === 'reset-password';
   // Privacy Policy / Terms of Service need to work signed-out too - they're
   // the URLs App Store Connect / Play Console link to, and a visitor
   // reading them before signing up shouldn't get bounced to sign-in first.
@@ -108,9 +115,9 @@ function RootNavigation() {
     // exceeded". Once bannedReason clears (dismissBanNotice, or a fresh
     // sign-in), this effect resumes normally.
     if (!session && bannedReason !== null) return;
-    if (!session && !inAuthGroup && !onJoinRoute && !onInviteRoute && !onUsersRoute && !onLegalRoute) {
+    if (!session && !inAuthGroup && !onJoinRoute && !onInviteRoute && !onUsersRoute && !onLegalRoute && !onResetPasswordRoute) {
       router.replace('/(auth)/sign-in');
-    } else if (session && needsUsername && !onCompleteProfile) {
+    } else if (session && needsUsername && !onCompleteProfile && !onResetPasswordRoute) {
       router.replace('/complete-profile');
     } else if (session && inAuthGroup) {
       // A token stashed by join/[share_token].tsx or invite/[token].tsx
@@ -123,7 +130,7 @@ function RootNavigation() {
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, profileLoading, bannedReason, needsUsername, onCompleteProfile, inAuthGroup, onJoinRoute, onInviteRoute, onUsersRoute, onLegalRoute, loading, router]);
+  }, [session, profileLoading, bannedReason, needsUsername, onCompleteProfile, inAuthGroup, onJoinRoute, onInviteRoute, onUsersRoute, onLegalRoute, onResetPasswordRoute, loading, router]);
 
   if (loading) {
     return (
@@ -161,6 +168,7 @@ function RootNavigation() {
     !onInviteRoute &&
     !onUsersRoute &&
     !onLegalRoute &&
+    !onResetPasswordRoute &&
     !needsUsername &&
     !!profile &&
     !profile.onboarding_completed;
@@ -186,6 +194,7 @@ function RootNavigation() {
     !onInviteRoute &&
     !onUsersRoute &&
     !onLegalRoute &&
+    !onResetPasswordRoute &&
     !needsUsername &&
     !needsOnboarding;
 
