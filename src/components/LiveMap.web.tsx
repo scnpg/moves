@@ -32,6 +32,8 @@ interface LiveMapProps {
   moves: EligibleMove[];
   center: { lat: number; lng: number } | null;
   onSelectMove: (moveId: string) => void;
+  /** Right-click on a pin - purely additive alongside the left-click-to-view behavior, so a Move can be reported without leaving the map or joining it. */
+  onReportMove?: (move: EligibleMove) => void;
   /** Public-tab search radius, in miles - draws a coverage bubble and updates live while the slider drags (pure client-side geometry, no tile cost). */
   radiusMiles?: number | null;
   /** Only changes once a slider drag settles - the map only re-fits/re-zooms here, not on every drag frame, to avoid re-fetching a new set of tiles on every pixel of movement. */
@@ -123,7 +125,7 @@ function MapRefBridge({ mapRef }: { mapRef: React.MutableRefObject<LeafletMap | 
  * client never re-fuzzes data the server already cleared for exact display.
  */
 function LiveMapImpl(
-  { moves, center, onSelectMove, radiusMiles, fitRadiusMiles }: LiveMapProps,
+  { moves, center, onSelectMove, onReportMove, radiusMiles, fitRadiusMiles }: LiveMapProps,
   ref: ForwardedRef<LiveMapHandle>
 ) {
   const { colors, border, signal, scheme } = useTheme();
@@ -200,7 +202,13 @@ function LiveMapImpl(
               fillColor: signal.degree[move.degree_limit],
               fillOpacity: 0.85,
             }}
-            eventHandlers={{ click: () => onSelectMove(move.id) }}
+            eventHandlers={{
+              click: () => onSelectMove(move.id),
+              contextmenu: (e) => {
+                e.originalEvent.preventDefault();
+                onReportMove?.(move);
+              },
+            }}
           >
             <Tooltip direction="top" offset={[0, -8]}>
               {move.title}

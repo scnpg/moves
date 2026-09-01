@@ -333,6 +333,12 @@ const zhHant: TranslationDictionary = {
     couldNotBlock: '無法封鎖',
     couldNotUnblock: '無法取消封鎖',
     report: '檢舉',
+    ban: '停權',
+    unban: '解除停權',
+    banConfirmTitle: '要將 {name} 停權嗎？',
+    banConfirmMessage: '這會立即停用對方的帳號。之後可以解除停權。',
+    couldNotBan: '無法停權',
+    couldNotUnban: '無法解除停權',
   },
   report: {
     title: '檢舉 {name}',
@@ -484,6 +490,13 @@ const zhHant: TranslationDictionary = {
     inviteHeading: '邀請 {count}/{goal} 位朋友',
     friendHeading: '加 {count}/{goal} 位附近的人為好友',
     noNearbyYet: '附近還沒有人 - 開啟你的位置以查看附近的人。',
+  },
+  banned: {
+    title: '帳號已被停權',
+    body: '此帳號因違反社群規範已被停權。',
+    bodyWithReason: '此帳號已被停權：{reason}',
+    contact: '如果你認為這是誤判，請寄信至 movessupport@gmail.com。',
+    dismiss: '返回登入畫面',
   },
   locationGate: {
     title: '開啟定位',

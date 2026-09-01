@@ -334,6 +334,12 @@ const en = {
     couldNotBlock: 'Could not block',
     couldNotUnblock: 'Could not unblock',
     report: 'Report',
+    ban: 'Ban',
+    unban: 'Unban',
+    banConfirmTitle: 'Ban {name}?',
+    banConfirmMessage: 'This immediately suspends their account. They can be unbanned later.',
+    couldNotBan: 'Could not ban',
+    couldNotUnban: 'Could not unban',
   },
   report: {
     title: 'Report {name}',
@@ -485,6 +491,13 @@ const en = {
     inviteHeading: 'Invite {count}/{goal} friends',
     friendHeading: 'Friend {count}/{goal} people nearby',
     noNearbyYet: 'No one nearby yet - set your location to see people.',
+  },
+  banned: {
+    title: 'Account suspended',
+    body: 'This account has been suspended for violating our community guidelines.',
+    bodyWithReason: 'This account has been suspended: {reason}',
+    contact: 'If you think this is a mistake, email movessupport@gmail.com.',
+    dismiss: 'Back to sign in',
   },
   locationGate: {
     title: 'Turn on location',

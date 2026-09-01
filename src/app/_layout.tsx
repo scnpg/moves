@@ -10,6 +10,7 @@ import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts
 import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 
 import { AppHeader } from '@/components/AppHeader';
+import { BannedScreen } from '@/components/BannedScreen';
 import { LocationRequiredScreen } from '@/components/LocationRequiredScreen';
 import { OnboardingCarousel } from '@/components/OnboardingCarousel';
 import { completeOnboarding } from '@/features/profile/api';
@@ -59,7 +60,7 @@ export default function RootLayout() {
 }
 
 function RootNavigation() {
-  const { session, profile, loading, refreshProfile } = useAuth();
+  const { session, profile, loading, profileLoading, refreshProfile, bannedReason, dismissBanNotice } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const { colors, scheme } = useTheme();
@@ -92,6 +93,21 @@ function RootNavigation() {
 
   useEffect(() => {
     if (loading) return;
+    // session flips truthy the instant sign-in succeeds, but its profile
+    // (and ban status) is still loading at that point - navigating into the
+    // app on `session` alone would optimistically head for /(tabs) for an
+    // account that's a moment later discovered to be banned and signed
+    // back out, yanking the Stack navigator mid-transition and spinning
+    // expo-router into "Maximum update depth exceeded". Wait for the
+    // profile fetch to settle before acting on a session change.
+    if (profileLoading) return;
+    // A detected ban short-circuits the render below to <BannedScreen> and
+    // unmounts the <Stack> navigator entirely - forcing a route change here
+    // while that's true fights the render branch (nothing settles into the
+    // target route) and spins expo-router into "Maximum update depth
+    // exceeded". Once bannedReason clears (dismissBanNotice, or a fresh
+    // sign-in), this effect resumes normally.
+    if (!session && bannedReason !== null) return;
     if (!session && !inAuthGroup && !onJoinRoute && !onInviteRoute && !onUsersRoute && !onLegalRoute) {
       router.replace('/(auth)/sign-in');
     } else if (session && needsUsername && !onCompleteProfile) {
@@ -107,12 +123,21 @@ function RootNavigation() {
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, needsUsername, onCompleteProfile, inAuthGroup, onJoinRoute, onInviteRoute, onUsersRoute, onLegalRoute, loading, router]);
+  }, [session, profileLoading, bannedReason, needsUsername, onCompleteProfile, inAuthGroup, onJoinRoute, onInviteRoute, onUsersRoute, onLegalRoute, loading, router]);
 
   if (loading) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.bg }]}>
         <ActivityIndicator color={colors.brand} size="large" />
+      </View>
+    );
+  }
+
+  if (!session && bannedReason !== null) {
+    return (
+      <View style={styles.flex}>
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <BannedScreen reason={bannedReason} onDismiss={dismissBanNotice} />
       </View>
     );
   }

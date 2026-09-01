@@ -23,6 +23,9 @@ export interface Profile {
   is_moderator: boolean;
   username_reset_required: boolean;
   onboarding_completed: boolean;
+  is_banned: boolean;
+  banned_at: string | null;
+  ban_reason: string | null;
 }
 
 export type ModerationCaseKind = 'move' | 'profile' | 'message';
@@ -232,6 +235,7 @@ export interface PublicProfile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  is_banned: boolean;
 }
 
 export interface UserSettings {

@@ -48,8 +48,19 @@ export async function getModerationQueue(): Promise<ModerationQueueItem[]> {
   return (data ?? []) as ModerationQueueItem[];
 }
 
-/** "confirmed_threat" triggers immediate removal server-side (delete the Move/message, or flag the profile's username for a forced change) - see apply_moderation_verdict() in the migration. */
+/** "confirmed_threat" triggers immediate removal server-side (delete the Move/message, or ban the profile) - see apply_moderation_verdict() in the migration. */
 export async function resolveModerationCase(caseId: string, verdict: ModerationVerdict) {
   const { error } = await supabase.rpc('resolve_moderation_case', { p_case_id: caseId, p_verdict: verdict });
+  if (error) throw error;
+}
+
+/** Moderator-only (is_moderator() gate on the RPC itself) - independent of the report-threshold pipeline, for acting immediately from a profile page. Doesn't revoke an already-issued session token (see ban_user() in the migration) - it's blocked from further writes and signed out client-side the next time its profile loads. */
+export async function banUser(userId: string, reason?: string) {
+  const { error } = await supabase.rpc('ban_user', { p_user_id: userId, p_reason: reason?.trim() || null });
+  if (error) throw error;
+}
+
+export async function unbanUser(userId: string) {
+  const { error } = await supabase.rpc('unban_user', { p_user_id: userId });
   if (error) throw error;
 }

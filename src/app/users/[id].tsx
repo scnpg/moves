@@ -9,7 +9,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HoverPressable } from '@/components/HoverPressable';
 import { ReportUserPanel } from '@/components/ReportUserPanel';
 import { Screen } from '@/components/Screen';
-import { blockUser, getBlockedUsers, unblockUser } from '@/features/blocking/api';
+import { banUser, blockUser, getBlockedUsers, unbanUser, unblockUser } from '@/features/blocking/api';
 import {
   acceptFriendRequest,
   getFriendshipStatus,
@@ -27,7 +27,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session } = useAuth();
+  const { session, profile: myProfile } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
   const { colors, font } = useTheme();
@@ -42,6 +42,7 @@ export default function UserProfileScreen() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [banLoading, setBanLoading] = useState(false);
 
   // Reachable while signed out - shared profile links/QR codes (see
   // ShareProfilePanel, get_public_profile()) need to work for people who
@@ -166,6 +167,35 @@ export default function UserProfileScreen() {
     }
   };
 
+  const handleBan = async () => {
+    if (!id || !profile) return;
+    const name = profile.display_name ?? profile.username;
+    const confirmed = await confirmAction(t('userProfile.banConfirmTitle', { name }), t('userProfile.banConfirmMessage'), t('userProfile.ban'));
+    if (!confirmed) return;
+    setBanLoading(true);
+    try {
+      await banUser(id);
+      setProfile({ ...profile, is_banned: true });
+    } catch (err) {
+      notify(t('userProfile.couldNotBan'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
+    } finally {
+      setBanLoading(false);
+    }
+  };
+
+  const handleUnban = async () => {
+    if (!id || !profile) return;
+    setBanLoading(true);
+    try {
+      await unbanUser(id);
+      setProfile({ ...profile, is_banned: false });
+    } catch (err) {
+      notify(t('userProfile.couldNotUnban'), err instanceof Error ? err.message : t('common.pleaseTryAgain'));
+    } finally {
+      setBanLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Screen>
@@ -252,6 +282,13 @@ export default function UserProfileScreen() {
               <HoverPressable onPress={() => setReportOpen((open) => !open)} style={styles.secondaryAction}>
                 <Text style={[styles.secondaryActionText, { color: colors.textMuted, fontFamily: font.family.monoBold }]}>{t('userProfile.report')}</Text>
               </HoverPressable>
+              {myProfile?.is_moderator && id !== session.user.id ? (
+                <HoverPressable onPress={profile.is_banned ? handleUnban : handleBan} disabled={banLoading} style={styles.secondaryAction}>
+                  <Text style={[styles.secondaryActionText, { color: colors.danger, fontFamily: font.family.monoBold }]}>
+                    {profile.is_banned ? t('userProfile.unban') : t('userProfile.ban')}
+                  </Text>
+                </HoverPressable>
+              ) : null}
             </View>
           ) : null}
 

@@ -71,6 +71,8 @@ interface LiveMapProps {
   moves: EligibleMove[];
   center: { lat: number; lng: number } | null;
   onSelectMove: (moveId: string) => void;
+  /** Long-press on a pin - purely additive alongside the tap-to-view behavior, so a Move can be reported without leaving the map or joining it. */
+  onReportMove?: (move: EligibleMove) => void;
   /** Public-tab search radius, in miles - draws a coverage bubble (see LiveMap.web.tsx for the web equivalent). */
   radiusMiles?: number | null;
   /** Only changes once a slider drag settles - the map only re-fits/re-zooms here, not on every drag frame. */
@@ -89,7 +91,7 @@ interface LiveMapProps {
  * fuzzy_lat/fuzzy_lng - a ~1.1km-precision point - for everyone else.
  */
 function LiveMapImpl(
-  { moves, center, onSelectMove, radiusMiles, mapHeight, obscuredBottom }: LiveMapProps,
+  { moves, center, onSelectMove, onReportMove, radiusMiles, mapHeight, obscuredBottom }: LiveMapProps,
   ref: ForwardedRef<LiveMapHandle>
 ) {
   const { colors, border, signal, scheme } = useTheme();
@@ -173,6 +175,30 @@ function LiveMapImpl(
         }}
         onRegionChangeComplete={(region) => {
           currentRegionRef.current = region;
+        }}
+        onLongPress={(e) => {
+          // Marker itself has no onLongPress in this react-native-maps
+          // version (only onPress/onCalloutPress) - long-pressing the map
+          // and finding whichever pin is closest instead, within a radius
+          // that scales with the current zoom (a fixed degree threshold
+          // would be too strict zoomed out, too loose zoomed in).
+          if (!onReportMove || pins.length === 0) return;
+          const { latitude, longitude } = e.nativeEvent.coordinate;
+          const threshold = (currentRegionRef.current?.latitudeDelta ?? DEFAULT_DELTA) * 0.05;
+          let closest: (typeof pins)[number] | null = null;
+          let closestDist = Infinity;
+          for (const move of pins) {
+            const lat = move.lat ?? move.fuzzy_lat;
+            const lng = move.lng ?? move.fuzzy_lng;
+            const dist = Math.hypot(lat - latitude, lng - longitude);
+            if (dist < closestDist) {
+              closestDist = dist;
+              closest = move;
+            }
+          }
+          if (closest && closestDist <= threshold) {
+            onReportMove(closest);
+          }
         }}
       >
         {center && throttledRadiusMiles != null ? (

@@ -333,6 +333,12 @@ const es: TranslationDictionary = {
     couldNotBlock: 'No se pudo bloquear',
     couldNotUnblock: 'No se pudo desbloquear',
     report: 'Reportar',
+    ban: 'Suspender',
+    unban: 'Reactivar',
+    banConfirmTitle: '¿Suspender a {name}?',
+    banConfirmMessage: 'Esto suspende su cuenta de inmediato. Se puede reactivar más tarde.',
+    couldNotBan: 'No se pudo suspender',
+    couldNotUnban: 'No se pudo reactivar',
   },
   report: {
     title: 'Reportar a {name}',
@@ -484,6 +490,13 @@ const es: TranslationDictionary = {
     inviteHeading: 'Invita a {count}/{goal} amigos',
     friendHeading: 'Agrega a {count}/{goal} personas cerca',
     noNearbyYet: 'Todavía no hay nadie cerca - activa tu ubicación para ver a las personas.',
+  },
+  banned: {
+    title: 'Cuenta suspendida',
+    body: 'Esta cuenta ha sido suspendida por infringir nuestras normas de la comunidad.',
+    bodyWithReason: 'Esta cuenta ha sido suspendida: {reason}',
+    contact: 'Si crees que esto es un error, escribe a movessupport@gmail.com.',
+    dismiss: 'Volver a iniciar sesión',
   },
   locationGate: {
     title: 'Activa tu ubicación',

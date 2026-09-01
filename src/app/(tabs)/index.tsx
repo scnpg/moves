@@ -12,6 +12,7 @@ import { LiveMap } from '@/components/LiveMap';
 import type { LiveMapHandle } from '@/components/LiveMap.types';
 import { MoveCard } from '@/components/MoveCard';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { ReportUserPanel } from '@/components/ReportUserPanel';
 import { Screen } from '@/components/Screen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { Slider } from '@/components/Slider';
@@ -81,6 +82,10 @@ export default function MovesScreen() {
   // Tracks the bottom sheet's live height so the recenter button can sit
   // just above its moving top edge instead of the map area's fixed bottom.
   const [sheetHeight, setSheetHeight] = useState(0);
+  // Right-click (web) / long-press (native) on a map pin - lets a Move be
+  // reported without leaving the map or joining it, see LiveMap's
+  // onReportMove prop.
+  const [reportingMove, setReportingMove] = useState<EligibleMove | null>(null);
 
   const load = useCallback(async () => {
     if (!session?.user) return;
@@ -207,6 +212,7 @@ export default function MovesScreen() {
           moves={moves}
           center={coords}
           onSelectMove={(moveId) => router.push(`/room/${moveId}`)}
+          onReportMove={setReportingMove}
           radiusMiles={tab === 'public' ? radiusMiles : null}
           fitRadiusMiles={tab === 'public' ? fetchRadiusMiles : null}
           mapHeight={mapHeight}
@@ -295,6 +301,19 @@ export default function MovesScreen() {
           </View>
         </BottomSheet>
       </View>
+
+      {reportingMove ? (
+        <View style={[styles.reportOverlay, { backgroundColor: colors.overlay }]}>
+          <View style={styles.reportPanelWrap}>
+            <ReportUserPanel
+              userId={reportingMove.host_id}
+              name={reportingMove.host_display_name ?? reportingMove.host_username}
+              moveId={reportingMove.id}
+              onDone={() => setReportingMove(null)}
+            />
+          </View>
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -302,6 +321,20 @@ export default function MovesScreen() {
 const styles = StyleSheet.create({
   noPadding: {
     padding: 0,
+  },
+  reportOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  reportPanelWrap: {
+    width: '100%',
+    maxWidth: 420,
   },
   topBar: {
     flexDirection: 'row',
